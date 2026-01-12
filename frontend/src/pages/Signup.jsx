@@ -1,0 +1,312 @@
+import { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { X, Mail, ChevronDown, Search, Eye, EyeOff } from 'lucide-react'
+import { signup } from '../api/auth'
+
+const API_URL = 'http://localhost:5001/api'
+
+const countries = [
+  { code: '+1', name: 'United States', flag: '🇺🇸' },
+  { code: '+1', name: 'Canada', flag: '🇨🇦' },
+  { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: '+91', name: 'India', flag: '🇮🇳' },
+  { code: '+61', name: 'Australia', flag: '🇦🇺' },
+  { code: '+49', name: 'Germany', flag: '🇩🇪' },
+  { code: '+33', name: 'France', flag: '🇫🇷' },
+  { code: '+81', name: 'Japan', flag: '🇯🇵' },
+  { code: '+86', name: 'China', flag: '🇨🇳' },
+  { code: '+55', name: 'Brazil', flag: '🇧🇷' },
+  { code: '+52', name: 'Mexico', flag: '🇲🇽' },
+  { code: '+34', name: 'Spain', flag: '🇪🇸' },
+  { code: '+39', name: 'Italy', flag: '🇮🇹' },
+  { code: '+7', name: 'Russia', flag: '🇷🇺' },
+  { code: '+82', name: 'South Korea', flag: '🇰🇷' },
+  { code: '+31', name: 'Netherlands', flag: '🇳🇱' },
+  { code: '+46', name: 'Sweden', flag: '🇸🇪' },
+  { code: '+41', name: 'Switzerland', flag: '🇨🇭' },
+  { code: '+65', name: 'Singapore', flag: '🇸🇬' },
+  { code: '+971', name: 'UAE', flag: '🇦🇪' },
+  { code: '+966', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: '+27', name: 'South Africa', flag: '🇿🇦' },
+  { code: '+234', name: 'Nigeria', flag: '🇳🇬' },
+  { code: '+254', name: 'Kenya', flag: '🇰🇪' },
+  { code: '+62', name: 'Indonesia', flag: '🇮🇩' },
+  { code: '+60', name: 'Malaysia', flag: '🇲🇾' },
+  { code: '+63', name: 'Philippines', flag: '🇵🇭' },
+  { code: '+66', name: 'Thailand', flag: '🇹🇭' },
+  { code: '+84', name: 'Vietnam', flag: '🇻🇳' },
+  { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
+  { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
+  { code: '+94', name: 'Sri Lanka', flag: '🇱🇰' },
+  { code: '+977', name: 'Nepal', flag: '🇳🇵' },
+]
+
+const Signup = () => {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const referralCode = searchParams.get('ref')
+  const [activeTab, setActiveTab] = useState('signup')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+  const [countrySearch, setCountrySearch] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState(countries[0])
+  const dropdownRef = useRef(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [formData, setFormData] = useState({
+    firstName: '',
+    email: '',
+    phone: '',
+    countryCode: '+1',
+    password: ''
+  })
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowCountryDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filteredCountries = countries.filter(country =>
+    country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+    country.code.includes(countrySearch)
+  )
+
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country)
+    setFormData({ ...formData, countryCode: country.code })
+    setShowCountryDropdown(false)
+    setCountrySearch('')
+  }
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+    setError('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    
+    try {
+      const response = await signup(formData)
+      localStorage.setItem('token', response.token)
+      localStorage.setItem('user', JSON.stringify(response.user))
+      
+      // Register referral if referral code exists
+      if (referralCode && response.user?._id) {
+        try {
+          await fetch(`${API_URL}/ib/register-referral`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: response.user._id,
+              referralCode: referralCode
+            })
+          })
+          console.log('Referral registered:', referralCode)
+        } catch (refError) {
+          console.error('Error registering referral:', refError)
+        }
+      }
+      
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 sm:p-6 md:p-8 relative overflow-hidden">
+      {/* Background gradient effects */}
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-r from-cyan-500/20 to-transparent rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-l from-orange-500/20 via-purple-500/20 to-transparent rounded-full blur-3xl" />
+      
+      {/* Modal */}
+      <div className="relative bg-dark-700 rounded-2xl p-6 sm:p-8 w-full max-w-md border border-gray-800 mx-4 sm:mx-0">
+        {/* Close button */}
+        <button className="absolute top-4 right-4 w-8 h-8 bg-dark-600 rounded-full flex items-center justify-center hover:bg-dark-500 transition-colors">
+          <X size={16} className="text-gray-400" />
+        </button>
+
+        {/* Tabs */}
+        <div className="flex bg-dark-600 rounded-full p-1 w-fit mb-8">
+          <button
+            onClick={() => setActiveTab('signup')}
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'signup' ? 'bg-dark-500 text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Sign up
+          </button>
+          <Link
+            to="/user/login"
+            className="px-6 py-2 rounded-full text-sm font-medium text-gray-400 hover:text-white transition-colors"
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Title */}
+        <h1 className="text-2xl font-semibold text-white mb-6">Create an account</h1>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name field */}
+          <input
+            type="text"
+            name="firstName"
+            placeholder="Enter your name"
+            value={formData.firstName}
+            onChange={handleChange}
+            className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+          />
+
+          {/* Email field */}
+          <div className="relative">
+            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full bg-dark-600 border border-gray-700 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+            />
+          </div>
+
+          {/* Phone field with country selector */}
+          <div className="flex relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+              className="flex items-center gap-1 sm:gap-2 bg-dark-600 border border-gray-700 rounded-l-lg px-2 sm:px-3 py-3 border-r-0 hover:bg-dark-500 transition-colors min-w-[70px] sm:min-w-[90px]"
+            >
+              <span className="text-base sm:text-lg">{selectedCountry.flag}</span>
+              <span className="text-gray-400 text-xs sm:text-sm hidden sm:inline">{selectedCountry.code}</span>
+              <ChevronDown size={14} className="text-gray-500" />
+            </button>
+            
+            {/* Country Dropdown */}
+            {showCountryDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-64 sm:w-72 bg-dark-600 border border-gray-700 rounded-lg shadow-xl z-50 max-h-64 overflow-hidden">
+                {/* Search */}
+                <div className="p-2 border-b border-gray-700">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      className="w-full bg-dark-700 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-600"
+                    />
+                  </div>
+                </div>
+                {/* Country List */}
+                <div className="max-h-48 overflow-y-auto">
+                  {filteredCountries.map((country, index) => (
+                    <button
+                      key={`${country.code}-${index}`}
+                      type="button"
+                      onClick={() => handleCountrySelect(country)}
+                      className="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-500 transition-colors text-left"
+                    >
+                      <span className="text-lg">{country.flag}</span>
+                      <span className="text-white text-sm flex-1">{country.name}</span>
+                      <span className="text-gray-500 text-sm">{country.code}</span>
+                    </button>
+                  ))}
+                  {filteredCountries.length === 0 && (
+                    <p className="text-gray-500 text-sm text-center py-3">No countries found</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Enter phone number"
+              value={formData.phone}
+              onChange={handleChange}
+              className="flex-1 bg-dark-600 border border-gray-700 rounded-r-lg px-3 sm:px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors min-w-0"
+            />
+          </div>
+
+          {/* Password field */}
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              placeholder="Create password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors mt-2 disabled:opacity-50"
+          >
+            {loading ? 'Creating account...' : 'Create an account'}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-gray-700" />
+          <span className="text-gray-500 text-sm">OR SIGN IN WITH</span>
+          <div className="flex-1 h-px bg-gray-700" />
+        </div>
+
+        {/* Social buttons */}
+        <div className="flex gap-3">
+          <button className="flex-1 flex items-center justify-center gap-2 bg-dark-600 border border-gray-700 rounded-lg py-3 hover:bg-dark-500 transition-colors">
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+          </button>
+          <button className="flex-1 flex items-center justify-center gap-2 bg-dark-600 border border-gray-700 rounded-lg py-3 hover:bg-dark-500 transition-colors">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Terms */}
+        <p className="text-center text-gray-500 text-sm mt-6">
+          By creating an account, you agree to our{' '}
+          <a href="#" className="text-white hover:underline">Terms & Service</a>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default Signup
