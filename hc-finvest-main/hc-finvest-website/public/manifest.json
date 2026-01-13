@@ -1,0 +1,15 @@
+{
+  "short_name": "HC Finvest",
+  "name": "Begin trading with HC Finvest, a genuine ECN technology broker. Access forex, shares, indices, commodities, and equities with us.",
+  "icons": [
+    {
+      "src": "hcfinvest.ico",
+      "sizes": "16x16 24x24 32x32 48x48 64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
