@@ -51,7 +51,7 @@ const AdminLogin = () => {
 
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-12" />
+          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-16 w-auto" />
         </div>
 
         {/* Admin Badge */}
