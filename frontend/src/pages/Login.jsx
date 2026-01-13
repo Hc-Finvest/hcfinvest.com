@@ -63,6 +63,11 @@ const Login = () => {
           <X size={16} className="text-gray-400" />
         </button>
 
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-12" />
+        </div>
+
         {/* Tabs */}
         <div className="flex bg-dark-600 rounded-full p-1 w-fit mb-8">
           <Link

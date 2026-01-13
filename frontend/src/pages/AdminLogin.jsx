@@ -49,6 +49,11 @@ const AdminLogin = () => {
           <X size={16} className="text-gray-400" />
         </button>
 
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-12" />
+        </div>
+
         {/* Admin Badge */}
         <div className="flex items-center gap-2 mb-6">
           <div className="px-3 py-1 bg-red-500/20 text-red-500 rounded-full text-sm font-medium">
