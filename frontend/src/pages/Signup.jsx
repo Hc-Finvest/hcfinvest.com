@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { X, Mail, ChevronDown, Search, Eye, EyeOff } from 'lucide-react'
 import { signup } from '../api/auth'
 
-import { API_URL } from '../config/api'
+const API_URL = 'http://localhost:5001/api'
 
 const countries = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },
@@ -102,11 +102,17 @@ const Signup = () => {
     setError('')
     
     try {
-      const response = await signup(formData)
+      // Include referral code in signup data
+      const signupData = {
+        ...formData,
+        referralCode: referralCode || undefined
+      }
+      
+      const response = await signup(signupData)
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
       
-      // Register referral if referral code exists
+      // Also call register-referral API for backward compatibility
       if (referralCode && response.user?._id) {
         try {
           await fetch(`${API_URL}/ib/register-referral`, {
@@ -148,11 +154,6 @@ const Signup = () => {
         <button className="absolute top-4 right-4 w-8 h-8 bg-dark-600 rounded-full flex items-center justify-center hover:bg-dark-500 transition-colors">
           <X size={16} className="text-gray-400" />
         </button>
-
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-16 w-auto" />
-        </div>
 
         {/* Tabs */}
         <div className="flex bg-dark-600 rounded-full p-1 w-fit mb-8">

@@ -1,8 +1,7 @@
 // Institutional-grade real-time price streaming service using Socket.IO
 import { io } from 'socket.io-client'
-import { API_BASE_URL } from '../config/api'
 
-const SOCKET_URL = API_BASE_URL
+const SOCKET_URL = 'http://localhost:5001'
 
 class PriceStreamService {
   constructor() {

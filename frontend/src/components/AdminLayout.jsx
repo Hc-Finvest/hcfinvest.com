@@ -93,12 +93,10 @@ const AdminLayout = ({ children, title, subtitle }) => {
         {/* Logo */}
         <div className="p-4 flex items-center justify-between border-b border-gray-800">
           <div className="flex items-center gap-2">
-            <img 
-              src="/hcfinvest_orange_logo.png" 
-              alt="HCF Invest" 
-              className="h-8 flex-shrink-0"
-            />
-            {sidebarExpanded && <span className="text-white font-semibold">Admin</span>}
+            <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">C</span>
+            </div>
+            {sidebarExpanded && <span className="text-white font-semibold">CoinLytix Admin</span>}
           </div>
           <button 
             onClick={() => setSidebarExpanded(!sidebarExpanded)}

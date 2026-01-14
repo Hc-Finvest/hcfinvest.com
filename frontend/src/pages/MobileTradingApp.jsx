@@ -10,7 +10,7 @@ import {
 import metaApiService from '../services/metaApi'
 import priceStreamService from '../services/priceStream'
 
-import { API_URL } from '../config/api'
+const API_URL = 'http://localhost:5001/api'
 
 const MobileTradingApp = () => {
   const navigate = useNavigate()

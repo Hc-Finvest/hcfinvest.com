@@ -11,7 +11,7 @@ import {
   Download
 } from 'lucide-react'
 
-import { API_URL } from '../config/api'
+const API_URL = 'http://localhost:5001/api'
 
 const AdminEarnings = () => {
   const [summary, setSummary] = useState(null)

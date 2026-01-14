@@ -12,7 +12,7 @@ const transactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Deposit', 'Withdrawal', 'Transfer_To_Account', 'Transfer_From_Account', 'Account_Transfer_Out', 'Account_Transfer_In', 'IB_Commission', 'System'],
+    enum: ['Deposit', 'Withdrawal', 'Transfer_To_Account', 'Transfer_From_Account', 'Account_Transfer_Out', 'Account_Transfer_In', 'Demo_Credit', 'Demo_Reset'],
     required: true
   },
   amount: {
@@ -22,7 +22,7 @@ const transactionSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['Bank Transfer', 'UPI', 'QR Code', 'Internal', 'Crypto', 'Manual'],
+    enum: ['Bank Transfer', 'UPI', 'QR Code', 'Internal', 'System'],
     default: 'Internal'
   },
   // For internal transfers
@@ -74,14 +74,6 @@ const transactionSchema = new mongoose.Schema({
   processedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  },
-  mysqlTxId: {
-    type: String,
-    default: null
-  },
-  note: {
-    type: String,
-    default: ''
   }
 }, { timestamps: true })
 

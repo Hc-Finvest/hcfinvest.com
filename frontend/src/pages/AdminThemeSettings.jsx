@@ -11,7 +11,7 @@ import {
   X
 } from 'lucide-react'
 
-import { API_URL } from '../config/api'
+const API_URL = 'http://localhost:5001/api'
 
 const AdminThemeSettings = () => {
   const [themes, setThemes] = useState([])

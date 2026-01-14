@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
-import { API_URL } from '../config/api'
 import { 
   Users,
   TrendingUp,
@@ -31,7 +30,7 @@ const AdminOverview = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/admin/users`)
+      const response = await fetch('http://localhost:5001/api/admin/users')
       if (response.ok) {
         const data = await response.json()
         const userList = data.users || []
