@@ -2,6 +2,8 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import Admin from '../models/Admin.js'
+import EmailOTP from '../models/EmailOTP.js'
+import emailService from '../services/emailService.js'
 
 const router = express.Router()
 
@@ -69,6 +71,11 @@ router.post('/signup', async (req, res) => {
     // Generate token
     const token = generateToken(user._id)
 
+    // Send welcome email asynchronously (don't wait for it)
+    emailService.sendWelcomeEmail(user).catch(err => {
+      console.error('Failed to send welcome email:', err.message)
+    })
+
     res.status(201).json({
       message: 'User registered successfully',
       user: {
@@ -85,6 +92,143 @@ router.post('/signup', async (req, res) => {
   } catch (error) {
     console.error('Signup error:', error)
     res.status(500).json({ message: 'Error creating user', error: error.message })
+  }
+})
+
+// POST /api/auth/signup-with-otp - OTP-based signup (Step 1: Send OTP)
+router.post('/signup/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' })
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() })
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'An account with this email already exists' 
+      })
+    }
+
+    // Generate and send OTP
+    const { otp } = await EmailOTP.createOTP(email, 'signup', {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    })
+
+    await emailService.sendOTPEmail(email, otp, 'signup')
+
+    res.json({ 
+      success: true, 
+      message: 'OTP sent to your email. Please verify to complete registration.',
+      expiresIn: 600
+    })
+
+  } catch (error) {
+    console.error('Send signup OTP error:', error)
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// POST /api/auth/signup-with-otp - OTP-based signup (Step 2: Verify OTP and Create User)
+router.post('/signup/verify-otp', async (req, res) => {
+  try {
+    const { firstName, email, phone, countryCode, password, otp, adminSlug, referralCode } = req.body
+
+    if (!email || !otp) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and OTP are required' 
+      })
+    }
+
+    // Verify OTP first
+    await EmailOTP.verifyOTP(email, otp, 'signup')
+
+    // Check if user already exists (double check)
+    const existingUser = await User.findOne({ email: email.toLowerCase() })
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'An account with this email already exists' 
+      })
+    }
+
+    // Find admin by slug if provided
+    let assignedAdmin = null
+    let adminUrlSlug = null
+    if (adminSlug) {
+      const admin = await Admin.findOne({ urlSlug: adminSlug.toLowerCase(), status: 'ACTIVE' })
+      if (admin) {
+        assignedAdmin = admin._id
+        adminUrlSlug = admin.urlSlug
+      }
+    }
+
+    // Handle referral code
+    let parentIBId = null
+    let referredBy = null
+    if (referralCode) {
+      const referringIB = await User.findOne({ 
+        referralCode: referralCode, 
+        isIB: true, 
+        ibStatus: 'ACTIVE' 
+      })
+      if (referringIB) {
+        parentIBId = referringIB._id
+        referredBy = referralCode
+      }
+    }
+
+    // Create new user (email is now verified)
+    const user = await User.create({
+      firstName,
+      email: email.toLowerCase(),
+      phone,
+      countryCode,
+      password,
+      assignedAdmin,
+      adminUrlSlug,
+      parentIBId,
+      referredBy,
+      emailVerified: true,
+      emailVerifiedAt: new Date()
+    })
+
+    // Update admin stats if assigned
+    if (assignedAdmin) {
+      await Admin.findByIdAndUpdate(assignedAdmin, { $inc: { 'stats.totalUsers': 1 } })
+    }
+
+    // Generate token
+    const token = generateToken(user._id)
+
+    // Send welcome email asynchronously
+    emailService.sendWelcomeEmail(user).catch(err => {
+      console.error('Failed to send welcome email:', err.message)
+    })
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Welcome to HCF Invest.',
+      user: {
+        _id: user._id,
+        id: user._id,
+        firstName: user.firstName,
+        email: user.email,
+        phone: user.phone,
+        assignedAdmin,
+        adminUrlSlug
+      },
+      token
+    })
+
+  } catch (error) {
+    console.error('Verify signup OTP error:', error)
+    res.status(400).json({ success: false, message: error.message })
   }
 })
 
