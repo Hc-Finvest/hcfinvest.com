@@ -96,7 +96,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
             <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-sm">C</span>
             </div>
-            {sidebarExpanded && <span className="text-white font-semibold">CoinLytix Admin</span>}
+            {sidebarExpanded && <span className="text-white font-semibold">HCF Invest Admin</span>}
           </div>
           <button 
             onClick={() => setSidebarExpanded(!sidebarExpanded)}

@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Search, Star, X, Plus, Minus, Settings, Home, Wallet, LayoutGrid, BarChart3, Pencil, Trophy, AlertTriangle, Sun, Moon } from 'lucide-react'
@@ -6,7 +7,7 @@ import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 import { useTheme } from '../context/ThemeContext'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const TradingPage = () => {
   const navigate = useNavigate()

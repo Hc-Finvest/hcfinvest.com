@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -7,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const CopyTradePage = () => {
   const navigate = useNavigate()

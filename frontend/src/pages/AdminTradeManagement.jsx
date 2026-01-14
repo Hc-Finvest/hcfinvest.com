@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import { 
@@ -19,7 +20,7 @@ import metaApiService from '../services/metaApi'
 import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const AdminTradeManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')

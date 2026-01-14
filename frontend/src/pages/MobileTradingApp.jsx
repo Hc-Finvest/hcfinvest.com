@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
@@ -10,7 +11,7 @@ import {
 import metaApiService from '../services/metaApi'
 import priceStreamService from '../services/priceStream'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const MobileTradingApp = () => {
   const navigate = useNavigate()

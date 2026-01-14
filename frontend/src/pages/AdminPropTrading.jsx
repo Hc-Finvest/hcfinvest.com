@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { 
   Trophy, Settings, Users, Plus, Edit, Trash2, Eye, Check, X,
@@ -5,7 +6,7 @@ import {
   ChevronDown, Search, Filter, MoreVertical, Shield, Target
 } from 'lucide-react'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 export default function AdminPropTrading() {
   const [activeTab, setActiveTab] = useState('dashboard')

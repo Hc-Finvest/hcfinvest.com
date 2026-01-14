@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -7,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const InstructionsPage = () => {
   const navigate = useNavigate()
@@ -199,7 +200,7 @@ const InstructionsPage = () => {
                   <BookOpen size={isMobile ? 20 : 28} className="text-accent-green" />
                 </div>
                 <div>
-                  <h2 className={`font-bold text-white ${isMobile ? 'text-base' : 'text-xl'}`}>Welcome to CoinLytix</h2>
+                  <h2 className={`font-bold text-white ${isMobile ? 'text-base' : 'text-xl'}`}>Welcome to HCF Invest</h2>
                   <p className={`text-gray-400 ${isMobile ? 'text-xs' : ''}`}>Learn how to use our platform</p>
                 </div>
               </div>

@@ -1,9 +1,10 @@
+import { API_URL } from '../config/api'
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { X, Mail, ChevronDown, Search, Eye, EyeOff } from 'lucide-react'
 import { signup } from '../api/auth'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const countries = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },

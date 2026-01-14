@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import { 
@@ -10,7 +11,7 @@ import {
   CreditCard
 } from 'lucide-react'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 const AdminAccountTypes = () => {
   const [accountTypes, setAccountTypes] = useState([])

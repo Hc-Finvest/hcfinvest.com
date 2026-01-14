@@ -1,3 +1,4 @@
+import { API_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -5,7 +6,7 @@ import {
   Check, ChevronRight, Zap, Award, DollarSign, ArrowLeft, FileText, X
 } from 'lucide-react'
 
-const API_URL = 'http://localhost:5001/api'
+const API_URL = '${API_URL}'
 
 export default function BuyChallengePage() {
   const navigate = useNavigate()
