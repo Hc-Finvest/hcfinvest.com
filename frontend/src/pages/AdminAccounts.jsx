@@ -17,8 +17,6 @@ import {
   Ban
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminAccounts = () => {
   const navigate = useNavigate()
   const [activeMenu, setActiveMenu] = useState('Accounts')

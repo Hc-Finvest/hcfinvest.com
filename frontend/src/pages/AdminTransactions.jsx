@@ -16,8 +16,6 @@ import {
   XCircle
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminTransactions = () => {
   const navigate = useNavigate()
   const [activeMenu, setActiveMenu] = useState('Transactions')

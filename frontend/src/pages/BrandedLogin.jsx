@@ -3,8 +3,6 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const BrandedLogin = () => {
   const { slug } = useParams()
   const navigate = useNavigate()

@@ -28,8 +28,6 @@ import {
   Key
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminUserManagement = () => {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)

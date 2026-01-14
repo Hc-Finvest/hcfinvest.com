@@ -18,8 +18,6 @@ import {
   Percent
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminBankSettings = () => {
   const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)

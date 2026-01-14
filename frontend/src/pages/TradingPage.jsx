@@ -7,8 +7,6 @@ import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 import { useTheme } from '../context/ThemeContext'
 
-const API_URL = '${API_URL}'
-
 const TradingPage = () => {
   const navigate = useNavigate()
   const { accountId } = useParams()

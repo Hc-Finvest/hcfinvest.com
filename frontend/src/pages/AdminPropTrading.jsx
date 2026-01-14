@@ -6,8 +6,6 @@ import {
   ChevronDown, Search, Filter, MoreVertical, Shield, Target
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 export default function AdminPropTrading() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [settings, setSettings] = useState(null)

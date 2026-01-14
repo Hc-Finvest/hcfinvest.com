@@ -14,8 +14,6 @@ import {
   Calendar
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminKYC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')

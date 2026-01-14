@@ -16,8 +16,6 @@ import {
   Moon
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminForexCharges = () => {
   const [charges, setCharges] = useState([])
   const [loading, setLoading] = useState(true)

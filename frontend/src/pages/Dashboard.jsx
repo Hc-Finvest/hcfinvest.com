@@ -26,8 +26,6 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
-const API_URL = '${API_URL}'
-
 const Dashboard = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()

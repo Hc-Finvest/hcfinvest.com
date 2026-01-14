@@ -15,8 +15,6 @@ import {
   X
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminSupport = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')

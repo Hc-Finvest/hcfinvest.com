@@ -17,8 +17,6 @@ import {
   Clock
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminCopyTrade = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('masters')

@@ -11,8 +11,6 @@ import {
 import metaApiService from '../services/metaApi'
 import priceStreamService from '../services/priceStream'
 
-const API_URL = '${API_URL}'
-
 const MobileTradingApp = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()

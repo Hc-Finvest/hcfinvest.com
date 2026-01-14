@@ -6,8 +6,6 @@ import {
   Check, ChevronRight, Zap, Award, DollarSign, ArrowLeft, FileText, X
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 export default function BuyChallengePage() {
   const navigate = useNavigate()
   const [challenges, setChallenges] = useState([])

@@ -24,8 +24,6 @@ import {
   Target
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminIBManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('ibs') // ibs, applications, plans, settings, transfer

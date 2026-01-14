@@ -16,8 +16,6 @@ import {
   Smartphone
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminFundManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')

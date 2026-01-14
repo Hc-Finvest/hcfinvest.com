@@ -30,8 +30,6 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
-const API_URL = '${API_URL}'
-
 const OrderBook = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()

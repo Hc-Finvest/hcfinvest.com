@@ -11,8 +11,6 @@ import {
   CreditCard
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminAccountTypes = () => {
   const [accountTypes, setAccountTypes] = useState([])
   const [loading, setLoading] = useState(true)

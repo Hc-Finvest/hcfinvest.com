@@ -12,8 +12,6 @@ import {
   X
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminThemeSettings = () => {
   const [themes, setThemes] = useState([])
   const [presets, setPresets] = useState([])

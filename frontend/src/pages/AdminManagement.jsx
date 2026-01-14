@@ -22,8 +22,6 @@ import {
   Lock
 } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const AdminManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [admins, setAdmins] = useState([])

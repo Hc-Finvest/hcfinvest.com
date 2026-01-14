@@ -3,8 +3,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { X, Mail, Check, AlertCircle } from 'lucide-react'
 
-const API_URL = '${API_URL}'
-
 const ForgotPassword = () => {
   const [email, setEmail] = useState('')
   const [newEmail, setNewEmail] = useState('')
