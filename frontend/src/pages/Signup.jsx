@@ -154,10 +154,6 @@ const Signup = () => {
           <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-20 w-auto" />
         </div>
         
-        {/* Close button */}
-        <button className="absolute top-4 right-4 w-8 h-8 bg-dark-600 rounded-full flex items-center justify-center hover:bg-dark-500 transition-colors">
-          <X size={16} className="text-gray-400" />
-        </button>
 
         {/* Tabs */}
         <div className="flex bg-dark-600 rounded-full p-1 w-fit mb-8">
