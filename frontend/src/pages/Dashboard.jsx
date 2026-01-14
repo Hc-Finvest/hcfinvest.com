@@ -411,8 +411,8 @@ const Dashboard = () => {
       >
         {/* Logo - Icon only */}
         <div className="p-4 flex items-center justify-center shrink-0">
-          <div className="w-8 h-8 bg-accent-green rounded flex items-center justify-center">
-            <span className="text-black font-bold text-sm">CL</span>
+          <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
+            <span className="text-white font-bold text-sm">HCF</span>
           </div>
         </div>
 

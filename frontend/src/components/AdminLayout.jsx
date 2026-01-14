@@ -20,7 +20,8 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Palette
+  Palette,
+  Mail
 } from 'lucide-react'
 
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -43,6 +44,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
     { name: 'Prop Firm Challenges', icon: Trophy, path: '/admin/prop-firm' },
     { name: 'Account Types', icon: CreditCard, path: '/admin/account-types' },
     { name: 'Theme Settings', icon: Palette, path: '/admin/theme' },
+    { name: 'Email Management', icon: Mail, path: '/admin/email' },
     { name: 'Admin Management', icon: Shield, path: '/admin/admin-management' },
     { name: 'KYC Verification', icon: FileCheck, path: '/admin/kyc' },
     { name: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
@@ -93,10 +95,10 @@ const AdminLayout = ({ children, title, subtitle }) => {
         {/* Logo */}
         <div className="p-4 flex items-center justify-between border-b border-gray-800">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm">C</span>
+            <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">HCF</span>
             </div>
-            {sidebarExpanded && <span className="text-white font-semibold">HCF Invest Admin</span>}
+            {sidebarExpanded && <span className="text-white font-semibold">hcfinvest Admin</span>}
           </div>
           <button 
             onClick={() => setSidebarExpanded(!sidebarExpanded)}

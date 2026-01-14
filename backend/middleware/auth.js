@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import Admin from '../models/Admin.js'
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+
 // Auth middleware for regular users
 export const authMiddleware = async (req, res, next) => {
   try {
@@ -13,7 +15,7 @@ export const authMiddleware = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1]
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, JWT_SECRET)
     
     const user = await User.findById(decoded.id).select('-password')
     
@@ -62,10 +64,14 @@ export const adminMiddleware = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1]
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, JWT_SECRET)
     
-    // Check if it's an admin token
-    const admin = await Admin.findById(decoded.id).select('-password')
+    // Check if it's an admin token (adminId from admin-mgmt login or id from other sources)
+    const adminId = decoded.adminId || decoded.id
+    console.log('Admin middleware - decoded:', { adminId, role: decoded.role })
+    
+    const admin = await Admin.findById(adminId).select('-password')
+    console.log('Admin middleware - admin found:', admin ? admin.email : 'NOT FOUND')
     
     if (admin) {
       if (admin.status !== 'ACTIVE') {
@@ -113,7 +119,7 @@ export const optionalAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1]
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, JWT_SECRET)
     const user = await User.findById(decoded.id).select('-password')
     
     if (user && !user.isBlocked && !user.isBanned) {

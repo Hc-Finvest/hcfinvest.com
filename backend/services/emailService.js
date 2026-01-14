@@ -6,9 +6,9 @@ class EmailService {
   constructor() {
     this.transporter = null
     this.provider = process.env.EMAIL_PROVIDER || 'smtp'
-    this.appName = process.env.APP_NAME || 'HCF Invest'
-    this.fromEmail = process.env.SMTP_FROM_EMAIL || 'noreply@hcfinvest.com'
-    this.fromName = process.env.SMTP_FROM_NAME || 'HCF Invest'
+    this.appName = process.env.APP_NAME || 'hcfinvest'
+    this.fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@hcfinvest.com'
+    this.fromName = process.env.SMTP_FROM_NAME || 'hcfinvest'
     this.initialized = false
   }
 
@@ -18,18 +18,37 @@ class EmailService {
     try {
       switch (this.provider) {
         case 'smtp':
+        case 'zoho':
+          const port = parseInt(process.env.SMTP_PORT) || 465
+          const isSecure = port === 465
+          
+          // Zoho SMTP Configuration
+          // Host: smtppro.zoho.in (India) or smtp.zoho.com (Global)
+          // Port 465: SSL (secure: true)
+          // Port 587: STARTTLS (secure: false)
           this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT) || 587,
-            secure: process.env.SMTP_SECURE === 'true',
+            host: process.env.SMTP_HOST || 'smtppro.zoho.in',
+            port: port,
+            secure: isSecure,
             auth: {
               user: process.env.SMTP_USER,
               pass: process.env.SMTP_PASS
             },
             tls: {
-              rejectUnauthorized: false
-            }
+              rejectUnauthorized: true,
+              minVersion: 'TLSv1.2'
+            },
+            connectionTimeout: 30000,
+            greetingTimeout: 30000,
+            socketTimeout: 60000,
+            debug: true,
+            logger: true
           })
+          
+          // Log configuration (without password)
+          console.log(`📧 Email Config: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`)
+          console.log(`📧 User: ${process.env.SMTP_USER}`)
+          console.log(`📧 From: ${this.fromName} <${this.fromEmail}>`)
           break
 
         case 'sendgrid':
@@ -130,8 +149,10 @@ class EmailService {
     })
 
     try {
+      // Use SMTP_USER as sender to avoid relay errors
+      const senderEmail = process.env.SMTP_USER || this.fromEmail
       const mailOptions = {
-        from: `"${this.fromName}" <${this.fromEmail}>`,
+        from: `"${this.fromName}" <${senderEmail}>`,
         to: toName ? `"${toName}" <${to}>` : to,
         subject,
         html,
@@ -382,7 +403,7 @@ class EmailService {
                 Your account has been successfully created. You can now access all our features and start trading.
               </p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || 'https://trade.hcfinvest.com'}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                <a href="${process.env.FRONTEND_URL || 'https://hcfinvest.com'}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
                   Get Started
                 </a>
               </div>

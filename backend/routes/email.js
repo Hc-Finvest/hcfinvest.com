@@ -468,6 +468,47 @@ router.get('/stats', adminMiddleware, async (req, res) => {
   }
 })
 
+// Verify SMTP connection (public endpoint for testing)
+router.get('/verify-connection', async (req, res) => {
+  try {
+    const connectionStatus = await emailService.verifyConnection()
+    
+    if (connectionStatus.success) {
+      res.json({ 
+        success: true, 
+        message: 'SMTP connection verified successfully',
+        config: {
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          user: process.env.SMTP_USER,
+          from: process.env.SMTP_FROM_EMAIL
+        }
+      })
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: connectionStatus.message,
+        troubleshooting: [
+          'Verify IMAP/SMTP is enabled in Zoho Mail settings',
+          'Ensure you are using an App Password (not regular password)',
+          'Check if the email address is correct',
+          'Try regenerating the App Password in Zoho'
+        ]
+      })
+    }
+  } catch (error) {
+    console.error('Verify connection error:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      troubleshooting: [
+        'Check your .env file configuration',
+        'Verify SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS are set correctly'
+      ]
+    })
+  }
+})
+
 // Test email configuration
 router.post('/test', adminMiddleware, async (req, res) => {
   try {
@@ -489,11 +530,11 @@ router.post('/test', adminMiddleware, async (req, res) => {
     // Send test email
     await emailService.sendEmail({
       to: email,
-      subject: 'Test Email - HCF Invest',
+      subject: 'Test Email - HC Finvest',
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Test Email</h2>
-          <p>This is a test email from HCF Invest.</p>
+          <p>This is a test email from HC Finvest.</p>
           <p>If you received this email, your email configuration is working correctly.</p>
           <p>Sent at: ${new Date().toISOString()}</p>
         </div>

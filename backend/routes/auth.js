@@ -321,10 +321,12 @@ router.get('/me', async (req, res) => {
     }
 
     // Check if password was changed after token was issued
+    // Add 5 second buffer to account for registration timing
     if (user.passwordChangedAt) {
       const tokenIssuedAt = decoded.iat * 1000 // Convert to milliseconds
       const passwordChangedAt = new Date(user.passwordChangedAt).getTime()
-      if (passwordChangedAt > tokenIssuedAt) {
+      const bufferTime = 5000 // 5 seconds buffer for new registrations
+      if (passwordChangedAt > tokenIssuedAt + bufferTime) {
         return res.status(403).json({ 
           message: 'Your password was changed. Please login again.',
           forceLogout: true

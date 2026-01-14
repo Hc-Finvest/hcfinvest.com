@@ -38,6 +38,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import AdminThemeSettings from './pages/AdminThemeSettings'
 import BrandedLogin from './pages/BrandedLogin'
 import BrandedSignup from './pages/BrandedSignup'
+import AdminEmailManagement from './pages/AdminEmailManagement'
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
         <Route path="/support" element={<SupportPage />} />
         <Route path="/instructions" element={<InstructionsPage />} />
         <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminOverview />} />
         <Route path="/admin/users" element={<AdminUserManagement />} />
         <Route path="/admin/accounts" element={<AdminAccounts />} />
@@ -79,6 +81,7 @@ function App() {
         <Route path="/admin/prop-trading" element={<AdminPropTrading />} />
         <Route path="/admin/earnings" element={<AdminEarnings />} />
         <Route path="/admin/theme" element={<AdminThemeSettings />} />
+        <Route path="/admin/email" element={<AdminEmailManagement />} />
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />

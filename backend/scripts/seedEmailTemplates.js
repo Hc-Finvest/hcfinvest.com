@@ -17,7 +17,7 @@ const defaultTemplates = [
     description: 'OTP email sent during user signup',
     placeholders: [
       { key: 'otp', description: 'The 6-digit OTP code', example: '123456' },
-      { key: 'app_name', description: 'Application name', example: 'HCF Invest' },
+      { key: 'app_name', description: 'Application name', example: 'HC Finvest' },
       { key: 'expiry_minutes', description: 'OTP expiry time in minutes', example: '10' }
     ],
     htmlContent: `<!DOCTYPE html>
@@ -73,7 +73,7 @@ const defaultTemplates = [
     description: 'OTP email sent for password reset',
     placeholders: [
       { key: 'otp', description: 'The 6-digit OTP code', example: '123456' },
-      { key: 'app_name', description: 'Application name', example: 'HCF Invest' },
+      { key: 'app_name', description: 'Application name', example: 'HC Finvest' },
       { key: 'expiry_minutes', description: 'OTP expiry time in minutes', example: '10' }
     ],
     htmlContent: `<!DOCTYPE html>
@@ -130,7 +130,7 @@ const defaultTemplates = [
     placeholders: [
       { key: 'user_name', description: 'User first name', example: 'John' },
       { key: 'email', description: 'User email address', example: 'john@example.com' },
-      { key: 'app_name', description: 'Application name', example: 'HCF Invest' }
+      { key: 'app_name', description: 'Application name', example: 'HC Finvest' }
     ],
     htmlContent: `<!DOCTYPE html>
 <html>
@@ -199,7 +199,7 @@ const defaultTemplates = [
     placeholders: [
       { key: 'reset_url', description: 'Password reset URL', example: 'https://example.com/reset?token=xxx' },
       { key: 'expiry_minutes', description: 'Link expiry time in minutes', example: '60' },
-      { key: 'app_name', description: 'Application name', example: 'HCF Invest' }
+      { key: 'app_name', description: 'Application name', example: 'HC Finvest' }
     ],
     htmlContent: `<!DOCTYPE html>
 <html>
@@ -261,7 +261,7 @@ const defaultTemplates = [
       { key: 'user_name', description: 'User first name', example: 'John' },
       { key: 'amount', description: 'Deposit amount', example: '$1,000' },
       { key: 'transaction_id', description: 'Transaction ID', example: 'TXN123456' },
-      { key: 'app_name', description: 'Application name', example: 'HCF Invest' }
+      { key: 'app_name', description: 'Application name', example: 'HC Finvest' }
     ],
     htmlContent: `<!DOCTYPE html>
 <html>
@@ -327,7 +327,7 @@ const defaultTemplates = [
       { key: 'user_name', description: 'User first name', example: 'John' },
       { key: 'amount', description: 'Withdrawal amount', example: '$500' },
       { key: 'transaction_id', description: 'Transaction ID', example: 'TXN123456' },
-      { key: 'app_name', description: 'Application name', example: 'HCF Invest' }
+      { key: 'app_name', description: 'Application name', example: 'HC Finvest' }
     ],
     htmlContent: `<!DOCTYPE html>
 <html>

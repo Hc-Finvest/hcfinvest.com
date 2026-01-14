@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { API_URL } from '../config/api'
 
 const AdminLogin = () => {
   const navigate = useNavigate()
@@ -22,15 +23,33 @@ const AdminLogin = () => {
     setLoading(true)
     setError('')
     
-    // Simple admin credentials check (in production, use proper backend auth)
-    if (formData.email === 'admin@admin.com' && formData.password === 'admin123') {
-      localStorage.setItem('adminToken', 'admin-authenticated')
-      localStorage.setItem('adminUser', JSON.stringify({ email: formData.email, role: 'admin' }))
-      navigate('/admin/dashboard')
-    } else {
-      setError('Invalid admin credentials')
+    try {
+      const response = await fetch(`${API_URL}/admin-mgmt/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        localStorage.setItem('adminToken', data.token)
+        localStorage.setItem('adminUser', JSON.stringify(data.admin))
+        navigate('/admin/dashboard')
+      } else {
+        setError(data.message || 'Invalid admin credentials')
+      }
+    } catch (err) {
+      console.error('Admin login error:', err)
+      setError('Login failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -43,17 +62,9 @@ const AdminLogin = () => {
       <div className="relative bg-dark-700 rounded-2xl p-6 sm:p-8 w-full max-w-md border border-gray-800 mx-4 sm:mx-0">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-20 w-auto" />
+          <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="h-20 w-auto" />
         </div>
         
-        {/* Close button */}
-        <button 
-          onClick={() => navigate('/')}
-          className="absolute top-4 right-4 w-8 h-8 bg-dark-600 rounded-full flex items-center justify-center hover:bg-dark-500 transition-colors"
-        >
-          <X size={16} className="text-gray-400" />
-        </button>
-
         {/* Admin Badge */}
         <div className="flex items-center gap-2 mb-6">
           <div className="px-3 py-1 bg-red-500/20 text-red-500 rounded-full text-sm font-medium">
