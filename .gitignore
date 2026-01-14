@@ -50,3 +50,10 @@ temp/
 
 # Uploads
 uploads/
+
+# PM2 config
+ecosystem.config.js
+
+# Package lock files
+package-lock.json
+**/package-lock.json
