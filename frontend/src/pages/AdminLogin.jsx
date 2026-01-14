@@ -41,6 +41,11 @@ const AdminLogin = () => {
       
       {/* Modal */}
       <div className="relative bg-dark-700 rounded-2xl p-6 sm:p-8 w-full max-w-md border border-gray-800 mx-4 sm:mx-0">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/hcfinvest_orange_logo.png" alt="HCF Invest" className="h-20 w-auto" />
+        </div>
+        
         {/* Close button */}
         <button 
           onClick={() => navigate('/')}
