@@ -1,8 +1,8 @@
 import { API_URL } from '../config/api'
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { X, Mail, ChevronDown, Search, Eye, EyeOff } from 'lucide-react'
-import { signup } from '../api/auth'
+import { Mail, ChevronDown, Search, Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react'
+import { sendSignupOTP, verifySignupOTP } from '../api/auth'
 
 const countries = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },
@@ -47,12 +47,20 @@ const Signup = () => {
   const [activeTab, setActiveTab] = useState('signup')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const [countrySearch, setCountrySearch] = useState('')
   const [selectedCountry, setSelectedCountry] = useState(countries[0])
   const dropdownRef = useRef(null)
   const [showPassword, setShowPassword] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  // OTP verification state
+  const [step, setStep] = useState(1) // 1 = form, 2 = OTP verification
+  const [otp, setOtp] = useState('')
+  const [otpSending, setOtpSending] = useState(false)
+  const [resendTimer, setResendTimer] = useState(0)
+  
   const [formData, setFormData] = useState({
     firstName: '',
     email: '',
@@ -67,6 +75,14 @@ const Signup = () => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+  
+  // Resend timer countdown
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendTimer])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -94,20 +110,82 @@ const Signup = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
     setError('')
   }
-
-  const handleSubmit = async (e) => {
+  
+  // Step 1: Send OTP to email
+  const handleSendOTP = async (e) => {
     e.preventDefault()
+    
+    // Validate form
+    if (!formData.firstName.trim()) {
+      setError('Please enter your name')
+      return
+    }
+    if (!formData.email.trim()) {
+      setError('Please enter your email')
+      return
+    }
+    if (!formData.phone.trim()) {
+      setError('Please enter your phone number')
+      return
+    }
+    if (!formData.password || formData.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+    
+    setOtpSending(true)
+    setError('')
+    
+    try {
+      await sendSignupOTP(formData.email)
+      setStep(2)
+      setResendTimer(60) // 60 seconds before resend
+      setSuccess('OTP sent to your email!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setOtpSending(false)
+    }
+  }
+  
+  // Resend OTP
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return
+    
+    setOtpSending(true)
+    setError('')
+    
+    try {
+      await sendSignupOTP(formData.email)
+      setResendTimer(60)
+      setSuccess('OTP resent to your email!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setOtpSending(false)
+    }
+  }
+  
+  // Step 2: Verify OTP and create account
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault()
+    
+    if (!otp || otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP')
+      return
+    }
+    
     setLoading(true)
     setError('')
     
     try {
-      // Include referral code in signup data
       const signupData = {
         ...formData,
+        otp,
         referralCode: referralCode || undefined
       }
       
-      const response = await signup(signupData)
+      const response = await verifySignupOTP(signupData)
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
       
@@ -139,6 +217,14 @@ const Signup = () => {
     } finally {
       setLoading(false)
     }
+  }
+  
+  // Go back to form
+  const handleBack = () => {
+    setStep(1)
+    setOtp('')
+    setError('')
+    setSuccess('')
   }
 
   return (
@@ -173,126 +259,220 @@ const Signup = () => {
           </Link>
         </div>
 
-        {/* Title */}
-        <h1 className="text-2xl font-semibold text-white mb-6">Create an account</h1>
+        {/* Step 1: Registration Form */}
+        {step === 1 && (
+          <>
+            {/* Title */}
+            <h1 className="text-2xl font-semibold text-white mb-6">Create an account</h1>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name field */}
-          <input
-            type="text"
-            name="firstName"
-            placeholder="Enter your name"
-            value={formData.firstName}
-            onChange={handleChange}
-            className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
-          />
+            {/* Form */}
+            <form onSubmit={handleSendOTP} className="space-y-4">
+              {/* Name field */}
+              <input
+                type="text"
+                name="firstName"
+                placeholder="Enter your name"
+                value={formData.firstName}
+                onChange={handleChange}
+                className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+              />
 
-          {/* Email field */}
-          <div className="relative">
-            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full bg-dark-600 border border-gray-700 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
-            />
-          </div>
-
-          {/* Phone field with country selector */}
-          <div className="flex relative" ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-              className="flex items-center gap-1 sm:gap-2 bg-dark-600 border border-gray-700 rounded-l-lg px-2 sm:px-3 py-3 border-r-0 hover:bg-dark-500 transition-colors min-w-[70px] sm:min-w-[90px]"
-            >
-              <span className="text-base sm:text-lg">{selectedCountry.flag}</span>
-              <span className="text-gray-400 text-xs sm:text-sm hidden sm:inline">{selectedCountry.code}</span>
-              <ChevronDown size={14} className="text-gray-500" />
-            </button>
-            
-            {/* Country Dropdown */}
-            {showCountryDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-64 sm:w-72 bg-dark-600 border border-gray-700 rounded-lg shadow-xl z-50 max-h-64 overflow-hidden">
-                {/* Search */}
-                <div className="p-2 border-b border-gray-700">
-                  <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="Search country..."
-                      value={countrySearch}
-                      onChange={(e) => setCountrySearch(e.target.value)}
-                      className="w-full bg-dark-700 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-600"
-                    />
-                  </div>
-                </div>
-                {/* Country List */}
-                <div className="max-h-48 overflow-y-auto">
-                  {filteredCountries.map((country, index) => (
-                    <button
-                      key={`${country.code}-${index}`}
-                      type="button"
-                      onClick={() => handleCountrySelect(country)}
-                      className="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-500 transition-colors text-left"
-                    >
-                      <span className="text-lg">{country.flag}</span>
-                      <span className="text-white text-sm flex-1">{country.name}</span>
-                      <span className="text-gray-500 text-sm">{country.code}</span>
-                    </button>
-                  ))}
-                  {filteredCountries.length === 0 && (
-                    <p className="text-gray-500 text-sm text-center py-3">No countries found</p>
-                  )}
-                </div>
+              {/* Email field */}
+              <div className="relative">
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full bg-dark-600 border border-gray-700 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+                />
               </div>
-            )}
-            
-            <input
-              type="tel"
-              name="phone"
-              placeholder="Enter phone number"
-              value={formData.phone}
-              onChange={handleChange}
-              className="flex-1 bg-dark-600 border border-gray-700 rounded-r-lg px-3 sm:px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors min-w-0"
-            />
-          </div>
 
-          {/* Password field */}
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              placeholder="Create password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
-            />
+              {/* Phone field with country selector */}
+              <div className="flex relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                  className="flex items-center gap-1 sm:gap-2 bg-dark-600 border border-gray-700 rounded-l-lg px-2 sm:px-3 py-3 border-r-0 hover:bg-dark-500 transition-colors min-w-[70px] sm:min-w-[90px]"
+                >
+                  <span className="text-base sm:text-lg">{selectedCountry.flag}</span>
+                  <span className="text-gray-400 text-xs sm:text-sm hidden sm:inline">{selectedCountry.code}</span>
+                  <ChevronDown size={14} className="text-gray-500" />
+                </button>
+                
+                {/* Country Dropdown */}
+                {showCountryDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-64 sm:w-72 bg-dark-600 border border-gray-700 rounded-lg shadow-xl z-50 max-h-64 overflow-hidden">
+                    {/* Search */}
+                    <div className="p-2 border-b border-gray-700">
+                      <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="Search country..."
+                          value={countrySearch}
+                          onChange={(e) => setCountrySearch(e.target.value)}
+                          className="w-full bg-dark-700 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-600"
+                        />
+                      </div>
+                    </div>
+                    {/* Country List */}
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredCountries.map((country, index) => (
+                        <button
+                          key={`${country.code}-${index}`}
+                          type="button"
+                          onClick={() => handleCountrySelect(country)}
+                          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-500 transition-colors text-left"
+                        >
+                          <span className="text-lg">{country.flag}</span>
+                          <span className="text-white text-sm flex-1">{country.name}</span>
+                          <span className="text-gray-500 text-sm">{country.code}</span>
+                        </button>
+                      ))}
+                      {filteredCountries.length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-3">No countries found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Enter phone number"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="flex-1 bg-dark-600 border border-gray-700 rounded-r-lg px-3 sm:px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors min-w-0"
+                />
+              </div>
+
+              {/* Password field */}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Create password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {/* Error message */}
+              {error && (
+                <p className="text-red-500 text-sm">{error}</p>
+              )}
+
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={otpSending}
+                className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {otpSending ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  'Continue'
+                )}
+              </button>
+            </form>
+          </>
+        )}
+
+        {/* Step 2: OTP Verification */}
+        {step === 2 && (
+          <>
+            {/* Back button */}
             <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={handleBack}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <ArrowLeft size={18} />
+              Back
             </button>
-          </div>
 
-          {/* Error message */}
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
-          )}
+            {/* Title */}
+            <h1 className="text-2xl font-semibold text-white mb-2">Verify your email</h1>
+            <p className="text-gray-400 text-sm mb-6">
+              We've sent a 6-digit OTP to <span className="text-white">{formData.email}</span>
+            </p>
 
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors mt-2 disabled:opacity-50"
-          >
-            {loading ? 'Creating account...' : 'Create an account'}
-          </button>
-        </form>
+            {/* OTP Form */}
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
+              {/* OTP Input */}
+              <input
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  setOtp(value)
+                  setError('')
+                }}
+                className="w-full bg-dark-600 border border-gray-700 rounded-lg px-4 py-3 text-white text-center text-2xl tracking-widest placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors"
+                maxLength={6}
+                autoFocus
+              />
+
+              {/* Success message */}
+              {success && (
+                <p className="text-green-500 text-sm">{success}</p>
+              )}
+
+              {/* Error message */}
+              {error && (
+                <p className="text-red-500 text-sm">{error}</p>
+              )}
+
+              {/* Resend OTP */}
+              <div className="text-center">
+                {resendTimer > 0 ? (
+                  <p className="text-gray-500 text-sm">
+                    Resend OTP in <span className="text-white">{resendTimer}s</span>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={otpSending}
+                    className="text-orange-500 hover:text-orange-400 text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {otpSending ? 'Sending...' : 'Resend OTP'}
+                  </button>
+                )}
+              </div>
+
+              {/* Verify button */}
+              <button
+                type="submit"
+                disabled={loading || otp.length !== 6}
+                className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & Create Account'
+                )}
+              </button>
+            </form>
+          </>
+        )}
 
         {/* Terms */}
         <p className="text-center text-gray-500 text-sm mt-6">
