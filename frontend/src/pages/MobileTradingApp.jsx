@@ -54,6 +54,7 @@ const MobileTradingApp = () => {
   // iOS-style notification states
   const [notifications, setNotifications] = useState([])
   const notificationIdRef = useRef(0)
+  const [adminSpreads, setAdminSpreads] = useState({})
 
   const categories = ['All', 'Starred', 'Forex', 'Metals', 'Crypto']
 
@@ -257,20 +258,63 @@ const MobileTradingApp = () => {
       const data = await res.json()
       setAccounts(data.accounts || [])
       if (data.accounts?.length > 0) {
+        let selectedAcc = data.accounts[0]
         // If account ID is passed in URL, select that account
         if (accountIdFromUrl) {
           const accountFromUrl = data.accounts.find(acc => acc._id === accountIdFromUrl)
           if (accountFromUrl) {
-            setSelectedAccount(accountFromUrl)
-          } else {
-            setSelectedAccount(data.accounts[0])
+            selectedAcc = accountFromUrl
           }
-        } else {
-          setSelectedAccount(data.accounts[0])
+        }
+        setSelectedAccount(selectedAcc)
+        // Fetch spreads with account type
+        if (selectedAcc.accountTypeId?._id || selectedAcc.accountTypeId) {
+          fetchAdminSpreads(userId, selectedAcc.accountTypeId?._id || selectedAcc.accountTypeId)
         }
       }
     } catch (e) {}
     setLoading(false)
+  }
+
+  // Fetch admin-set spreads for instruments (based on user's account type)
+  const fetchAdminSpreads = async (userId, accountTypeId) => {
+    try {
+      let url = `${API_URL}/charges/spreads`
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      if (accountTypeId) params.append('accountTypeId', accountTypeId)
+      if (params.toString()) url += `?${params.toString()}`
+      
+      const res = await fetch(url)
+      const data = await res.json()
+      if (data.success) {
+        setAdminSpreads(data.spreads || {})
+      }
+    } catch (error) {
+      console.error('Error fetching admin spreads:', error)
+    }
+  }
+
+  // Calculate display price with admin spread applied
+  const getDisplayPrice = (symbol, side, rawBid, rawAsk) => {
+    const spreadConfig = adminSpreads[symbol]
+    if (!spreadConfig || !spreadConfig.spread) {
+      return side === 'BUY' ? rawAsk : rawBid
+    }
+    
+    const spreadValue = spreadConfig.spread
+    const spreadType = spreadConfig.spreadType || 'FIXED'
+    
+    let spread = spreadValue
+    if (spreadType === 'PERCENTAGE') {
+      spread = (rawAsk - rawBid) * (spreadValue / 100)
+    }
+    
+    if (side === 'BUY') {
+      return rawAsk + spread
+    } else {
+      return rawBid - spread
+    }
   }
 
   const fetchOpenTrades = async () => {

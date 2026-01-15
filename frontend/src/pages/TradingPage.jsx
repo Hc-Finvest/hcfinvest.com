@@ -452,10 +452,41 @@ const TradingPage = () => {
     return 'Forex'
   }
 
-  // Fetch admin-set spreads for instruments
-  const fetchAdminSpreads = async () => {
+  // Calculate display price with admin spread applied
+  // This shows users the actual execution price they'll get
+  const getDisplayPrice = (symbol, side, rawBid, rawAsk) => {
+    const spreadConfig = adminSpreads[symbol]
+    if (!spreadConfig || !spreadConfig.spread) {
+      // No admin spread configured, return raw price
+      return side === 'BUY' ? rawAsk : rawBid
+    }
+    
+    const spreadValue = spreadConfig.spread
+    const spreadType = spreadConfig.spreadType || 'FIXED'
+    
+    let spread = spreadValue
+    if (spreadType === 'PERCENTAGE') {
+      spread = (rawAsk - rawBid) * (spreadValue / 100)
+    }
+    
+    // Apply spread: BUY gets higher price, SELL gets lower price
+    if (side === 'BUY') {
+      return rawAsk + spread
+    } else {
+      return rawBid - spread
+    }
+  }
+
+  // Fetch admin-set spreads for instruments (based on user's account type)
+  const fetchAdminSpreads = async (accountTypeId = null) => {
     try {
-      const res = await fetch(`${API_URL}/charges/spreads`)
+      let url = `${API_URL}/charges/spreads`
+      const params = new URLSearchParams()
+      if (user._id) params.append('userId', user._id)
+      if (accountTypeId) params.append('accountTypeId', accountTypeId)
+      if (params.toString()) url += `?${params.toString()}`
+      
+      const res = await fetch(url)
       const data = await res.json()
       if (data.success) {
         setAdminSpreads(data.spreads || {})
@@ -960,6 +991,10 @@ const TradingPage = () => {
         if (acc) {
           setAccount(acc)
           setLeverage(acc.leverage || '1:100')
+          // Fetch spreads with account type for proper spread lookup
+          if (acc.accountTypeId?._id || acc.accountTypeId) {
+            fetchAdminSpreads(acc.accountTypeId?._id || acc.accountTypeId)
+          }
         } else {
           navigate('/account')
         }
@@ -1660,11 +1695,14 @@ const TradingPage = () => {
                     >
                       <div className="text-white text-[10px] font-medium">SELL</div>
                       <div className="text-white font-mono text-lg font-bold">
-                        {selectedInstrument.symbol?.includes('JPY') 
-                          ? selectedInstrument.bid?.toFixed(3)
-                          : ['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(selectedInstrument.symbol)
-                            ? selectedInstrument.bid?.toFixed(2)
-                            : selectedInstrument.bid?.toFixed(5)}
+                        {(() => {
+                          const price = getDisplayPrice(selectedInstrument.symbol, 'SELL', selectedInstrument.bid, selectedInstrument.ask)
+                          return selectedInstrument.symbol?.includes('JPY') 
+                            ? price?.toFixed(3)
+                            : ['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(selectedInstrument.symbol)
+                              ? price?.toFixed(2)
+                              : price?.toFixed(5)
+                        })()}
                       </div>
                     </button>
                     <button 
@@ -1674,11 +1712,14 @@ const TradingPage = () => {
                     >
                       <div className="text-white text-[10px] font-medium">BUY</div>
                       <div className="text-white font-mono text-lg font-bold">
-                        {selectedInstrument.symbol?.includes('JPY') 
-                          ? selectedInstrument.ask?.toFixed(3)
-                          : ['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(selectedInstrument.symbol)
-                            ? selectedInstrument.ask?.toFixed(2)
-                            : selectedInstrument.ask?.toFixed(5)}
+                        {(() => {
+                          const price = getDisplayPrice(selectedInstrument.symbol, 'BUY', selectedInstrument.bid, selectedInstrument.ask)
+                          return selectedInstrument.symbol?.includes('JPY') 
+                            ? price?.toFixed(3)
+                            : ['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(selectedInstrument.symbol)
+                              ? price?.toFixed(2)
+                              : price?.toFixed(5)
+                        })()}
                       </div>
                     </button>
                   </div>
@@ -1866,7 +1907,7 @@ const TradingPage = () => {
                     {isExecutingTrade ? 'Executing...' : `Open ${selectedSide} Order`}
                   </button>
                   <div className="text-center text-gray-500 text-xs mt-2">
-                    {volume} lots @ {selectedSide === 'BUY' ? selectedInstrument.ask?.toFixed(2) : selectedInstrument.bid?.toFixed(2)}
+                    {volume} lots @ {getDisplayPrice(selectedInstrument.symbol, selectedSide, selectedInstrument.bid, selectedInstrument.ask)?.toFixed(2)}
                   </div>
                 </div>
               </>
