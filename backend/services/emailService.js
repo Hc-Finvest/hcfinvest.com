@@ -5,16 +5,23 @@ import EmailLog from '../models/EmailLog.js'
 class EmailService {
   constructor() {
     this.transporter = null
+    this.initialized = false
+  }
+
+  // Read env vars lazily to ensure dotenv has loaded
+  _loadConfig() {
     this.resendApiKey = process.env.RESEND_API_KEY
     this.provider = process.env.EMAIL_PROVIDER || 'smtp'
     this.appName = process.env.APP_NAME || 'hcfinvest'
     this.fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@hcfinvest.com'
     this.fromName = process.env.SMTP_FROM_NAME || 'hcfinvest'
-    this.initialized = false
   }
 
   async initialize() {
     if (this.initialized) return
+    
+    // Load config from env vars (lazy loading to ensure dotenv has loaded)
+    this._loadConfig()
 
     try {
       switch (this.provider) {
@@ -531,18 +538,18 @@ class EmailService {
     try {
       // Resend doesn't need SMTP verification
       if (this.provider === 'resend') {
-        // Test Resend API by checking API key validity
-        const response = await fetch('https://api.resend.com/domains', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.resendApiKey}`
+        // For Resend, just check if API key is configured
+        if (this.resendApiKey) {
+          return { 
+            success: true, 
+            message: 'Resend API is configured',
+            config: {
+              provider: 'resend',
+              from: this.fromEmail
+            }
           }
-        })
-        if (response.ok) {
-          return { success: true, message: 'Resend API is ready' }
         } else {
-          const data = await response.json()
-          return { success: false, message: data.message || 'Resend API error' }
+          return { success: false, message: 'RESEND_API_KEY is not configured' }
         }
       }
       

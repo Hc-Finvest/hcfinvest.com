@@ -30,7 +30,7 @@ const emailLogSchema = new mongoose.Schema({
   },
   provider: {
     type: String,
-    enum: ['smtp', 'sendgrid', 'ses', 'brevo', 'mailgun'],
+    enum: ['smtp', 'sendgrid', 'ses', 'brevo', 'mailgun', 'resend'],
     default: 'smtp'
   },
   providerMessageId: String,
