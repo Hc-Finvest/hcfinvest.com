@@ -5,9 +5,10 @@ import EmailLog from '../models/EmailLog.js'
 class EmailService {
   constructor() {
     this.transporter = null
+    this.resendApiKey = process.env.RESEND_API_KEY
     this.provider = process.env.EMAIL_PROVIDER || 'smtp'
     this.appName = process.env.APP_NAME || 'hcfinvest'
-    this.fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@hcfinvest.com'
+    this.fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@hcfinvest.com'
     this.fromName = process.env.SMTP_FROM_NAME || 'hcfinvest'
     this.initialized = false
   }
@@ -17,6 +18,15 @@ class EmailService {
 
     try {
       switch (this.provider) {
+        case 'resend':
+          // Resend uses HTTP API, no transporter needed
+          if (!this.resendApiKey) {
+            throw new Error('RESEND_API_KEY is required for Resend provider')
+          }
+          console.log(`📧 Email Provider: Resend (HTTP API)`)
+          console.log(`📧 From: ${this.fromName} <${this.fromEmail}>`)
+          break
+
         case 'smtp':
         case 'zoho':
           const port = parseInt(process.env.SMTP_PORT) || 465
@@ -108,6 +118,34 @@ class EmailService {
     }
   }
 
+  // Send email via Resend HTTP API
+  async sendViaResend(options) {
+    const { to, toName, subject, html, text } = options
+    
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: `${this.fromName} <${this.fromEmail}>`,
+        to: [toName ? `${toName} <${to}>` : to],
+        subject,
+        html,
+        text: text || this.stripHtml(html)
+      })
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok) {
+      throw new Error(data.message || `Resend API error: ${response.status}`)
+    }
+
+    return { messageId: data.id }
+  }
+
   async sendEmail(options) {
     await this.initialize()
 
@@ -149,18 +187,25 @@ class EmailService {
     })
 
     try {
-      // Use SMTP_USER as sender to avoid relay errors
-      const senderEmail = process.env.SMTP_USER || this.fromEmail
-      const mailOptions = {
-        from: `"${this.fromName}" <${senderEmail}>`,
-        to: toName ? `"${toName}" <${to}>` : to,
-        subject,
-        html,
-        text: text || this.stripHtml(html)
-      }
+      let info
 
-      // Send email asynchronously
-      const info = await this.transporter.sendMail(mailOptions)
+      // Use Resend HTTP API if provider is 'resend'
+      if (this.provider === 'resend') {
+        info = await this.sendViaResend({ to, toName, subject, html, text })
+      } else {
+        // Use SMTP_USER as sender to avoid relay errors
+        const senderEmail = process.env.SMTP_USER || this.fromEmail
+        const mailOptions = {
+          from: `"${this.fromName}" <${senderEmail}>`,
+          to: toName ? `"${toName}" <${to}>` : to,
+          subject,
+          html,
+          text: text || this.stripHtml(html)
+        }
+
+        // Send email via SMTP
+        info = await this.transporter.sendMail(mailOptions)
+      }
 
       // Update log with success
       await EmailLog.updateStatus(emailLog._id, 'sent', {
@@ -484,6 +529,23 @@ class EmailService {
   async verifyConnection() {
     await this.initialize()
     try {
+      // Resend doesn't need SMTP verification
+      if (this.provider === 'resend') {
+        // Test Resend API by checking API key validity
+        const response = await fetch('https://api.resend.com/domains', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${this.resendApiKey}`
+          }
+        })
+        if (response.ok) {
+          return { success: true, message: 'Resend API is ready' }
+        } else {
+          const data = await response.json()
+          return { success: false, message: data.message || 'Resend API error' }
+        }
+      }
+      
       await this.transporter.verify()
       return { success: true, message: 'Email service is ready' }
     } catch (error) {
