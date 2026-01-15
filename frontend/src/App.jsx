@@ -39,6 +39,7 @@ import AdminThemeSettings from './pages/AdminThemeSettings'
 import BrandedLogin from './pages/BrandedLogin'
 import BrandedSignup from './pages/BrandedSignup'
 import AdminEmailManagement from './pages/AdminEmailManagement'
+import AdminCryptrum from './pages/AdminCryptrum'
 
 function App() {
   return (
@@ -82,6 +83,7 @@ function App() {
         <Route path="/admin/earnings" element={<AdminEarnings />} />
         <Route path="/admin/theme" element={<AdminThemeSettings />} />
         <Route path="/admin/email" element={<AdminEmailManagement />} />
+        <Route path="/admin/cryptrum" element={<AdminCryptrum />} />
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />

@@ -40,6 +40,7 @@ const TradingPage = () => {
   const [entryPrice, setEntryPrice] = useState('')
   // Initialize with default instruments immediately - no loading state
   const [instruments, setInstruments] = useState([
+    // ============ FOREX PAIRS ============
     { symbol: 'EURUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
     { symbol: 'GBPUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
     { symbol: 'USDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
@@ -50,8 +51,34 @@ const TradingPage = () => {
     { symbol: 'EURGBP', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
     { symbol: 'EURJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
     { symbol: 'GBPJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURAUD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CADJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CHFJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CADCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPAUD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    // ============ COMMODITIES / METALS ============
     { symbol: 'XAUUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: true },
     { symbol: 'XAGUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'XPTUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'XPDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'USOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'UKOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'NGAS', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'COPPER', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    // ============ CRYPTO ============
     { symbol: 'BTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: true },
     { symbol: 'ETHUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'BNBUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
@@ -64,6 +91,16 @@ const TradingPage = () => {
     { symbol: 'LTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'AVAXUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'LINKUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'UNIUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'ATOMUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'XLMUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'TRXUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'ETCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'NEARUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'ALGOUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // ============ INDICES (Working on AllTick) ============
+    { symbol: 'UK100', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'HK50', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
   ])
   const [loadingInstruments, setLoadingInstruments] = useState(true) // Start true until prices load
   const [starredSymbols, setStarredSymbols] = useState(['XAUUSD', 'EURUSD', 'GBPUSD'])
@@ -103,7 +140,7 @@ const TradingPage = () => {
   const [killSwitchTimeLeft, setKillSwitchTimeLeft] = useState('')
   const [globalNotification, setGlobalNotification] = useState('')
 
-  const categories = ['All', 'Forex', 'Metals', 'Crypto']
+  const categories = ['All', 'Forex', 'Metals', 'Crypto', 'Indices']
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -467,6 +504,20 @@ const TradingPage = () => {
     let spread = spreadValue
     if (spreadType === 'PERCENTAGE') {
       spread = (rawAsk - rawBid) * (spreadValue / 100)
+    } else {
+      // FIXED spread - convert from pips/cents to actual price units
+      // Forex: 1 pip = 0.0001 (or 0.01 for JPY pairs)
+      // Metals (Gold/Silver): value is in cents, so divide by 100
+      // Crypto: value is in USD, use as-is
+      if (symbol.includes('JPY')) {
+        spread = spreadValue * 0.01 // JPY pairs: 1 pip = 0.01
+      } else if (['XAUUSD', 'XAGUSD'].includes(symbol)) {
+        spread = spreadValue / 100 // Metals: cents to dollars
+      } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(symbol)) {
+        spread = spreadValue // Crypto: USD value as-is
+      } else {
+        spread = spreadValue * 0.0001 // Standard Forex: 1 pip = 0.0001
+      }
     }
     
     // Apply spread: BUY gets higher price, SELL gets lower price
@@ -1494,18 +1545,18 @@ const TradingPage = () => {
                       }
                       
                       return (
-                        <tr key={trade._id} className="border-t border-gray-800 hover:bg-[#1a1a1a]">
-                          <td className="py-2 px-3 text-xs">{new Date(trade.openedAt).toLocaleTimeString()}</td>
-                          <td className="py-2 px-3 text-xs font-medium">{trade.symbol}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-400' : 'text-red-400'}`}>{trade.side}</td>
-                          <td className="py-2 px-3 text-xs">{trade.quantity}</td>
-                          <td className="py-2 px-3 text-xs">{formatPrice(trade.openPrice)}</td>
-                          <td className="py-2 px-3 text-xs">{formatPrice(currentPrice)}</td>
-                          <td className="py-2 px-3 text-xs">{trade.stopLoss ? formatPrice(trade.stopLoss) : '-'}</td>
-                          <td className="py-2 px-3 text-xs">{trade.takeProfit ? formatPrice(trade.takeProfit) : '-'}</td>
-                          <td className="py-2 px-3 text-xs">${trade.commission?.toFixed(2) || '0.00'}</td>
-                          <td className="py-2 px-3 text-xs">${trade.swap?.toFixed(2) || '0.00'}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.openedAt).toLocaleTimeString()}</td>
+                          <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
+                          <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(currentPrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.stopLoss ? formatPrice(trade.stopLoss) : '-'}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.takeProfit ? formatPrice(trade.takeProfit) : '-'}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.commission?.toFixed(2) || '0.00'}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.swap?.toFixed(2) || '0.00'}</td>
+                          <td className={`py-2 px-3 text-xs font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             ${pnl.toFixed(2)}
                           </td>
                           <td className="py-2 px-3">
@@ -1536,7 +1587,7 @@ const TradingPage = () => {
 
               {activePositionTab === 'History' && (
               <table className="w-full text-sm">
-                <thead className="text-gray-500 border-b border-gray-800 sticky top-0 bg-[#0d0d0d]">
+                <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
                   <tr>
                     <th className="text-left py-2 px-3 font-normal">Closed</th>
                     <th className="text-left py-2 px-3 font-normal">Symbol</th>
@@ -1566,19 +1617,19 @@ const TradingPage = () => {
                       }
                       
                       return (
-                        <tr key={trade._id} className="border-t border-gray-800 hover:bg-[#1a1a1a]">
-                          <td className="py-2 px-3 text-xs">{new Date(trade.closedAt).toLocaleString()}</td>
-                          <td className="py-2 px-3 text-xs font-medium">{trade.symbol}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-400' : 'text-red-400'}`}>{trade.side}</td>
-                          <td className="py-2 px-3 text-xs">{trade.quantity}</td>
-                          <td className="py-2 px-3 text-xs">{formatPrice(trade.openPrice)}</td>
-                          <td className="py-2 px-3 text-xs">{formatPrice(trade.closePrice)}</td>
-                          <td className="py-2 px-3 text-xs">${trade.commission?.toFixed(2) || '0.00'}</td>
-                          <td className="py-2 px-3 text-xs">${trade.swap?.toFixed(2) || '0.00'}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${trade.realizedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.closedAt).toLocaleString()}</td>
+                          <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
+                          <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.closePrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.commission?.toFixed(2) || '0.00'}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.swap?.toFixed(2) || '0.00'}</td>
+                          <td className={`py-2 px-3 text-xs font-medium ${trade.realizedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             ${trade.realizedPnl?.toFixed(2) || '0.00'}
                           </td>
-                          <td className="py-2 px-3 text-xs text-gray-400">{trade.closedBy || 'USER'}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{trade.closedBy || 'USER'}</td>
                         </tr>
                       )
                     })
@@ -1589,7 +1640,7 @@ const TradingPage = () => {
 
               {activePositionTab === 'Pending' && (
               <table className="w-full text-sm">
-                <thead className="text-gray-500 border-b border-gray-800 sticky top-0 bg-[#0d0d0d]">
+                <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
                   <tr>
                     <th className="text-left py-2 px-3 font-normal">Time</th>
                     <th className="text-left py-2 px-3 font-normal">Symbol</th>
@@ -1608,14 +1659,14 @@ const TradingPage = () => {
                     </tr>
                   ) : (
                     pendingOrders.map(order => (
-                      <tr key={order._id} className="border-t border-gray-800 hover:bg-[#1a1a1a]">
-                        <td className="py-2 px-3 text-xs">{new Date(order.createdAt).toLocaleTimeString()}</td>
-                        <td className="py-2 px-3 text-xs font-medium">{order.symbol}</td>
-                        <td className={`py-2 px-3 text-xs font-medium ${order.orderType.includes('BUY') ? 'text-blue-400' : 'text-red-400'}`}>{order.orderType}</td>
-                        <td className="py-2 px-3 text-xs">{order.quantity}</td>
-                        <td className="py-2 px-3 text-xs">{order.pendingPrice?.toFixed(5)}</td>
-                        <td className="py-2 px-3 text-xs">{order.stopLoss || '-'}</td>
-                        <td className="py-2 px-3 text-xs">{order.takeProfit || '-'}</td>
+                      <tr key={order._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(order.createdAt).toLocaleTimeString()}</td>
+                        <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{order.symbol}</td>
+                        <td className={`py-2 px-3 text-xs font-medium ${order.orderType.includes('BUY') ? 'text-blue-500' : 'text-red-500'}`}>{order.orderType}</td>
+                        <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.quantity}</td>
+                        <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.pendingPrice?.toFixed(5)}</td>
+                        <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.stopLoss || '-'}</td>
+                        <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.takeProfit || '-'}</td>
                         <td className="py-2 px-3">
                           <button 
                             onClick={() => cancelPendingOrder(order._id)}

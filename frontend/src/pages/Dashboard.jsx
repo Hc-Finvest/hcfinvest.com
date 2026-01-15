@@ -181,43 +181,19 @@ const Dashboard = () => {
     }
   }
 
-  // Fetch crypto news
+  // Crypto news - using curated sample data
   useEffect(() => {
-    const fetchNews = async () => {
-      setNewsLoading(true)
-      try {
-        // Using CoinGecko's free API for crypto news (no API key needed)
-        const response = await fetch('https://api.coingecko.com/api/v3/news')
-        if (response.ok) {
-          const data = await response.json()
-          setNews(data.data?.slice(0, 6) || [])
-        } else {
-          // Fallback sample news if API fails
-          setNews([
-            { title: 'Bitcoin Surges Past $100K Milestone', description: 'BTC reaches new all-time high amid institutional buying', updated_at: Date.now(), url: '#' },
-            { title: 'Ethereum 2.0 Staking Rewards Increase', description: 'ETH staking yields hit 5.2% APY', updated_at: Date.now() - 3600000, url: '#' },
-            { title: 'SEC Approves New Crypto ETFs', description: 'Multiple spot crypto ETFs get regulatory approval', updated_at: Date.now() - 7200000, url: '#' },
-            { title: 'DeFi Total Value Locked Hits $200B', description: 'Decentralized finance continues rapid growth', updated_at: Date.now() - 10800000, url: '#' },
-            { title: 'Major Bank Launches Crypto Custody', description: 'Traditional finance embraces digital assets', updated_at: Date.now() - 14400000, url: '#' },
-            { title: 'NFT Market Shows Recovery Signs', description: 'Trading volume up 40% month-over-month', updated_at: Date.now() - 18000000, url: '#' },
-          ])
-        }
-      } catch (error) {
-        // Fallback sample news
-        setNews([
-          { title: 'Bitcoin Surges Past $100K Milestone', description: 'BTC reaches new all-time high amid institutional buying', updated_at: Date.now(), url: '#' },
-          { title: 'Ethereum 2.0 Staking Rewards Increase', description: 'ETH staking yields hit 5.2% APY', updated_at: Date.now() - 3600000, url: '#' },
-          { title: 'SEC Approves New Crypto ETFs', description: 'Multiple spot crypto ETFs get regulatory approval', updated_at: Date.now() - 7200000, url: '#' },
-          { title: 'DeFi Total Value Locked Hits $200B', description: 'Decentralized finance continues rapid growth', updated_at: Date.now() - 10800000, url: '#' },
-          { title: 'Major Bank Launches Crypto Custody', description: 'Traditional finance embraces digital assets', updated_at: Date.now() - 14400000, url: '#' },
-          { title: 'NFT Market Shows Recovery Signs', description: 'Trading volume up 40% month-over-month', updated_at: Date.now() - 18000000, url: '#' },
-        ])
-      }
-      setNewsLoading(false)
-    }
-    fetchNews()
-    const interval = setInterval(fetchNews, 300000) // Refresh every 5 minutes
-    return () => clearInterval(interval)
+    setNewsLoading(true)
+    // Sample crypto news (replace with real API if you have a valid key)
+    setNews([
+      { title: 'Bitcoin Surges Past $100K Milestone', description: 'BTC reaches new all-time high amid institutional buying', updated_at: Date.now(), url: '#' },
+      { title: 'Ethereum 2.0 Staking Rewards Increase', description: 'ETH staking yields hit 5.2% APY', updated_at: Date.now() - 3600000, url: '#' },
+      { title: 'SEC Approves New Crypto ETFs', description: 'Multiple spot crypto ETFs get regulatory approval', updated_at: Date.now() - 7200000, url: '#' },
+      { title: 'DeFi Total Value Locked Hits $200B', description: 'Decentralized finance continues rapid growth', updated_at: Date.now() - 10800000, url: '#' },
+      { title: 'Major Bank Launches Crypto Custody', description: 'Traditional finance embraces digital assets', updated_at: Date.now() - 14400000, url: '#' },
+      { title: 'NFT Market Shows Recovery Signs', description: 'Trading volume up 40% month-over-month', updated_at: Date.now() - 18000000, url: '#' },
+    ])
+    setNewsLoading(false)
   }, [])
 
   // Economic calendar events
@@ -238,39 +214,19 @@ const Dashboard = () => {
     setEventsLoading(false)
   }, [])
 
-  // Fetch market news from free API
+  // Market news - using curated sample data
   useEffect(() => {
-    const fetchMarketNews = async () => {
-      try {
-        // Using NewsData.io free tier or fallback to sample data
-        const response = await fetch('https://newsdata.io/api/1/news?apikey=pub_63aboreal&q=forex%20OR%20currency%20OR%20trading&language=en&category=business')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.results && data.results.length > 0) {
-            setMarketNews(data.results.slice(0, 10))
-            return
-          }
-        }
-      } catch (error) {
-        console.log('Using fallback news data')
-      }
-      
-      // Fallback sample news with images
-      setMarketNews([
-        { title: 'EUR/USD Breaks Key Resistance Level', description: 'Euro surges against dollar amid ECB hawkish stance', image_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'Fed Signals Potential Rate Cuts in 2026', description: 'Federal Reserve hints at monetary policy shift', image_url: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'GBP/JPY Volatility Spikes on BOJ News', description: 'Bank of Japan policy decision creates market turbulence', image_url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'Gold Prices Hit New Record High', description: 'Safe-haven demand drives precious metals rally', image_url: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'Oil Markets React to OPEC+ Decision', description: 'Crude prices fluctuate on production cut news', image_url: 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'USD/CHF Tests Critical Support Zone', description: 'Swiss franc strengthens on risk-off sentiment', image_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'AUD/USD Rallies on China Data', description: 'Australian dollar gains on positive trade figures', image_url: 'https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?w=400', pubDate: new Date().toISOString(), link: '#' },
-        { title: 'Crypto Markets Show Correlation with Forex', description: 'Bitcoin movements mirror dollar index trends', image_url: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=400', pubDate: new Date().toISOString(), link: '#' },
-      ])
-    }
-    
-    fetchMarketNews()
-    const interval = setInterval(fetchMarketNews, 600000) // Refresh every 10 minutes
-    return () => clearInterval(interval)
+    // Sample market news with images (replace with real API if you have a valid key)
+    setMarketNews([
+      { title: 'EUR/USD Breaks Key Resistance Level', description: 'Euro surges against dollar amid ECB hawkish stance', image_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'Fed Signals Potential Rate Cuts in 2026', description: 'Federal Reserve hints at monetary policy shift', image_url: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'GBP/JPY Volatility Spikes on BOJ News', description: 'Bank of Japan policy decision creates market turbulence', image_url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'Gold Prices Hit New Record High', description: 'Safe-haven demand drives precious metals rally', image_url: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'Oil Markets React to OPEC+ Decision', description: 'Crude prices fluctuate on production cut news', image_url: 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'USD/CHF Tests Critical Support Zone', description: 'Swiss franc strengthens on risk-off sentiment', image_url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'AUD/USD Rallies on China Data', description: 'Australian dollar gains on positive trade figures', image_url: 'https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?w=400', pubDate: new Date().toISOString(), link: '#' },
+      { title: 'Crypto Markets Show Correlation with Forex', description: 'Bitcoin movements mirror dollar index trends', image_url: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=400', pubDate: new Date().toISOString(), link: '#' },
+    ])
   }, [])
 
   // Auto-slide news
@@ -325,15 +281,35 @@ const Dashboard = () => {
     navigate('/user/login')
   }
 
-  // Load TradingView widgets
+  // Load TradingView widgets with proper initialization
   useEffect(() => {
-    // TradingView Timeline Widget (News)
-    if (tradingViewRef.current) {
-      tradingViewRef.current.innerHTML = ''
+    // Helper function to safely load TradingView widget
+    const loadWidget = (containerRef, scriptSrc, config) => {
+      if (!containerRef.current) return
+      
+      // Clear previous content
+      containerRef.current.innerHTML = ''
+      
+      // Create the inner widget container that TradingView expects
+      const widgetContainer = document.createElement('div')
+      widgetContainer.className = 'tradingview-widget-container__widget'
+      widgetContainer.style.height = '100%'
+      widgetContainer.style.width = '100%'
+      containerRef.current.appendChild(widgetContainer)
+      
+      // Create and append the script
       const script = document.createElement('script')
-      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js'
+      script.src = scriptSrc
       script.async = true
-      script.innerHTML = JSON.stringify({
+      script.type = 'text/javascript'
+      script.innerHTML = JSON.stringify(config)
+      containerRef.current.appendChild(script)
+    }
+
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      // TradingView Timeline Widget (News)
+      loadWidget(tradingViewRef, 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js', {
         "feedMode": "all_symbols",
         "colorTheme": "dark",
         "isTransparent": true,
@@ -342,16 +318,9 @@ const Dashboard = () => {
         "height": "100%",
         "locale": "en"
       })
-      tradingViewRef.current.appendChild(script)
-    }
 
-    // TradingView Economic Calendar Widget
-    if (economicCalendarRef.current) {
-      economicCalendarRef.current.innerHTML = ''
-      const script = document.createElement('script')
-      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js'
-      script.async = true
-      script.innerHTML = JSON.stringify({
+      // TradingView Economic Calendar Widget
+      loadWidget(economicCalendarRef, 'https://s3.tradingview.com/external-embedding/embed-widget-events.js', {
         "colorTheme": "dark",
         "isTransparent": true,
         "width": "100%",
@@ -360,16 +329,9 @@ const Dashboard = () => {
         "importanceFilter": "0,1",
         "countryFilter": "us,eu,gb,jp,cn"
       })
-      economicCalendarRef.current.appendChild(script)
-    }
 
-    // TradingView Forex Heatmap Widget
-    if (forexHeatmapRef.current) {
-      forexHeatmapRef.current.innerHTML = ''
-      const script = document.createElement('script')
-      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-forex-heat-map.js'
-      script.async = true
-      script.innerHTML = JSON.stringify({
+      // TradingView Forex Heatmap Widget
+      loadWidget(forexHeatmapRef, 'https://s3.tradingview.com/external-embedding/embed-widget-forex-heat-map.js', {
         "width": "100%",
         "height": "100%",
         "currencies": ["EUR", "USD", "JPY", "GBP", "CHF", "AUD", "CAD", "NZD"],
@@ -377,16 +339,9 @@ const Dashboard = () => {
         "colorTheme": "dark",
         "locale": "en"
       })
-      forexHeatmapRef.current.appendChild(script)
-    }
 
-    // TradingView Forex Screener Widget
-    if (forexScreenerRef.current) {
-      forexScreenerRef.current.innerHTML = ''
-      const script = document.createElement('script')
-      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-screener.js'
-      script.async = true
-      script.innerHTML = JSON.stringify({
+      // TradingView Forex Screener Widget
+      loadWidget(forexScreenerRef, 'https://s3.tradingview.com/external-embedding/embed-widget-screener.js', {
         "width": "100%",
         "height": "100%",
         "defaultColumn": "overview",
@@ -397,8 +352,9 @@ const Dashboard = () => {
         "locale": "en",
         "isTransparent": true
       })
-      forexScreenerRef.current.appendChild(script)
-    }
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [])
 
   return (

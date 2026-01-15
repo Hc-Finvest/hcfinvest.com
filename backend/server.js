@@ -25,8 +25,10 @@ import themeRoutes from './routes/theme.js'
 import adminManagementRoutes from './routes/adminManagement.js'
 import uploadRoutes from './routes/upload.js'
 import emailRoutes from './routes/email.js'
+import cryptrumRoutes from './routes/cryptrum.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import marketDataService from './services/marketDataService.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -48,93 +50,38 @@ const io = new Server(httpServer, {
 const connectedClients = new Map()
 const priceSubscribers = new Set()
 
-// Price cache for real-time streaming
+// Price cache for real-time streaming (populated by AllTick via marketDataService)
 const priceCache = new Map()
-const BINANCE_SYMBOLS = {
-  'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
-  'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT',
-  'DOGEUSD': 'DOGEUSDT', 'DOTUSD': 'DOTUSDT', 'LTCUSD': 'LTCUSDT'
-}
-// Priority order - XAUUSD first as it's most traded
-const METAAPI_SYMBOLS = ['XAUUSD', 'EURUSD', 'GBPUSD', 'XAGUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY']
-const META_API_TOKEN = process.env.META_API_TOKEN || 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiJiYmRlZGVjYWJjMDAzOTczNTQ3ODk2Y2NlYjgyNzY2NSIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiXSwicmVzb3VyY2VzIjpbImFjY291bnQ6JFVTRVJfSUQkOjVmYTc1OGVjLWIyNDEtNGM5Ny04MWM0LTlkZTNhM2JjMWYwNCJdfV0sImlhdCI6MTc2ODIxODA3MSwiZXhwIjoxNzc1OTk0MDcxfQ.stub'
-const META_API_ACCOUNT_ID = process.env.META_API_ACCOUNT_ID || '5fa758ec-b241-4c97-81c4-9de3a3bc1f04'
 
-// Fetch MetaAPI price
-async function fetchMetaApiPrice(symbol) {
-  try {
-    const response = await fetch(
-      `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${META_API_ACCOUNT_ID}/symbols/${symbol}/current-price`,
-      { headers: { 'auth-token': META_API_TOKEN, 'Content-Type': 'application/json' } }
-    )
-    if (!response.ok) return null
-    const data = await response.json()
-    return data.bid ? { bid: data.bid, ask: data.ask || data.bid, time: Date.now() } : null
-  } catch (e) { return null }
-}
+// Initialize AllTick market data connection
+console.log('[Server] Initializing AllTick market data service...')
+marketDataService.connect()
 
-// Background price streaming - runs every 500ms for Binance, every 3s for MetaAPI
-let lastMetaApiRefresh = 0
-let metaApiIndex = 0
-async function streamPrices() {
+// Subscribe to price updates from AllTick and update cache
+marketDataService.addSubscriber((symbol, priceData) => {
+  priceCache.set(symbol, priceData)
+})
+
+// Broadcast prices to connected clients every 500ms
+setInterval(() => {
   if (priceSubscribers.size === 0) return
   
   const now = Date.now()
-  const updatedPrices = {}
+  const allPrices = marketDataService.getAllPrices()
   
-  // Binance - fast refresh (every call)
-  try {
-    const response = await fetch('https://api.binance.com/api/v3/ticker/bookTicker')
-    if (response.ok) {
-      const tickers = await response.json()
-      const tickerMap = {}
-      tickers.forEach(t => { tickerMap[t.symbol] = t })
-      
-      Object.keys(BINANCE_SYMBOLS).forEach(symbol => {
-        const ticker = tickerMap[BINANCE_SYMBOLS[symbol]]
-        if (ticker) {
-          const price = { bid: parseFloat(ticker.bidPrice), ask: parseFloat(ticker.askPrice), time: now }
-          priceCache.set(symbol, price)
-          updatedPrices[symbol] = price
-        }
-      })
-    }
-  } catch (e) {}
-  
-  // MetaAPI - fetch 3 symbols every 3 seconds (rate limit friendly)
-  if (now - lastMetaApiRefresh > 3000) {
-    lastMetaApiRefresh = now
-    
-    // Always fetch XAUUSD (index 0) plus 2 rotating symbols
-    const symbolsToFetch = ['XAUUSD']
-    const otherSymbols = METAAPI_SYMBOLS.slice(1) // All except XAUUSD
-    symbolsToFetch.push(otherSymbols[metaApiIndex % otherSymbols.length])
-    symbolsToFetch.push(otherSymbols[(metaApiIndex + 1) % otherSymbols.length])
-    metaApiIndex = (metaApiIndex + 2) % otherSymbols.length
-    
-    // Fetch in parallel for speed
-    const results = await Promise.allSettled(
-      symbolsToFetch.map(symbol => fetchMetaApiPrice(symbol))
-    )
-    
-    results.forEach((result, i) => {
-      if (result.status === 'fulfilled' && result.value) {
-        priceCache.set(symbolsToFetch[i], result.value)
-        updatedPrices[symbolsToFetch[i]] = result.value
-      }
-    })
-  }
-  
-  // Always broadcast full cache so clients have all prices
-  io.to('prices').emit('priceStream', {
-    prices: Object.fromEntries(priceCache),
-    updated: updatedPrices,
-    timestamp: now
+  // Update local cache
+  Object.entries(allPrices).forEach(([symbol, price]) => {
+    priceCache.set(symbol, price)
   })
-}
-
-// Start price streaming interval
-setInterval(streamPrices, 500)
+  
+  // Broadcast to all price subscribers
+  io.to('prices').emit('priceStream', {
+    prices: allPrices,
+    updated: allPrices,
+    timestamp: now,
+    provider: 'alltick'
+  })
+}, 500)
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
@@ -232,6 +179,7 @@ app.use('/api/theme', themeRoutes)
 app.use('/api/admin-mgmt', adminManagementRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/email', emailRoutes)
+app.use('/api/cryptrum', cryptrumRoutes)
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))

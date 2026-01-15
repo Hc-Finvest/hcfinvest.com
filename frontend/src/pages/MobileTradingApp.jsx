@@ -308,6 +308,17 @@ const MobileTradingApp = () => {
     let spread = spreadValue
     if (spreadType === 'PERCENTAGE') {
       spread = (rawAsk - rawBid) * (spreadValue / 100)
+    } else {
+      // FIXED spread - convert from pips/cents to actual price units
+      if (symbol.includes('JPY')) {
+        spread = spreadValue * 0.01 // JPY pairs: 1 pip = 0.01
+      } else if (['XAUUSD', 'XAGUSD'].includes(symbol)) {
+        spread = spreadValue / 100 // Metals: cents to dollars
+      } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(symbol)) {
+        spread = spreadValue // Crypto: USD value as-is
+      } else {
+        spread = spreadValue * 0.0001 // Standard Forex: 1 pip = 0.0001
+      }
     }
     
     if (side === 'BUY') {
@@ -1108,10 +1119,22 @@ const MobileTradingApp = () => {
                       {trade.realizedPnl >= 0 ? '+' : ''}${trade.realizedPnl?.toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                     <span>{trade.quantity} lots</span>
                     <span>{new Date(trade.closedAt).toLocaleDateString()}</span>
                   </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-400">Open: <span className="text-white">{trade.openPrice?.toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</span></span>
+                      <span className="text-gray-400">Close: <span className="text-white">{trade.closePrice?.toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</span></span>
+                    </div>
+                  </div>
+                  {(trade.commission > 0 || trade.swap !== 0) && (
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                      {trade.commission > 0 && <span>Comm: ${trade.commission?.toFixed(2)}</span>}
+                      {trade.swap !== 0 && <span>Swap: ${trade.swap?.toFixed(2)}</span>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

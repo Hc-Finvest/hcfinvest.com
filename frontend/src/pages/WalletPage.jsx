@@ -31,7 +31,9 @@ import {
   Image,
   BookOpen,
   Sun,
-  Moon
+  Moon,
+  Bitcoin,
+  ExternalLink
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
@@ -60,6 +62,25 @@ const WalletPage = () => {
   const [screenshotPreview, setScreenshotPreview] = useState(null)
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false)
   const fileInputRef = useRef(null)
+  
+  // Cryptrum state
+  const [cryptrumAvailable, setCryptrumAvailable] = useState(false)
+  const [cryptrumConfig, setCryptrumConfig] = useState(null)
+  const [showCryptrumModal, setShowCryptrumModal] = useState(false)
+  const [cryptrumAmount, setCryptrumAmount] = useState('')
+  const [cryptrumLoading, setCryptrumLoading] = useState(false)
+  const [cryptrumPayment, setCryptrumPayment] = useState(null)
+  
+  // Crypto withdrawal state
+  const [cryptoWithdrawAvailable, setCryptoWithdrawAvailable] = useState(false)
+  const [cryptoWithdrawConfig, setCryptoWithdrawConfig] = useState(null)
+  const [showCryptoWithdrawModal, setShowCryptoWithdrawModal] = useState(false)
+  const [cryptoWithdrawForm, setCryptoWithdrawForm] = useState({
+    amount: '',
+    cryptoCurrency: 'USDT',
+    walletAddress: ''
+  })
+  const [cryptoWithdrawLoading, setCryptoWithdrawLoading] = useState(false)
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -126,7 +147,139 @@ const WalletPage = () => {
     }
     fetchPaymentMethods()
     fetchCurrencies()
+    fetchCryptrumStatus()
+    fetchCryptoWithdrawStatus()
   }, [user._id])
+
+  // Check Cryptrum deposit availability
+  const fetchCryptrumStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/cryptrum/status`)
+      const data = await res.json()
+      if (data.success && data.available) {
+        setCryptrumAvailable(true)
+        setCryptrumConfig(data)
+      }
+    } catch (error) {
+      console.error('Cryptrum status check failed:', error)
+    }
+  }
+
+  // Check Crypto withdrawal availability
+  const fetchCryptoWithdrawStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/cryptrum/withdraw/status`)
+      const data = await res.json()
+      if (data.success && data.available) {
+        setCryptoWithdrawAvailable(true)
+        setCryptoWithdrawConfig(data)
+      }
+    } catch (error) {
+      console.error('Crypto withdraw status check failed:', error)
+    }
+  }
+
+  // Handle Crypto withdrawal request
+  const handleCryptoWithdraw = async () => {
+    if (!cryptoWithdrawForm.amount || parseFloat(cryptoWithdrawForm.amount) <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+    if (!cryptoWithdrawForm.walletAddress) {
+      setError('Please enter your wallet address')
+      return
+    }
+
+    const amount = parseFloat(cryptoWithdrawForm.amount)
+    
+    if (cryptoWithdrawConfig?.minWithdrawal && amount < cryptoWithdrawConfig.minWithdrawal) {
+      setError(`Minimum withdrawal is $${cryptoWithdrawConfig.minWithdrawal}`)
+      return
+    }
+    if (cryptoWithdrawConfig?.maxWithdrawal && amount > cryptoWithdrawConfig.maxWithdrawal) {
+      setError(`Maximum withdrawal is $${cryptoWithdrawConfig.maxWithdrawal}`)
+      return
+    }
+    if (amount > (wallet?.balance || 0)) {
+      setError('Insufficient balance')
+      return
+    }
+
+    setCryptoWithdrawLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch(`${API_URL}/cryptrum/withdraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          amount,
+          cryptoCurrency: cryptoWithdrawForm.cryptoCurrency,
+          walletAddress: cryptoWithdrawForm.walletAddress
+        })
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        setSuccess('Withdrawal request submitted! Pending approval.')
+        setShowCryptoWithdrawModal(false)
+        setCryptoWithdrawForm({ amount: '', cryptoCurrency: 'USDT', walletAddress: '' })
+        fetchWallet()
+        fetchTransactions()
+      } else {
+        setError(data.message || 'Failed to submit withdrawal request')
+      }
+    } catch (error) {
+      setError('Error submitting withdrawal request')
+    }
+    setCryptoWithdrawLoading(false)
+  }
+
+  // Handle Cryptrum deposit
+  const handleCryptrumDeposit = async () => {
+    if (!cryptrumAmount || parseFloat(cryptrumAmount) <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+
+    const amount = parseFloat(cryptrumAmount)
+    if (cryptrumConfig?.minDeposit && amount < cryptrumConfig.minDeposit) {
+      setError(`Minimum deposit is $${cryptrumConfig.minDeposit}`)
+      return
+    }
+    if (cryptrumConfig?.maxDeposit && amount > cryptrumConfig.maxDeposit) {
+      setError(`Maximum deposit is $${cryptrumConfig.maxDeposit}`)
+      return
+    }
+
+    setCryptrumLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch(`${API_URL}/cryptrum/deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          amount: amount,
+          currency: 'USD',
+          cryptoCurrency: 'USDT'
+        })
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        setCryptrumPayment(data.transaction)
+        setSuccess('Payment request created! Complete the payment using the details below.')
+      } else {
+        setError(data.message || 'Failed to create payment request')
+      }
+    } catch (error) {
+      setError('Error creating payment request')
+    }
+    setCryptrumLoading(false)
+  }
 
   const fetchCurrencies = async () => {
     try {
@@ -463,7 +616,7 @@ const WalletPage = () => {
                   </div>
                 </div>
               </div>
-              <div className={`flex gap-2 ${isMobile ? 'mt-4' : ''}`}>
+              <div className={`flex gap-2 ${isMobile ? 'mt-4 flex-wrap' : ''}`}>
                 <button
                   onClick={() => {
                     setShowDepositModal(true)
@@ -473,6 +626,19 @@ const WalletPage = () => {
                 >
                   <ArrowDownCircle size={isMobile ? 16 : 20} /> Deposit
                 </button>
+                {cryptrumAvailable && (
+                  <button
+                    onClick={() => {
+                      setShowCryptrumModal(true)
+                      setCryptrumPayment(null)
+                      setCryptrumAmount('')
+                      setError('')
+                    }}
+                    className={`flex items-center gap-2 bg-orange-500 text-white font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg hover:bg-orange-600 transition-colors`}
+                  >
+                    <Bitcoin size={isMobile ? 16 : 20} /> Crypto
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setShowWithdrawModal(true)
@@ -482,6 +648,18 @@ const WalletPage = () => {
                 >
                   <ArrowUpCircle size={isMobile ? 16 : 20} /> Withdraw
                 </button>
+                {cryptoWithdrawAvailable && (
+                  <button
+                    onClick={() => {
+                      setShowCryptoWithdrawModal(true)
+                      setCryptoWithdrawForm({ amount: '', cryptoCurrency: 'USDT', walletAddress: '' })
+                      setError('')
+                    }}
+                    className={`flex items-center gap-2 bg-purple-600 text-white font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg hover:bg-purple-700 transition-colors`}
+                  >
+                    <Bitcoin size={isMobile ? 16 : 20} /> Crypto Withdraw
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -875,6 +1053,275 @@ const WalletPage = () => {
                 Submit Withdrawal
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cryptrum Crypto Deposit Modal */}
+      {showCryptrumModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-xl p-4 sm:p-6 w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                  <Bitcoin size={20} className="text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-lg">Crypto Deposit</h3>
+                  <p className="text-gray-500 text-xs">via Cryptrum</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowCryptrumModal(false)
+                  setCryptrumPayment(null)
+                  setCryptrumAmount('')
+                  setError('')
+                  setSuccess('')
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {error && <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">{error}</div>}
+            {success && <div className="mb-4 p-3 bg-green-500/20 text-green-400 rounded-lg text-sm">{success}</div>}
+
+            {!cryptrumPayment ? (
+              <>
+                <div className="mb-4">
+                  <label className="block text-gray-400 text-sm mb-2">Amount (USD)</label>
+                  <input
+                    type="number"
+                    value={cryptrumAmount}
+                    onChange={(e) => setCryptrumAmount(e.target.value)}
+                    placeholder={`Min: $${cryptrumConfig?.minDeposit || 10}`}
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                  />
+                  {cryptrumConfig && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      Min: ${cryptrumConfig.minDeposit} • Max: ${cryptrumConfig.maxDeposit}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mb-4 p-3 bg-dark-700 rounded-lg">
+                  <p className="text-gray-400 text-sm mb-2">Supported Cryptocurrencies:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['USDT', 'BTC', 'ETH', 'USDC'].map(crypto => (
+                      <span key={crypto} className="px-2 py-1 bg-dark-600 text-white text-xs rounded">
+                        {crypto}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCryptrumModal(false)
+                      setCryptrumAmount('')
+                      setError('')
+                    }}
+                    className="flex-1 bg-dark-700 text-white py-3 rounded-lg hover:bg-dark-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCryptrumDeposit}
+                    disabled={cryptrumLoading || !cryptrumAmount}
+                    className="flex-1 bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {cryptrumLoading ? (
+                      <><RefreshCw size={16} className="animate-spin" /> Processing...</>
+                    ) : (
+                      'Continue to Payment'
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center mb-4">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Check size={32} className="text-green-500" />
+                  </div>
+                  <p className="text-white font-medium">Payment Request Created</p>
+                  <p className="text-gray-400 text-sm">Complete the payment using the details below</p>
+                </div>
+
+                <div className="bg-dark-700 rounded-lg p-4 mb-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Amount:</span>
+                    <span className="text-white font-medium">${cryptrumPayment.amount}</span>
+                  </div>
+                  {cryptrumPayment.cryptoAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400 text-sm">Crypto Amount:</span>
+                      <span className="text-white font-medium">{cryptrumPayment.cryptoAmount} {cryptrumPayment.cryptoCurrency}</span>
+                    </div>
+                  )}
+                  {cryptrumPayment.paymentAddress && (
+                    <div>
+                      <span className="text-gray-400 text-sm block mb-1">Payment Address:</span>
+                      <div className="bg-dark-600 p-2 rounded text-xs text-white break-all font-mono">
+                        {cryptrumPayment.paymentAddress}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Status:</span>
+                    <span className="text-yellow-500 font-medium flex items-center gap-1">
+                      <Clock size={14} /> Pending
+                    </span>
+                  </div>
+                </div>
+
+                {cryptrumPayment.paymentUrl && (
+                  <a
+                    href={cryptrumPayment.paymentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 mb-3"
+                  >
+                    <ExternalLink size={18} /> Open Payment Page
+                  </a>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowCryptrumModal(false)
+                    setCryptrumPayment(null)
+                    setCryptrumAmount('')
+                    setSuccess('')
+                    fetchWallet()
+                    fetchTransactions()
+                  }}
+                  className="w-full bg-dark-700 text-white py-3 rounded-lg hover:bg-dark-600 transition-colors"
+                >
+                  Close
+                </button>
+
+                <p className="text-gray-500 text-xs text-center mt-3">
+                  Your wallet will be credited automatically once payment is confirmed.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Crypto Withdrawal Modal */}
+      {showCryptoWithdrawModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-xl p-4 sm:p-6 w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                  <Bitcoin size={20} className="text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-lg">Crypto Withdrawal</h3>
+                  <p className="text-gray-500 text-xs">Withdraw to your crypto wallet</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowCryptoWithdrawModal(false)
+                  setCryptoWithdrawForm({ amount: '', cryptoCurrency: 'USDT', walletAddress: '' })
+                  setError('')
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {error && <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">{error}</div>}
+
+            <div className="mb-4 p-3 bg-dark-700 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Available Balance:</span>
+                <span className="text-white font-bold">${wallet?.balance?.toFixed(2) || '0.00'}</span>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-400 text-sm mb-2">Amount (USD)</label>
+              <input
+                type="number"
+                value={cryptoWithdrawForm.amount}
+                onChange={(e) => setCryptoWithdrawForm({ ...cryptoWithdrawForm, amount: e.target.value })}
+                placeholder={`Min: $${cryptoWithdrawConfig?.minWithdrawal || 10}`}
+                className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+              />
+              {cryptoWithdrawConfig && (
+                <p className="text-gray-500 text-xs mt-1">
+                  Min: ${cryptoWithdrawConfig.minWithdrawal} • Max: ${cryptoWithdrawConfig.maxWithdrawal}
+                </p>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-400 text-sm mb-2">Cryptocurrency</label>
+              <select
+                value={cryptoWithdrawForm.cryptoCurrency}
+                onChange={(e) => setCryptoWithdrawForm({ ...cryptoWithdrawForm, cryptoCurrency: e.target.value })}
+                className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value="USDT">USDT (Tether)</option>
+                <option value="BTC">BTC (Bitcoin)</option>
+                <option value="ETH">ETH (Ethereum)</option>
+                <option value="USDC">USDC</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-400 text-sm mb-2">Your Wallet Address</label>
+              <input
+                type="text"
+                value={cryptoWithdrawForm.walletAddress}
+                onChange={(e) => setCryptoWithdrawForm({ ...cryptoWithdrawForm, walletAddress: e.target.value })}
+                placeholder="Enter your crypto wallet address"
+                className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 font-mono text-sm"
+              />
+              <p className="text-yellow-500 text-xs mt-1">⚠️ Double-check your wallet address. Incorrect addresses cannot be recovered.</p>
+            </div>
+
+            {cryptoWithdrawConfig?.requireKYC && (
+              <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-500 text-sm">KYC verification required for withdrawals</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCryptoWithdrawModal(false)
+                  setCryptoWithdrawForm({ amount: '', cryptoCurrency: 'USDT', walletAddress: '' })
+                  setError('')
+                }}
+                className="flex-1 bg-dark-700 text-white py-3 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCryptoWithdraw}
+                disabled={cryptoWithdrawLoading || !cryptoWithdrawForm.amount || !cryptoWithdrawForm.walletAddress}
+                className="flex-1 bg-purple-600 text-white font-medium py-3 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {cryptoWithdrawLoading ? (
+                  <><RefreshCw size={16} className="animate-spin" /> Processing...</>
+                ) : (
+                  'Submit Withdrawal'
+                )}
+              </button>
+            </div>
+
+            <p className="text-gray-500 text-xs text-center mt-3">
+              Withdrawals require admin approval and may take 1-24 hours to process.
+            </p>
           </div>
         </div>
       )}

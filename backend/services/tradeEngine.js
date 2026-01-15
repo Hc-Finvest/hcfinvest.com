@@ -380,23 +380,10 @@ class TradeEngine {
       console.error('Error processing IB commission:', ibError)
     }
 
-    // Close follower trades if this is a master trade
-    this.closeFollowerTradesAsync(trade._id, closePrice)
+    // Note: Follower trade closing is handled by the route layer to avoid circular calls
+    // Do NOT call closeFollowerTrades here - it's called from trade.js route
 
     return { trade, realizedPnl }
-  }
-
-  // Async close follower trades (non-blocking)
-  async closeFollowerTradesAsync(masterTradeId, closePrice) {
-    try {
-      const copyTradingEngine = (await import('./copyTradingEngine.js')).default
-      const results = await copyTradingEngine.closeFollowerTrades(masterTradeId, closePrice)
-      if (results.length > 0) {
-        console.log(`Closed ${results.length} follower trades for master trade ${masterTradeId}`)
-      }
-    } catch (error) {
-      console.error('Error closing follower trades:', error)
-    }
   }
 
   // Modify trade SL/TP

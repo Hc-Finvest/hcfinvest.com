@@ -44,6 +44,14 @@ const ProfilePage = () => {
   })
   const [bankLoading, setBankLoading] = useState(false)
 
+  // Security State
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showLoginHistoryModal, setShowLoginHistoryModal] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' })
+  const [loginHistory, setLoginHistory] = useState([])
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
@@ -126,6 +134,61 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error deleting bank account:', error)
+    }
+  }
+
+  // Change Password
+  const handleChangePassword = async () => {
+    setPasswordMessage({ type: '', text: '' })
+    
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'All fields are required' })
+      return
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'New password must be at least 6 characters' })
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'New passwords do not match' })
+      return
+    }
+
+    setPasswordLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: storedUser._id,
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPasswordMessage({ type: 'success', text: 'Password changed successfully!' })
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setTimeout(() => setShowPasswordModal(false), 1500)
+      } else {
+        setPasswordMessage({ type: 'error', text: data.message || 'Failed to change password' })
+      }
+    } catch (error) {
+      setPasswordMessage({ type: 'error', text: 'Error changing password' })
+    }
+    setPasswordLoading(false)
+  }
+
+  // Fetch Login History
+  const fetchLoginHistory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/login-history/${storedUser._id}`)
+      const data = await res.json()
+      if (data.success) {
+        setLoginHistory(data.history || [])
+      }
+    } catch (error) {
+      console.error('Error fetching login history:', error)
     }
   }
   
@@ -1040,27 +1103,136 @@ const ProfilePage = () => {
                     <p className="text-white">Password</p>
                     <p className="text-gray-500 text-sm">Last changed: Never</p>
                   </div>
-                  <button className="text-accent-green hover:underline text-sm">Change Password</button>
+                  <button onClick={() => setShowPasswordModal(true)} className="text-accent-green hover:underline text-sm">Change Password</button>
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-gray-700">
                   <div>
                     <p className="text-white">Two-Factor Authentication</p>
                     <p className="text-gray-500 text-sm">Add an extra layer of security</p>
                   </div>
-                  <button className="text-accent-green hover:underline text-sm">Enable</button>
+                  <button onClick={() => alert('Two-Factor Authentication coming soon!')} className="text-accent-green hover:underline text-sm">Enable</button>
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-white">Login History</p>
                     <p className="text-gray-500 text-sm">View recent login activity</p>
                   </div>
-                  <button className="text-accent-green hover:underline text-sm">View</button>
+                  <button onClick={() => { fetchLoginHistory(); setShowLoginHistoryModal(true) }} className="text-accent-green hover:underline text-sm">View</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-800 rounded-2xl w-full max-w-md border border-gray-700 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-white font-semibold">Change Password</h3>
+              <button onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordMessage({ type: '', text: '' }) }} className="p-2 hover:bg-dark-700 rounded-lg">
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {passwordMessage.text && (
+                <div className={`p-3 rounded-lg text-sm ${passwordMessage.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                  {passwordMessage.text}
+                </div>
+              )}
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Enter new password (min 6 characters)"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Confirm new password"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordMessage({ type: '', text: '' }) }}
+                  className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={passwordLoading}
+                  className="flex-1 py-3 bg-accent-green text-black font-medium rounded-lg hover:bg-accent-green/90 disabled:opacity-50"
+                >
+                  {passwordLoading ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login History Modal */}
+      {showLoginHistoryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-800 rounded-2xl w-full max-w-md border border-gray-700 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-white font-semibold">Login History</h3>
+              <button onClick={() => setShowLoginHistoryModal(false)} className="p-2 hover:bg-dark-700 rounded-lg">
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {loginHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Clock size={48} className="mx-auto mb-3 opacity-50" />
+                  <p>Login history tracking coming soon</p>
+                  <p className="text-sm mt-1">Your login activity will be displayed here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {loginHistory.map((item, index) => (
+                    <div key={index} className="p-3 bg-dark-700 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white text-sm">{item.device || 'Unknown Device'}</span>
+                        <span className="text-gray-500 text-xs">{new Date(item.timestamp).toLocaleString()}</span>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-1">{item.ip || 'Unknown IP'} • {item.location || 'Unknown Location'}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-700">
+              <button
+                onClick={() => setShowLoginHistoryModal(false)}
+                className="w-full py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -365,23 +365,78 @@ class CopyTradingEngine {
   async closeFollowerTrades(masterTradeId, masterClosePrice) {
     console.log(`[CopyTrade] closeFollowerTrades called with masterTradeId: ${masterTradeId}, price: ${masterClosePrice}`)
     
+    // Convert to ObjectId if string
+    const mongoose = (await import('mongoose')).default
+    const masterTradeObjectId = typeof masterTradeId === 'string' 
+      ? new mongoose.Types.ObjectId(masterTradeId) 
+      : masterTradeId
+    
     const copyTrades = await CopyTrade.find({
-      masterTradeId,
+      masterTradeId: masterTradeObjectId,
       status: 'OPEN'
     })
 
     console.log(`[CopyTrade] Found ${copyTrades.length} open copy trades to close for master trade ${masterTradeId}`)
 
+    if (copyTrades.length === 0) {
+      console.log(`[CopyTrade] No open copy trades found - checking if masterTradeId format is correct`)
+      // Debug: log all open copy trades
+      const allOpenCopyTrades = await CopyTrade.find({ status: 'OPEN' }).limit(5)
+      console.log(`[CopyTrade] Sample open copy trades:`, allOpenCopyTrades.map(t => ({ masterTradeId: t.masterTradeId, followerTradeId: t.followerTradeId })))
+    }
+
     // Process ALL in parallel for instant close
     const results = await Promise.all(copyTrades.map(async (copyTrade) => {
       try {
-        // Close the follower trade
-        const result = await tradeEngine.closeTrade(
-          copyTrade.followerTradeId,
-          masterClosePrice,
-          masterClosePrice,
-          'USER'
-        )
+        // Close the follower trade using direct Trade update to avoid circular calls
+        const Trade = (await import('../models/Trade.js')).default
+        const TradingAccount = (await import('../models/TradingAccount.js')).default
+        
+        const followerTrade = await Trade.findById(copyTrade.followerTradeId)
+        if (!followerTrade || followerTrade.status !== 'OPEN') {
+          console.log(`[CopyTrade] Follower trade ${copyTrade.followerTradeId} not found or not open`)
+          return {
+            copyTradeId: copyTrade._id,
+            status: 'SKIPPED',
+            reason: 'Trade not found or not open'
+          }
+        }
+
+        // Calculate close price and PnL
+        const closePrice = masterClosePrice
+        const contractSize = followerTrade.contractSize || 100000
+        const rawPnl = followerTrade.side === 'BUY' 
+          ? (closePrice - followerTrade.openPrice) * followerTrade.quantity * contractSize
+          : (followerTrade.openPrice - closePrice) * followerTrade.quantity * contractSize
+        const realizedPnl = rawPnl - (followerTrade.swap || 0)
+
+        // Update follower trade
+        followerTrade.closePrice = closePrice
+        followerTrade.realizedPnl = realizedPnl
+        followerTrade.status = 'CLOSED'
+        followerTrade.closedBy = 'COPY_MASTER'
+        followerTrade.closedAt = new Date()
+        await followerTrade.save()
+
+        // Update follower account balance
+        const followerAccount = await TradingAccount.findById(followerTrade.tradingAccountId)
+        if (followerAccount) {
+          if (realizedPnl >= 0) {
+            followerAccount.balance += realizedPnl
+          } else {
+            const loss = Math.abs(realizedPnl)
+            if (followerAccount.balance >= loss) {
+              followerAccount.balance -= loss
+            } else {
+              const remainingLoss = loss - followerAccount.balance
+              followerAccount.balance = 0
+              followerAccount.credit = Math.max(0, (followerAccount.credit || 0) - remainingLoss)
+            }
+          }
+          await followerAccount.save()
+        }
+
+        const result = { trade: followerTrade, realizedPnl }
 
         // Update copy trade record
         copyTrade.masterClosePrice = masterClosePrice
