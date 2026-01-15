@@ -186,9 +186,7 @@ const SupportPage = () => {
           onMouseLeave={() => setSidebarExpanded(false)}
         >
           <div className="p-4 flex items-center justify-center">
-            <div className="w-8 h-8 bg-accent-green rounded flex items-center justify-center">
-              <span className="text-black font-bold text-sm">CL</span>
-            </div>
+            <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 object-contain" />
           </div>
           <nav className="flex-1 px-2">
             {menuItems.map((item) => (

@@ -409,11 +409,9 @@ const Dashboard = () => {
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
       >
-        {/* Logo - Icon only */}
+        {/* Logo */}
         <div className="p-4 flex items-center justify-center shrink-0">
-          <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
-            <span className="text-white font-bold text-sm">HCF</span>
-          </div>
+          <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 object-contain" />
         </div>
 
         {/* Menu */}
@@ -594,12 +592,12 @@ const Dashboard = () => {
                 <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
                   <Activity size={20} className="text-purple-500" />
                 </div>
-                <span className={`text-xs font-medium ${totalPnl >= 0 ? 'text-accent-green' : 'text-red-500'}`}>
+                <span className={`text-xs font-medium ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {totalPnl >= 0 ? '+' : ''}{totalPnl !== 0 ? ((totalPnl / (walletBalance || 1)) * 100).toFixed(1) + '%' : '0%'}
                 </span>
               </div>
               <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total PnL</p>
-              <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-accent-green' : 'text-red-500'}`}>
+              <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
               </p>
             </div>

@@ -274,7 +274,7 @@ router.post('/close/:tradeId', async (req, res) => {
 
     // Check if this is a master trader's trade and close follower trades
     let followerResults = []
-    const master = await MasterTrader.findOne({ tradingAccountId: trade.tradingAccountId, status: 'APPROVED' })
+    const master = await MasterTrader.findOne({ tradingAccountId: trade.tradingAccountId, status: 'ACTIVE' })
     if (master) {
       console.log(`[AdminTrade] Master trade closed, propagating to followers. TradeId: ${tradeId}, ClosePrice: ${finalClosePrice}`)
       followerResults = await copyTradingEngine.closeFollowerTrades(trade._id, finalClosePrice)

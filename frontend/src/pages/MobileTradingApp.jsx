@@ -821,7 +821,7 @@ const MobileTradingApp = () => {
           </div>
           <div className="flex justify-between px-4 py-2.5">
             <span className="text-gray-400 text-sm">Equity</span>
-            <span className={`text-sm ${totalFloatingPnl >= 0 ? 'text-white' : 'text-red-500'}`}>
+            <span className={`text-sm ${realTimeEquity >= accountSummary.balance ? 'text-green-500' : 'text-red-500'}`}>
               {realTimeEquity.toFixed(2)}
             </span>
           </div>

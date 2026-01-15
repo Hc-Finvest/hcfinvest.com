@@ -33,6 +33,52 @@ router.get('/users/:id', async (req, res) => {
   }
 })
 
+// POST /api/admin/users/create - Create new user (Admin only)
+router.post('/users/create', async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, password } = req.body
+    
+    if (!firstName || !email || !password) {
+      return res.status(400).json({ success: false, message: 'First name, email and password are required' })
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' })
+    }
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() })
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' })
+    }
+    
+    // Create new user
+    const user = await User.create({
+      firstName,
+      lastName: lastName || '',
+      email: email.toLowerCase(),
+      phone: phone || '',
+      password,
+      isEmailVerified: true // Admin-created users are pre-verified
+    })
+    
+    res.json({
+      success: true,
+      message: 'User created successfully',
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone
+      }
+    })
+  } catch (error) {
+    console.error('Error creating user:', error)
+    res.status(500).json({ success: false, message: 'Error creating user', error: error.message })
+  }
+})
+
 // PUT /api/admin/users/:id/password - Change user password
 router.put('/users/:id/password', async (req, res) => {
   try {
