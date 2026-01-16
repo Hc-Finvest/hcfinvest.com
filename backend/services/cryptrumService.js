@@ -61,8 +61,8 @@ class CryptrumService {
   async makeRequest(endpoint, method = 'POST', data = {}) {
     await this.loadConfig()
     
-    if (!this.apiKey || !this.merchantId) {
-      throw new Error('Cryptrum API not configured. Please set API credentials in admin panel.')
+    if (!this.apiKey) {
+      throw new Error('Cryptrum API key not configured. Please set API credentials in admin panel.')
     }
 
     const timestamp = Date.now().toString()

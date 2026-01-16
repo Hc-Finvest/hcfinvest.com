@@ -276,7 +276,7 @@ const WalletPage = () => {
         setError(data.message || 'Failed to create payment request')
       }
     } catch (error) {
-      setError('Error creating payment request')
+      setError(error.message || 'Error creating payment request. Please try again.')
     }
     setCryptrumLoading(false)
   }
