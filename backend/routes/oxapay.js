@@ -6,6 +6,11 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // ==================== USER ROUTES ====================
 
 // GET /api/oxapay/status - Check if Oxapay is available
@@ -24,8 +29,11 @@ router.post('/deposit', authMiddleware, async (req, res) => {
   try {
     const { userId, amount, currency = 'USD', cryptoCurrency = 'USDT' } = req.body
 
-    if (!userId || !amount) {
-      return res.status(400).json({ success: false, message: 'User ID and amount are required' })
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+    if (!amount) {
+      return res.status(400).json({ success: false, message: 'Amount is required' })
     }
 
     if (amount <= 0) {
@@ -80,8 +88,11 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
   try {
     const { userId, amount, cryptoCurrency = 'USDT', walletAddress, network = 'TRC20' } = req.body
 
-    if (!userId || !amount || !walletAddress) {
-      return res.status(400).json({ success: false, message: 'User ID, amount, and wallet address are required' })
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+    if (!amount || !walletAddress) {
+      return res.status(400).json({ success: false, message: 'Amount and wallet address are required' })
     }
 
     if (amount <= 0) {

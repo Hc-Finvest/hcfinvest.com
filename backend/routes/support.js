@@ -4,13 +4,21 @@ import User from '../models/User.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // POST /api/support/create - Create new support ticket
 router.post('/create', async (req, res) => {
   try {
     const { userId, subject, category, priority, message } = req.body
 
-    if (!userId || !subject || !message) {
-      return res.status(400).json({ success: false, message: 'User ID, subject, and message are required' })
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+    if (!subject || !message) {
+      return res.status(400).json({ success: false, message: 'Subject and message are required' })
     }
 
     const user = await User.findById(userId)
@@ -46,6 +54,9 @@ router.post('/create', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { status } = req.query
 
     const query = { userId }

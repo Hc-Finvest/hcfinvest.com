@@ -6,6 +6,11 @@ import propTradingEngine from '../services/propTradingEngine.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // ==================== PUBLIC ROUTES ====================
 
 // GET /api/prop/status - Check if challenge mode is enabled
@@ -60,8 +65,8 @@ router.post('/buy', async (req, res) => {
   try {
     const { userId, challengeId, paymentId } = req.body
 
-    if (!userId || !challengeId) {
-      return res.status(400).json({ success: false, message: 'User ID and Challenge ID required' })
+    if (!isValidObjectId(userId) || !isValidObjectId(challengeId)) {
+      return res.status(400).json({ success: false, message: 'Invalid User ID or Challenge ID' })
     }
 
     const settings = await PropSettings.getSettings()
@@ -95,6 +100,9 @@ router.post('/buy', async (req, res) => {
 router.get('/my-accounts/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { status } = req.query
 
     let query = { userId }

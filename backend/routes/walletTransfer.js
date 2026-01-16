@@ -7,15 +7,26 @@ import Transaction from '../models/Transaction.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // POST /api/wallet-transfer/to-trading - Transfer from User Wallet to Trading Account
 router.post('/to-trading', async (req, res) => {
   try {
     const { userId, tradingAccountId, amount } = req.body
 
-    if (!userId || !tradingAccountId || !amount) {
+    if (!isValidObjectId(userId) || !isValidObjectId(tradingAccountId)) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Invalid user ID or trading account ID'
+      })
+    }
+    if (!amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount is required'
       })
     }
 
@@ -108,10 +119,16 @@ router.post('/from-trading', async (req, res) => {
   try {
     const { userId, tradingAccountId, amount } = req.body
 
-    if (!userId || !tradingAccountId || !amount) {
+    if (!isValidObjectId(userId) || !isValidObjectId(tradingAccountId)) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Invalid user ID or trading account ID'
+      })
+    }
+    if (!amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount is required'
       })
     }
 
@@ -222,6 +239,9 @@ router.post('/from-trading', async (req, res) => {
 router.get('/balances/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
 
     const user = await User.findById(userId)
     if (!user) {
