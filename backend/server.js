@@ -147,8 +147,22 @@ io.on('connection', (socket) => {
 // Make io accessible to routes
 app.set('io', io)
 
-// Middleware
-app.use(cors())
+// Middleware - CORS configuration for production
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://trade.hcfinvest.com',
+    'https://hcfinvest.com',
+    'https://www.hcfinvest.com',
+    'https://admin.hcfinvest.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}
+app.use(cors(corsOptions))
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
