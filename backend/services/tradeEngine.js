@@ -384,17 +384,28 @@ class TradeEngine {
     // Close follower trades if this is a master trade
     // This ensures SL/TP triggered closes also propagate to followers
     try {
+      // Get the tradingAccountId - handle both populated and non-populated cases
+      const tradingAccountId = trade.tradingAccountId?._id || trade.tradingAccountId
+      console.log(`[CopyTrade] Checking if trade belongs to master. tradingAccountId: ${tradingAccountId}`)
+      
       const master = await MasterTrader.findOne({ 
-        tradingAccountId: trade.tradingAccountId, 
+        tradingAccountId: tradingAccountId, 
         status: 'ACTIVE' 
       })
       
       if (master) {
-        console.log(`[CopyTrade] Master trade closed via ${closedBy}, closing follower trades...`)
+        console.log(`[CopyTrade] Master trade ${trade._id} closed via ${closedBy}, closing follower trades...`)
+        console.log(`[CopyTrade] Master tradingAccountId: ${tradingAccountId}, masterId: ${master._id}`)
         // Dynamically import to avoid circular dependency
         const copyTradingEngine = (await import('./copyTradingEngine.js')).default
-        const copyResults = await copyTradingEngine.closeFollowerTrades(tradeId, closePrice)
+        // Use trade._id (ObjectId) not tradeId (could be string)
+        const copyResults = await copyTradingEngine.closeFollowerTrades(trade._id, closePrice)
         console.log(`[CopyTrade] Closed ${copyResults.filter(r => r.status === 'SUCCESS').length} follower trades`)
+        if (copyResults.length > 0) {
+          console.log(`[CopyTrade] Close results:`, JSON.stringify(copyResults))
+        }
+      } else {
+        console.log(`[CopyTrade] No active master found for tradingAccountId: ${tradingAccountId}`)
       }
     } catch (copyError) {
       console.error('[CopyTrade] Error closing follower trades:', copyError)

@@ -271,7 +271,8 @@ class CopyTradingEngine {
         )
 
         // Record successful copy trade
-        await CopyTrade.create({
+        console.log(`[CopyTrade] Creating CopyTrade record: masterTradeId=${masterTrade._id}, followerTradeId=${followerTrade._id}`)
+        const copyTradeRecord = await CopyTrade.create({
           masterTradeId: masterTrade._id,
           masterId: masterId,
           followerTradeId: followerTrade._id,
@@ -289,6 +290,7 @@ class CopyTradingEngine {
           status: 'OPEN',
           tradingDay
         })
+        console.log(`[CopyTrade] CopyTrade record created: ${copyTradeRecord._id}`)
 
         // Update follower stats
         follower.stats.totalCopiedTrades += 1
@@ -363,13 +365,33 @@ class CopyTradingEngine {
 
   // Close all follower trades when master closes (PARALLEL for speed)
   async closeFollowerTrades(masterTradeId, masterClosePrice) {
-    console.log(`[CopyTrade] closeFollowerTrades called with masterTradeId: ${masterTradeId}, price: ${masterClosePrice}`)
+    console.log(`[CopyTrade] ========== CLOSE FOLLOWER TRADES START ==========`)
+    console.log(`[CopyTrade] masterTradeId: ${masterTradeId} (type: ${typeof masterTradeId})`)
+    console.log(`[CopyTrade] masterClosePrice: ${masterClosePrice}`)
     
     // Convert to ObjectId if string
     const mongoose = (await import('mongoose')).default
-    const masterTradeObjectId = typeof masterTradeId === 'string' 
-      ? new mongoose.Types.ObjectId(masterTradeId) 
-      : masterTradeId
+    let masterTradeObjectId
+    try {
+      masterTradeObjectId = typeof masterTradeId === 'string' 
+        ? new mongoose.Types.ObjectId(masterTradeId) 
+        : masterTradeId
+      console.log(`[CopyTrade] Converted masterTradeId to ObjectId: ${masterTradeObjectId}`)
+    } catch (convErr) {
+      console.error(`[CopyTrade] Failed to convert masterTradeId to ObjectId:`, convErr)
+      return []
+    }
+    
+    // First, let's check if ANY CopyTrade records exist for this master trade
+    const allCopyTradesForMaster = await CopyTrade.find({ masterTradeId: masterTradeObjectId })
+    console.log(`[CopyTrade] Total CopyTrade records for this master trade: ${allCopyTradesForMaster.length}`)
+    if (allCopyTradesForMaster.length > 0) {
+      console.log(`[CopyTrade] CopyTrade statuses:`, allCopyTradesForMaster.map(t => ({ 
+        id: t._id, 
+        status: t.status, 
+        followerTradeId: t.followerTradeId 
+      })))
+    }
     
     const copyTrades = await CopyTrade.find({
       masterTradeId: masterTradeObjectId,
@@ -377,13 +399,22 @@ class CopyTradingEngine {
       followerTradeId: { $ne: null }  // Only get copy trades with valid follower trades
     })
 
-    console.log(`[CopyTrade] Found ${copyTrades.length} open copy trades to close for master trade ${masterTradeId}`)
+    console.log(`[CopyTrade] Found ${copyTrades.length} OPEN copy trades with valid followerTradeId`)
 
     if (copyTrades.length === 0) {
-      console.log(`[CopyTrade] No open copy trades found - checking if masterTradeId format is correct`)
+      console.log(`[CopyTrade] No open copy trades found - checking ALL open copy trades in system`)
       // Debug: log all open copy trades
-      const allOpenCopyTrades = await CopyTrade.find({ status: 'OPEN' }).limit(5)
-      console.log(`[CopyTrade] Sample open copy trades:`, allOpenCopyTrades.map(t => ({ masterTradeId: t.masterTradeId, followerTradeId: t.followerTradeId })))
+      const allOpenCopyTrades = await CopyTrade.find({ status: 'OPEN' }).limit(10)
+      console.log(`[CopyTrade] Total OPEN copy trades in system: ${allOpenCopyTrades.length}`)
+      if (allOpenCopyTrades.length > 0) {
+        console.log(`[CopyTrade] Sample open copy trades:`, allOpenCopyTrades.map(t => ({ 
+          masterTradeId: t.masterTradeId?.toString(), 
+          followerTradeId: t.followerTradeId?.toString(),
+          status: t.status
+        })))
+      }
+      console.log(`[CopyTrade] ========== CLOSE FOLLOWER TRADES END (NO TRADES) ==========`)
+      return []
     }
 
     // Process ALL in parallel for instant close
@@ -479,6 +510,7 @@ class CopyTradingEngine {
     }))
 
     console.log(`[CopyTrade] Close complete: ${results.filter(r => r.status === 'SUCCESS').length}/${copyTrades.length} success`)
+    console.log(`[CopyTrade] ========== CLOSE FOLLOWER TRADES END ==========`)
     return results
   }
 
