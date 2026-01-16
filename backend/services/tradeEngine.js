@@ -4,6 +4,7 @@ import Charges from '../models/Charges.js'
 import TradeSettings from '../models/TradeSettings.js'
 import AdminLog from '../models/AdminLog.js'
 import ibEngine from './ibEngineNew.js'
+import MasterTrader from '../models/MasterTrader.js'
 
 class TradeEngine {
   constructor() {
@@ -380,8 +381,24 @@ class TradeEngine {
       console.error('Error processing IB commission:', ibError)
     }
 
-    // Note: Follower trade closing is handled by the route layer to avoid circular calls
-    // Do NOT call closeFollowerTrades here - it's called from trade.js route
+    // Close follower trades if this is a master trade
+    // This ensures SL/TP triggered closes also propagate to followers
+    try {
+      const master = await MasterTrader.findOne({ 
+        tradingAccountId: trade.tradingAccountId, 
+        status: 'ACTIVE' 
+      })
+      
+      if (master) {
+        console.log(`[CopyTrade] Master trade closed via ${closedBy}, closing follower trades...`)
+        // Dynamically import to avoid circular dependency
+        const copyTradingEngine = (await import('./copyTradingEngine.js')).default
+        const copyResults = await copyTradingEngine.closeFollowerTrades(tradeId, closePrice)
+        console.log(`[CopyTrade] Closed ${copyResults.filter(r => r.status === 'SUCCESS').length} follower trades`)
+      }
+    } catch (copyError) {
+      console.error('[CopyTrade] Error closing follower trades:', copyError)
+    }
 
     return { trade, realizedPnl }
   }

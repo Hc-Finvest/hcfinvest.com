@@ -358,8 +358,11 @@ const MobileTradingApp = () => {
   const fetchAccountSummary = async () => {
     if (!selectedAccount) return
     try {
-      const pricesParam = encodeURIComponent(JSON.stringify(livePrices))
-      const res = await fetch(`${API_URL}/trade/summary/${selectedAccount._id}?prices=${pricesParam}`)
+      const res = await fetch(`${API_URL}/trade/summary/${selectedAccount._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prices: livePrices })
+      })
       const data = await res.json()
       if (data.success) setAccountSummary(data.summary)
     } catch (e) {}

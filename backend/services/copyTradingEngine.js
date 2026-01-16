@@ -373,7 +373,8 @@ class CopyTradingEngine {
     
     const copyTrades = await CopyTrade.find({
       masterTradeId: masterTradeObjectId,
-      status: 'OPEN'
+      status: 'OPEN',
+      followerTradeId: { $ne: null }  // Only get copy trades with valid follower trades
     })
 
     console.log(`[CopyTrade] Found ${copyTrades.length} open copy trades to close for master trade ${masterTradeId}`)

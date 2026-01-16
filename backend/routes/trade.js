@@ -237,27 +237,8 @@ router.post('/close', async (req, res) => {
       'USER'
     )
 
-    // Check if this was a master trade and close follower trades
-    if (tradeToClose) {
-      console.log(`[CopyTrade] Checking if trade ${tradeId} belongs to a master. TradingAccountId: ${tradeToClose.tradingAccountId}`)
-      const master = await MasterTrader.findOne({ 
-        tradingAccountId: tradeToClose.tradingAccountId, 
-        status: 'ACTIVE' 
-      })
-      
-      console.log(`[CopyTrade] Master found: ${master ? master._id : 'NO MASTER FOUND'}`)
-      
-      if (master) {
-        try {
-          const closePrice = tradeToClose.side === 'BUY' ? parseFloat(bid) : parseFloat(ask)
-          console.log(`[CopyTrade] Calling closeFollowerTrades for master trade ${tradeId} at price ${closePrice}`)
-          const copyResults = await copyTradingEngine.closeFollowerTrades(tradeId, closePrice)
-          console.log(`[CopyTrade] Closed ${copyResults.length} follower trades for master trade ${tradeId}`)
-        } catch (copyError) {
-          console.error('[CopyTrade] Error closing follower trades:', copyError)
-        }
-      }
-    }
+    // Note: Copy trading close is now handled inside tradeEngine.closeTrade()
+    // This ensures SL/TP triggered closes also propagate to followers
 
     // Process IB commission for the closed trade
     try {
@@ -432,11 +413,11 @@ router.get('/history/:tradingAccountId', async (req, res) => {
   }
 })
 
-// GET /api/trade/summary/:tradingAccountId - Get account summary with real-time values
-router.get('/summary/:tradingAccountId', async (req, res) => {
+// POST /api/trade/summary/:tradingAccountId - Get account summary with real-time values
+router.post('/summary/:tradingAccountId', async (req, res) => {
   try {
     const { tradingAccountId } = req.params
-    const { prices } = req.query // JSON string of current prices
+    const { prices } = req.body // Prices object from request body
 
     // Check for regular trading account first
     let account = await TradingAccount.findById(tradingAccountId)
@@ -467,14 +448,7 @@ router.get('/summary/:tradingAccountId', async (req, res) => {
       status: 'OPEN' 
     })
 
-    let currentPrices = {}
-    if (prices) {
-      try {
-        currentPrices = JSON.parse(prices)
-      } catch (e) {
-        // Ignore parse errors
-      }
-    }
+    let currentPrices = prices || {}
 
     // Calculate used margin from open trades
     const usedMargin = openTrades.reduce((sum, t) => sum + (t.marginUsed || 0), 0)

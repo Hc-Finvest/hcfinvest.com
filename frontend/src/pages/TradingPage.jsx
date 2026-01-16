@@ -597,8 +597,11 @@ const TradingPage = () => {
         }
       })
       
-      const pricesParam = encodeURIComponent(JSON.stringify(pricesObj))
-      const res = await fetch(`${API_URL}/trade/summary/${accountId}?prices=${pricesParam}`)
+      const res = await fetch(`${API_URL}/trade/summary/${accountId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prices: pricesObj })
+      })
       const data = await res.json()
       if (data.success) {
         setAccountSummary(data.summary)
