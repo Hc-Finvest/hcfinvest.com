@@ -64,10 +64,10 @@ function App() {
   return (
     <div className="App">      
         {/* Snow Fall Start */}
-      <Snowfall 
-        snowflakeCount={100} 
-        style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", zIndex: 9999 }}
-      />
+      // <Snowfall 
+      //   snowflakeCount={100} 
+      //   style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", zIndex: 9999 }}
+      // />
       {/* Snow Fall End */}
 
       <Navbar />
