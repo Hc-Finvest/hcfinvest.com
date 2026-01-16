@@ -92,7 +92,6 @@ ibWalletSchema.statics.getOrCreateWallet = async function(ibUserId) {
   return wallet
 }
 
-// Index
-ibWalletSchema.index({ ibUserId: 1 })
+// ibUserId already has unique: true which creates an index
 
 export default mongoose.model('IBWallet', ibWalletSchema)

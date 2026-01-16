@@ -125,9 +125,7 @@ ibUserSchema.methods.getUplineChain = async function(maxLevels = 5) {
   return chain
 }
 
-// Indexes
-ibUserSchema.index({ userId: 1 })
-ibUserSchema.index({ referralCode: 1 })
+// Indexes (userId and referralCode already have unique: true which creates indexes)
 ibUserSchema.index({ parentIBId: 1 })
 ibUserSchema.index({ status: 1 })
 

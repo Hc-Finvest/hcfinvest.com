@@ -132,9 +132,7 @@ const adminSchema = new mongoose.Schema({
   timestamps: true
 })
 
-// Index for faster lookups
-adminSchema.index({ urlSlug: 1 })
-adminSchema.index({ email: 1 })
+// Index for faster lookups (urlSlug and email already have unique: true which creates indexes)
 adminSchema.index({ parentAdmin: 1 })
 
 export default mongoose.model('Admin', adminSchema)

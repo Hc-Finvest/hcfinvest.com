@@ -50,9 +50,8 @@ const ibReferralSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-// Indexes
+// Indexes (userId already has unique: true which creates an index)
 ibReferralSchema.index({ referredByIBId: 1 })
-ibReferralSchema.index({ userId: 1 })
 ibReferralSchema.index({ referralCode: 1 })
 
 export default mongoose.model('IBReferral', ibReferralSchema)

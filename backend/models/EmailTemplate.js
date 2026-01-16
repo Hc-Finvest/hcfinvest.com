@@ -60,8 +60,7 @@ const emailTemplateSchema = new mongoose.Schema({
   timestamps: true
 })
 
-// Index for faster queries
-emailTemplateSchema.index({ slug: 1 })
+// Index for faster queries (slug already has unique: true which creates an index)
 emailTemplateSchema.index({ category: 1, isActive: 1 })
 
 // Static method to get template by slug

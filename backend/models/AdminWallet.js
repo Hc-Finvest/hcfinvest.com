@@ -41,6 +41,6 @@ const adminWalletSchema = new mongoose.Schema({
   timestamps: true
 })
 
-adminWalletSchema.index({ adminId: 1 })
+// adminId already has unique: true which creates an index
 
 export default mongoose.model('AdminWallet', adminWalletSchema)
