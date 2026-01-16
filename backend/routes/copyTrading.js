@@ -21,6 +21,9 @@ const isValidObjectId = (id) => {
 router.post('/master/apply', async (req, res) => {
   try {
     const { userId, tradingAccountId, displayName, description, requestedCommissionPercentage } = req.body
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
 
     // Check if copy trading is enabled
     const settings = await CopySettings.getSettings()

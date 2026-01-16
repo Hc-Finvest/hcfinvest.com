@@ -20,6 +20,9 @@ const isValidObjectId = (id) => {
 router.post('/apply', async (req, res) => {
   try {
     const { userId } = req.body
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
 
     // Check if IB system is enabled
     const settings = await IBSettings.getSettings()
@@ -233,6 +236,9 @@ router.get('/my-commissions/:userId', async (req, res) => {
 router.post('/withdraw', async (req, res) => {
   try {
     const { userId, amount } = req.body
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
 
     const ibUser = await IBUser.findOne({ userId })
     if (!ibUser) {
@@ -258,6 +264,9 @@ router.post('/withdraw', async (req, res) => {
 router.post('/register-referral', async (req, res) => {
   try {
     const { userId, referralCode } = req.body
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
 
     if (!referralCode) {
       return res.status(400).json({ message: 'Referral code required' })
