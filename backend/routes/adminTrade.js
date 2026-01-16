@@ -905,6 +905,11 @@ router.get('/logs', async (req, res) => {
   }
 })
 
+// Helper to validate adminId (not undefined/null string)
+const isValidAdminId = (adminId) => {
+  return adminId && adminId !== 'undefined' && adminId !== 'null' && adminId.length === 24
+}
+
 // PUT /api/admin/trade/change-side/:tradeId - Admin change trade side (BUY to SELL or SELL to BUY)
 router.put('/change-side/:tradeId', async (req, res) => {
   try {
@@ -926,12 +931,12 @@ router.put('/change-side/:tradeId', async (req, res) => {
     trade.side = newSide
     trade.adminModified = true
     trade.adminModifiedAt = new Date()
-    if (adminId) trade.adminModifiedBy = adminId
+    if (isValidAdminId(adminId)) trade.adminModifiedBy = adminId
 
     await trade.save()
 
     // Log admin action
-    if (adminId) {
+    if (isValidAdminId(adminId)) {
       await AdminLog.create({
         adminId,
         action: 'TRADE_CHANGE_SIDE',
@@ -999,7 +1004,7 @@ router.delete('/delete/:tradeId', async (req, res) => {
     await Trade.findByIdAndDelete(tradeId)
 
     // Log admin action
-    if (adminId) {
+    if (isValidAdminId(adminId)) {
       await AdminLog.create({
         adminId,
         action: 'TRADE_DELETE',
@@ -1061,12 +1066,12 @@ router.post('/reopen/:tradeId', async (req, res) => {
     trade.realizedPnl = 0
     trade.adminModified = true
     trade.adminModifiedAt = new Date()
-    if (adminId) trade.adminModifiedBy = adminId
+    if (isValidAdminId(adminId)) trade.adminModifiedBy = adminId
 
     await trade.save()
 
     // Log admin action
-    if (adminId) {
+    if (isValidAdminId(adminId)) {
       await AdminLog.create({
         adminId,
         action: 'TRADE_REOPEN',

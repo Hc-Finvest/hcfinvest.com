@@ -9,6 +9,11 @@ import ibEngine from '../services/ibEngine.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // ==================== IB USER ROUTES ====================
 
 // POST /api/ib/apply - Apply to become an IB
@@ -97,7 +102,11 @@ router.post('/apply', async (req, res) => {
 // GET /api/ib/my-profile/:userId - Get user's IB profile
 router.get('/my-profile/:userId', async (req, res) => {
   try {
-    const ibUser = await IBUser.findOne({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const ibUser = await IBUser.findOne({ userId })
       .populate('ibPlanId')
       .populate('parentIBId', 'referralCode')
 
@@ -114,7 +123,11 @@ router.get('/my-profile/:userId', async (req, res) => {
 // GET /api/ib/referral-link/:userId - Get IB referral link
 router.get('/referral-link/:userId', async (req, res) => {
   try {
-    const ibUser = await IBUser.findOne({ userId: req.params.userId, status: 'ACTIVE' })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const ibUser = await IBUser.findOne({ userId, status: 'ACTIVE' })
 
     if (!ibUser) {
       return res.status(404).json({ message: 'Active IB profile not found' })

@@ -8,12 +8,21 @@ import AdminWalletTransaction from '../models/AdminWalletTransaction.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // GET /api/wallet/:userId - Get user wallet
 router.get('/:userId', async (req, res) => {
   try {
-    let wallet = await Wallet.findOne({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    let wallet = await Wallet.findOne({ userId })
     if (!wallet) {
-      wallet = new Wallet({ userId: req.params.userId, balance: 0 })
+      wallet = new Wallet({ userId, balance: 0 })
       await wallet.save()
     }
     res.json({ wallet })

@@ -10,6 +10,11 @@ import copyTradingEngine from '../services/copyTradingEngine.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // ==================== MASTER TRADER ROUTES ====================
 
 // POST /api/copy/master/apply - Apply to become a master trader
@@ -121,7 +126,11 @@ router.get('/master/:id', async (req, res) => {
 // GET /api/copy/master/my-profile/:userId - Get user's master profile
 router.get('/master/my-profile/:userId', async (req, res) => {
   try {
-    const master = await MasterTrader.findOne({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const master = await MasterTrader.findOne({ userId })
       .populate('tradingAccountId', 'accountId balance')
 
     if (!master) {
