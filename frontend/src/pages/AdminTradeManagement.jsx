@@ -356,6 +356,74 @@ const AdminTradeManagement = () => {
     }
   }
 
+  // Change trade side (BUY to SELL or SELL to BUY)
+  const handleChangeSide = async (trade) => {
+    if (!confirm(`Are you sure you want to change trade ${trade.tradeId} from ${trade.side} to ${trade.side === 'BUY' ? 'SELL' : 'BUY'}?`)) {
+      return
+    }
+    try {
+      const res = await fetch(`${API_URL}/admin/trade/change-side/${trade._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId: localStorage.getItem('adminId') })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Trade side changed from ${data.oldSide} to ${data.newSide}`)
+        fetchTrades()
+      } else {
+        alert(data.message || 'Failed to change trade side')
+      }
+    } catch (error) {
+      alert('Error changing trade side')
+    }
+  }
+
+  // Delete trade completely
+  const handleDeleteTrade = async (trade) => {
+    if (!confirm(`Are you sure you want to DELETE trade ${trade.tradeId}? This action cannot be undone!`)) {
+      return
+    }
+    try {
+      const adminId = localStorage.getItem('adminId')
+      const res = await fetch(`${API_URL}/admin/trade/delete/${trade._id}?adminId=${adminId}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Trade ${data.deletedTrade.tradeId} deleted successfully`)
+        fetchTrades()
+      } else {
+        alert(data.message || 'Failed to delete trade')
+      }
+    } catch (error) {
+      alert('Error deleting trade')
+    }
+  }
+
+  // Reopen a closed trade
+  const handleReopenTrade = async (trade) => {
+    if (!confirm(`Are you sure you want to REOPEN trade ${trade.tradeId}? This will reverse the P&L of $${trade.realizedPnl?.toFixed(2)} from the account.`)) {
+      return
+    }
+    try {
+      const res = await fetch(`${API_URL}/admin/trade/reopen/${trade._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId: localStorage.getItem('adminId') })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Trade reopened successfully! Reversed P&L: $${data.reversedPnl?.toFixed(2)}`)
+        fetchTrades()
+      } else {
+        alert(data.message || 'Failed to reopen trade')
+      }
+    } catch (error) {
+      alert('Error reopening trade')
+    }
+  }
+
   // Calculate PnL when admin changes prices
   const calculatePnL = () => {
     if (!selectedTrade || !editForm.closePrice) return
@@ -531,7 +599,7 @@ const AdminTradeManagement = () => {
                     </div>
                   </div>
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-3 border-t border-gray-600">
+                  <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-600">
                     <button
                       onClick={() => openEditModal(trade)}
                       className="flex-1 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
@@ -539,13 +607,35 @@ const AdminTradeManagement = () => {
                       <Edit size={14} /> Edit
                     </button>
                     {trade.status === 'OPEN' && (
+                      <>
+                        <button
+                          onClick={() => handleChangeSide(trade)}
+                          className="flex-1 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
+                        >
+                          <RefreshCw size={14} /> Flip
+                        </button>
+                        <button
+                          onClick={() => openCloseModal(trade)}
+                          className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
+                        >
+                          <XCircle size={14} /> Close
+                        </button>
+                      </>
+                    )}
+                    {trade.status === 'CLOSED' && (
                       <button
-                        onClick={() => openCloseModal(trade)}
-                        className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
+                        onClick={() => handleReopenTrade(trade)}
+                        className="flex-1 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
                       >
-                        <XCircle size={14} /> Close
+                        <CheckCircle size={14} /> Reopen
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDeleteTrade(trade)}
+                      className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
+                    >
+                      <Trash2 size={14} /> Delete
+                    </button>
                   </div>
                 </div>
               ))}
@@ -608,14 +698,39 @@ const AdminTradeManagement = () => {
                             <Edit size={16} />
                           </button>
                           {trade.status === 'OPEN' && (
+                            <>
+                              <button 
+                                onClick={() => handleChangeSide(trade)}
+                                className="p-2 hover:bg-yellow-500/20 rounded-lg transition-colors text-gray-400 hover:text-yellow-500" 
+                                title={`Change to ${trade.side === 'BUY' ? 'SELL' : 'BUY'}`}
+                              >
+                                <RefreshCw size={16} />
+                              </button>
+                              <button 
+                                onClick={() => openCloseModal(trade)}
+                                className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-red-500" 
+                                title="Close Trade"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
+                          {trade.status === 'CLOSED' && (
                             <button 
-                              onClick={() => openCloseModal(trade)}
-                              className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-red-500" 
-                              title="Close Trade"
+                              onClick={() => handleReopenTrade(trade)}
+                              className="p-2 hover:bg-green-500/20 rounded-lg transition-colors text-gray-400 hover:text-green-500" 
+                              title="Reopen Trade"
                             >
-                              <XCircle size={16} />
+                              <CheckCircle size={16} />
                             </button>
                           )}
+                          <button 
+                            onClick={() => handleDeleteTrade(trade)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-red-500" 
+                            title="Delete Trade"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>

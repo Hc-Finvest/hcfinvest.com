@@ -905,4 +905,188 @@ router.get('/logs', async (req, res) => {
   }
 })
 
+// PUT /api/admin/trade/change-side/:tradeId - Admin change trade side (BUY to SELL or SELL to BUY)
+router.put('/change-side/:tradeId', async (req, res) => {
+  try {
+    const { tradeId } = req.params
+    const { adminId } = req.body
+
+    const trade = await Trade.findById(tradeId)
+    if (!trade) {
+      return res.status(404).json({ success: false, message: 'Trade not found' })
+    }
+
+    if (trade.status !== 'OPEN') {
+      return res.status(400).json({ success: false, message: 'Can only change side of open trades' })
+    }
+
+    const oldSide = trade.side
+    const newSide = trade.side === 'BUY' ? 'SELL' : 'BUY'
+
+    trade.side = newSide
+    trade.adminModified = true
+    trade.adminModifiedAt = new Date()
+    if (adminId) trade.adminModifiedBy = adminId
+
+    await trade.save()
+
+    // Log admin action
+    if (adminId) {
+      await AdminLog.create({
+        adminId,
+        action: 'TRADE_CHANGE_SIDE',
+        targetType: 'TRADE',
+        targetId: trade._id,
+        previousValue: { side: oldSide },
+        newValue: { side: newSide }
+      })
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Trade side changed from ${oldSide} to ${newSide}`, 
+      trade,
+      oldSide,
+      newSide
+    })
+  } catch (error) {
+    console.error('Error changing trade side:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// DELETE /api/admin/trade/delete/:tradeId - Admin delete trade completely
+router.delete('/delete/:tradeId', async (req, res) => {
+  try {
+    const { tradeId } = req.params
+    const { adminId } = req.query
+
+    const trade = await Trade.findById(tradeId)
+    if (!trade) {
+      return res.status(404).json({ success: false, message: 'Trade not found' })
+    }
+
+    // If trade is open, release the margin back to account
+    if (trade.status === 'OPEN') {
+      const account = await TradingAccount.findById(trade.tradingAccountId)
+      if (account) {
+        // No balance adjustment needed for open trades - margin is just reserved
+        await account.save()
+      }
+    }
+
+    // If trade is closed, reverse the P&L from account
+    if (trade.status === 'CLOSED' && trade.realizedPnl) {
+      const account = await TradingAccount.findById(trade.tradingAccountId)
+      if (account) {
+        account.balance -= trade.realizedPnl
+        if (account.balance < 0) account.balance = 0
+        await account.save()
+      }
+    }
+
+    // Store trade info for logging before deletion
+    const tradeInfo = {
+      tradeId: trade.tradeId,
+      symbol: trade.symbol,
+      side: trade.side,
+      quantity: trade.quantity,
+      status: trade.status,
+      realizedPnl: trade.realizedPnl
+    }
+
+    // Delete the trade
+    await Trade.findByIdAndDelete(tradeId)
+
+    // Log admin action
+    if (adminId) {
+      await AdminLog.create({
+        adminId,
+        action: 'TRADE_DELETE',
+        targetType: 'TRADE',
+        targetId: tradeId,
+        previousValue: tradeInfo,
+        newValue: null
+      })
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Trade deleted successfully',
+      deletedTrade: tradeInfo
+    })
+  } catch (error) {
+    console.error('Error deleting trade:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// POST /api/admin/trade/reopen/:tradeId - Admin reopen a closed trade
+router.post('/reopen/:tradeId', async (req, res) => {
+  try {
+    const { tradeId } = req.params
+    const { adminId } = req.body
+
+    const trade = await Trade.findById(tradeId)
+    if (!trade) {
+      return res.status(404).json({ success: false, message: 'Trade not found' })
+    }
+
+    if (trade.status !== 'CLOSED') {
+      return res.status(400).json({ success: false, message: 'Can only reopen closed trades' })
+    }
+
+    // Reverse the P&L from account balance (undo the close)
+    const account = await TradingAccount.findById(trade.tradingAccountId)
+    if (account && trade.realizedPnl) {
+      account.balance -= trade.realizedPnl
+      if (account.balance < 0) account.balance = 0
+      await account.save()
+    }
+
+    // Store old values for logging
+    const oldValues = {
+      status: trade.status,
+      closePrice: trade.closePrice,
+      closedAt: trade.closedAt,
+      closedBy: trade.closedBy,
+      realizedPnl: trade.realizedPnl
+    }
+
+    // Reopen the trade
+    trade.status = 'OPEN'
+    trade.closePrice = null
+    trade.closedAt = null
+    trade.closedBy = null
+    trade.realizedPnl = 0
+    trade.adminModified = true
+    trade.adminModifiedAt = new Date()
+    if (adminId) trade.adminModifiedBy = adminId
+
+    await trade.save()
+
+    // Log admin action
+    if (adminId) {
+      await AdminLog.create({
+        adminId,
+        action: 'TRADE_REOPEN',
+        targetType: 'TRADE',
+        targetId: trade._id,
+        previousValue: oldValues,
+        newValue: { status: 'OPEN' }
+      })
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Trade reopened successfully', 
+      trade,
+      reversedPnl: oldValues.realizedPnl
+    })
+  } catch (error) {
+    console.error('Error reopening trade:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 export default router
