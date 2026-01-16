@@ -9,6 +9,11 @@ import mongoose from 'mongoose'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // ==================== USER ROUTES ====================
 
 // POST /api/ib/apply - Apply to become an IB
@@ -62,6 +67,9 @@ router.post('/register-referral', async (req, res) => {
 router.get('/my-profile/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const user = await User.findById(userId).populate('ibPlanId').populate('ibLevelId')
     
     if (!user) {
@@ -117,7 +125,9 @@ router.get('/my-profile/:userId', async (req, res) => {
 router.get('/my-referrals/:userId', async (req, res) => {
   try {
     const { userId } = req.params
-    
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const referrals = await User.find({ parentIBId: userId })
       .select('firstName email createdAt isIB ibStatus')
       .sort({ createdAt: -1 })
@@ -133,6 +143,9 @@ router.get('/my-referrals/:userId', async (req, res) => {
 router.get('/my-commissions/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { limit = 50, offset = 0 } = req.query
 
     const commissions = await IBCommission.find({ ibUserId: userId })
@@ -155,6 +168,9 @@ router.get('/my-commissions/:userId', async (req, res) => {
 router.get('/my-downline/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { maxDepth = 5 } = req.query
 
     const tree = await ibEngine.getIBTree(
@@ -243,6 +259,9 @@ router.get('/admin/pending', async (req, res) => {
 router.put('/admin/approve/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { planId } = req.body
 
     const user = await ibEngine.approveIB(userId, planId)
@@ -266,6 +285,9 @@ router.put('/admin/approve/:userId', async (req, res) => {
 router.put('/admin/reject/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { reason } = req.body
 
     const user = await User.findById(userId)
@@ -294,6 +316,9 @@ router.put('/admin/reject/:userId', async (req, res) => {
 router.put('/admin/block/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { reason } = req.body
 
     const user = await ibEngine.blockIB(userId, reason)
@@ -316,6 +341,9 @@ router.put('/admin/block/:userId', async (req, res) => {
 router.put('/admin/unblock/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const user = await User.findById(userId)
     if (!user) throw new Error('User not found')
 
@@ -341,6 +369,9 @@ router.put('/admin/unblock/:userId', async (req, res) => {
 router.put('/admin/update/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { ibLevel } = req.body
 
     const user = await User.findById(userId)
@@ -373,6 +404,9 @@ router.put('/admin/update/:userId', async (req, res) => {
 router.put('/admin/change-plan/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { planId } = req.body
 
     const user = await User.findById(userId)
@@ -395,6 +429,9 @@ router.put('/admin/change-plan/:userId', async (req, res) => {
 router.get('/admin/tree/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { maxDepth = 5 } = req.query
 
     const tree = await ibEngine.getIBTree(
@@ -413,6 +450,9 @@ router.get('/admin/tree/:userId', async (req, res) => {
 router.get('/admin/stats/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const stats = await ibEngine.getIBStats(userId)
     res.json({ success: true, ...stats })
   } catch (error) {
