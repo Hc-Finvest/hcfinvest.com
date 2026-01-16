@@ -53,7 +53,7 @@ const copyTradeSchema = new mongoose.Schema({
   },
   copyMode: {
     type: String,
-    enum: ['FIXED_LOT', 'LOT_MULTIPLIER', 'AUTO'],
+    enum: ['FIXED_LOT', 'BALANCE_BASED', 'EQUITY_BASED', 'MULTIPLIER', 'LOT_MULTIPLIER', 'AUTO'],
     required: true
   },
   copyValue: {
