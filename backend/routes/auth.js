@@ -7,6 +7,11 @@ import emailService from '../services/emailService.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // Generate JWT token with issued at timestamp
 const generateToken = (userId) => {
   return jwt.sign({ id: userId, iat: Math.floor(Date.now() / 1000) }, process.env.JWT_SECRET, { expiresIn: '7d' })
@@ -401,7 +406,11 @@ router.put('/update-profile', async (req, res) => {
 // GET /api/auth/user/:userId - Get user by ID (for admin)
 router.get('/user/:userId', async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select('-password')
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const user = await User.findById(userId).select('-password')
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }

@@ -148,7 +148,11 @@ router.get('/referral-link/:userId', async (req, res) => {
 // GET /api/ib/my-referrals/:userId - Get IB's direct referrals
 router.get('/my-referrals/:userId', async (req, res) => {
   try {
-    const ibUser = await IBUser.findOne({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const ibUser = await IBUser.findOne({ userId })
     if (!ibUser) {
       return res.status(404).json({ message: 'IB profile not found' })
     }
@@ -166,7 +170,11 @@ router.get('/my-referrals/:userId', async (req, res) => {
 // GET /api/ib/my-downline/:userId - Get IB's full downline tree
 router.get('/my-downline/:userId', async (req, res) => {
   try {
-    const ibUser = await IBUser.findOne({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const ibUser = await IBUser.findOne({ userId })
     if (!ibUser) {
       return res.status(404).json({ message: 'IB profile not found' })
     }
@@ -183,8 +191,11 @@ router.get('/my-downline/:userId', async (req, res) => {
 router.get('/my-commissions/:userId', async (req, res) => {
   try {
     const { limit = 50, status } = req.query
-
-    const ibUser = await IBUser.findOne({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const ibUser = await IBUser.findOne({ userId })
     if (!ibUser) {
       return res.status(404).json({ message: 'IB profile not found' })
     }

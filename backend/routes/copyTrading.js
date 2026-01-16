@@ -412,7 +412,11 @@ router.delete('/follow/:id/unfollow', async (req, res) => {
 // GET /api/copy/my-subscriptions/:userId - Get user's copy subscriptions
 router.get('/my-subscriptions/:userId', async (req, res) => {
   try {
-    const subscriptions = await CopyFollower.find({ followerId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const subscriptions = await CopyFollower.find({ followerId: userId })
       .populate('masterId', 'displayName stats approvedCommissionPercentage')
       .populate('followerAccountId', 'accountId balance')
       .sort({ createdAt: -1 })
@@ -423,7 +427,7 @@ router.get('/my-subscriptions/:userId', async (req, res) => {
       
       // Get all copy trades for this subscription
       const copyTrades = await CopyTrade.find({
-        followerUserId: req.params.userId,
+        followerUserId: userId,
         masterId: sub.masterId?._id
       })
 
@@ -471,8 +475,11 @@ router.get('/my-subscriptions/:userId', async (req, res) => {
 router.get('/my-copy-trades/:userId', async (req, res) => {
   try {
     const { status, limit = 50 } = req.query
-
-    const query = { followerUserId: req.params.userId }
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const query = { followerUserId: userId }
     if (status) query.status = status
 
     const copyTrades = await CopyTrade.find(query)

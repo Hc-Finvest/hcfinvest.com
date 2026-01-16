@@ -211,7 +211,11 @@ router.post('/transfer-from-trading', async (req, res) => {
 // GET /api/wallet/transactions/:userId - Get user transactions
 router.get('/transactions/:userId', async (req, res) => {
   try {
-    const transactions = await Transaction.find({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const transactions = await Transaction.find({ userId })
       .sort({ createdAt: -1 })
     res.json({ transactions })
   } catch (error) {

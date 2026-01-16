@@ -5,6 +5,11 @@ import UserBankAccount from '../models/UserBankAccount.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // GET /api/payment-methods - Get all active payment methods (for users)
 router.get('/', async (req, res) => {
   try {
@@ -287,7 +292,11 @@ router.post('/currencies/add-all', async (req, res) => {
 // GET /api/payment-methods/user-banks/:userId - Get user's bank accounts
 router.get('/user-banks/:userId', async (req, res) => {
   try {
-    const accounts = await UserBankAccount.find({ userId: req.params.userId }).sort({ createdAt: -1 })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const accounts = await UserBankAccount.find({ userId }).sort({ createdAt: -1 })
     res.json({ accounts })
   } catch (error) {
     res.status(500).json({ message: 'Error fetching bank accounts', error: error.message })
@@ -297,8 +306,12 @@ router.get('/user-banks/:userId', async (req, res) => {
 // GET /api/payment-methods/user-banks/:userId/approved - Get user's approved bank accounts (for withdrawal)
 router.get('/user-banks/:userId/approved', async (req, res) => {
   try {
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
     const accounts = await UserBankAccount.find({ 
-      userId: req.params.userId, 
+      userId, 
       status: 'Approved',
       isActive: true 
     }).sort({ createdAt: -1 })

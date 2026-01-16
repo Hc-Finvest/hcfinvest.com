@@ -4,6 +4,11 @@ import User from '../models/User.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // POST /api/kyc/submit - Submit KYC documents
 router.post('/submit', async (req, res) => {
   try {
@@ -71,7 +76,9 @@ router.post('/submit', async (req, res) => {
 router.get('/status/:userId', async (req, res) => {
   try {
     const { userId } = req.params
-
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const kyc = await KYC.findOne({ userId }).sort({ createdAt: -1 })
 
     if (!kyc) {

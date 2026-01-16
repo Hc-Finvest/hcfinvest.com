@@ -7,10 +7,19 @@ import bcrypt from 'bcryptjs'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // GET /api/trading-accounts/user/:userId - Get user's trading accounts
 router.get('/user/:userId', async (req, res) => {
   try {
-    const accounts = await TradingAccount.find({ userId: req.params.userId })
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+    const accounts = await TradingAccount.find({ userId })
       .populate('accountTypeId', 'name description minDeposit leverage exposureLimit isDemo')
       .sort({ createdAt: -1 })
     res.json({ success: true, accounts })

@@ -4,6 +4,11 @@ import User from '../models/User.js'
 
 const router = express.Router()
 
+// Helper to validate MongoDB ObjectId
+const isValidObjectId = (id) => {
+  return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 // GET /api/admin/users - Get all users
 router.get('/users', async (req, res) => {
   try {
@@ -23,7 +28,11 @@ router.get('/users', async (req, res) => {
 // GET /api/admin/users/:id - Get single user
 router.get('/users/:id', async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password')
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const user = await User.findById(id).select('-password')
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }
@@ -82,12 +91,16 @@ router.post('/users/create', async (req, res) => {
 // PUT /api/admin/users/:id/password - Change user password
 router.put('/users/:id/password', async (req, res) => {
   try {
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { password } = req.body
     if (!password || password.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' })
     }
     
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
@@ -105,19 +118,23 @@ router.put('/users/:id/password', async (req, res) => {
 // POST /api/admin/users/:id/deduct - Deduct funds from user wallet
 router.post('/users/:id/deduct', async (req, res) => {
   try {
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { amount, reason } = req.body
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Invalid amount' })
     }
     
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
     
     // Use Wallet model (same as user wallet page)
     const Wallet = (await import('../models/Wallet.js')).default
-    let wallet = await Wallet.findOne({ userId: req.params.id })
+    let wallet = await Wallet.findOne({ userId: id })
     if (!wallet) {
       return res.status(400).json({ success: false, message: 'User has no wallet' })
     }
@@ -145,21 +162,25 @@ router.post('/users/:id/deduct', async (req, res) => {
 // POST /api/admin/users/:id/add-fund - Add funds to user wallet (Admin only)
 router.post('/users/:id/add-fund', async (req, res) => {
   try {
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { amount, reason } = req.body
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Invalid amount' })
     }
     
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
     
     // Use Wallet model (same as user wallet page)
     const Wallet = (await import('../models/Wallet.js')).default
-    let wallet = await Wallet.findOne({ userId: req.params.id })
+    let wallet = await Wallet.findOne({ userId: id })
     if (!wallet) {
-      wallet = new Wallet({ userId: req.params.id, balance: 0 })
+      wallet = new Wallet({ userId: id, balance: 0 })
     }
     
     const previousBalance = wallet.balance || 0
@@ -244,9 +265,13 @@ router.post('/trading-account/:id/deduct', async (req, res) => {
 // PUT /api/admin/users/:id/block - Block/Unblock user
 router.put('/users/:id/block', async (req, res) => {
   try {
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { blocked, reason } = req.body
     
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
@@ -269,9 +294,13 @@ router.put('/users/:id/block', async (req, res) => {
 // PUT /api/admin/users/:id/ban - Ban/Unban user
 router.put('/users/:id/ban', async (req, res) => {
   try {
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
     const { banned, reason } = req.body
     
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
@@ -297,7 +326,11 @@ router.put('/users/:id/ban', async (req, res) => {
 // DELETE /api/admin/users/:id - Delete user
 router.delete('/users/:id', async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id)
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    const user = await User.findByIdAndDelete(id)
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }
@@ -312,13 +345,17 @@ router.delete('/users/:id', async (req, res) => {
 // POST /api/admin/trading-account/:id/add-credit - Add credit/bonus to trading account
 router.post('/trading-account/:id/add-credit', async (req, res) => {
   try {
+    const { id } = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid account ID' })
+    }
     const { amount, reason, adminId } = req.body
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Invalid amount' })
     }
     
     const TradingAccount = (await import('../models/TradingAccount.js')).default
-    const account = await TradingAccount.findById(req.params.id)
+    const account = await TradingAccount.findById(id)
     if (!account) {
       return res.status(404).json({ success: false, message: 'Trading account not found' })
     }
