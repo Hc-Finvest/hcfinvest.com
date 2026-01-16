@@ -326,8 +326,11 @@ router.post('/user-banks', async (req, res) => {
   try {
     const { userId, type, bankName, accountNumber, accountHolderName, ifscCode, branchName, upiId } = req.body
 
-    if (!userId || !type) {
-      return res.status(400).json({ message: 'User ID and type are required' })
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+    if (!type) {
+      return res.status(400).json({ message: 'Type is required' })
     }
 
     // Check for duplicate

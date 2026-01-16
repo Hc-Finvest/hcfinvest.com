@@ -14,10 +14,13 @@ router.post('/submit', async (req, res) => {
   try {
     const { userId, documentType, documentNumber, frontImage, backImage, selfieImage } = req.body
 
-    if (!userId || !documentType || !documentNumber || !frontImage) {
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+    if (!documentType || !documentNumber || !frontImage) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: userId, documentType, documentNumber, frontImage'
+        message: 'Missing required fields: documentType, documentNumber, frontImage'
       })
     }
 

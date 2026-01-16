@@ -36,6 +36,9 @@ router.post('/deposit', async (req, res) => {
   try {
     const { userId, amount, paymentMethod, transactionRef, screenshot } = req.body
 
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' })
     }
@@ -75,6 +78,9 @@ router.post('/withdraw', async (req, res) => {
   try {
     const { userId, amount, paymentMethod } = req.body
 
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' })
     }
@@ -117,6 +123,9 @@ router.post('/transfer-to-trading', async (req, res) => {
   try {
     const { userId, tradingAccountId, amount } = req.body
 
+    if (!isValidObjectId(userId) || !isValidObjectId(tradingAccountId)) {
+      return res.status(400).json({ message: 'Invalid user ID or trading account ID' })
+    }
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' })
     }
@@ -165,6 +174,9 @@ router.post('/transfer-from-trading', async (req, res) => {
   try {
     const { userId, tradingAccountId, amount } = req.body
 
+    if (!isValidObjectId(userId) || !isValidObjectId(tradingAccountId)) {
+      return res.status(400).json({ message: 'Invalid user ID or trading account ID' })
+    }
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' })
     }

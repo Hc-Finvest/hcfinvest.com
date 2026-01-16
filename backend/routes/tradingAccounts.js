@@ -46,6 +46,10 @@ router.post('/', async (req, res) => {
   try {
     const { userId, accountTypeId, pin } = req.body
 
+    if (!isValidObjectId(userId) || !isValidObjectId(accountTypeId)) {
+      return res.status(400).json({ message: 'Invalid user ID or account type ID' })
+    }
+
     // Validate PIN (4 digits)
     if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       return res.status(400).json({ message: 'PIN must be exactly 4 digits' })
@@ -208,6 +212,10 @@ router.post('/:id/transfer', async (req, res) => {
   try {
     const { userId, amount, pin, direction, skipPinVerification } = req.body
 
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
+
     // Validate amount
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' })
@@ -313,6 +321,9 @@ router.post('/account-transfer', async (req, res) => {
   try {
     const { userId, fromAccountId, toAccountId, amount, pin, skipPinVerification } = req.body
 
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' })
+    }
     if (!fromAccountId || !toAccountId) {
       return res.status(400).json({ message: 'Both source and target accounts are required' })
     }
