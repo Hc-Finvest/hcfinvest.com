@@ -46,7 +46,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
     { name: 'Account Types', icon: CreditCard, path: '/admin/account-types' },
     { name: 'Theme Settings', icon: Palette, path: '/admin/theme' },
     { name: 'Email Management', icon: Mail, path: '/admin/email' },
-    { name: 'Cryptrum Gateway', icon: Bitcoin, path: '/admin/cryptrum' },
+    { name: 'Oxapay Gateway', icon: Bitcoin, path: '/admin/oxapay' },
     { name: 'Admin Management', icon: Shield, path: '/admin/admin-management' },
     { name: 'KYC Verification', icon: FileCheck, path: '/admin/kyc' },
     { name: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },

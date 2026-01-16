@@ -25,7 +25,7 @@ import themeRoutes from './routes/theme.js'
 import adminManagementRoutes from './routes/adminManagement.js'
 import uploadRoutes from './routes/upload.js'
 import emailRoutes from './routes/email.js'
-import cryptrumRoutes from './routes/cryptrum.js'
+import oxapayRoutes from './routes/oxapay.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import marketDataService from './services/marketDataService.js'
@@ -179,7 +179,7 @@ app.use('/api/theme', themeRoutes)
 app.use('/api/admin-mgmt', adminManagementRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/email', emailRoutes)
-app.use('/api/cryptrum', cryptrumRoutes)
+app.use('/api/oxapay', oxapayRoutes)
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))

@@ -63,13 +63,13 @@ const WalletPage = () => {
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false)
   const fileInputRef = useRef(null)
   
-  // Cryptrum state
-  const [cryptrumAvailable, setCryptrumAvailable] = useState(false)
-  const [cryptrumConfig, setCryptrumConfig] = useState(null)
-  const [showCryptrumModal, setShowCryptrumModal] = useState(false)
-  const [cryptrumAmount, setCryptrumAmount] = useState('')
-  const [cryptrumLoading, setCryptrumLoading] = useState(false)
-  const [cryptrumPayment, setCryptrumPayment] = useState(null)
+  // Oxapay state
+  const [oxapayAvailable, setOxapayAvailable] = useState(false)
+  const [oxapayConfig, setOxapayConfig] = useState(null)
+  const [showOxapayModal, setShowOxapayModal] = useState(false)
+  const [oxapayAmount, setOxapayAmount] = useState('')
+  const [oxapayLoading, setOxapayLoading] = useState(false)
+  const [oxapayPayment, setOxapayPayment] = useState(null)
   
   // Crypto withdrawal state
   const [cryptoWithdrawAvailable, setCryptoWithdrawAvailable] = useState(false)
@@ -147,28 +147,28 @@ const WalletPage = () => {
     }
     fetchPaymentMethods()
     fetchCurrencies()
-    fetchCryptrumStatus()
+    fetchOxapayStatus()
     fetchCryptoWithdrawStatus()
   }, [user._id])
 
-  // Check Cryptrum deposit availability
-  const fetchCryptrumStatus = async () => {
+  // Check Oxapay deposit availability
+  const fetchOxapayStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/cryptrum/status`)
+      const res = await fetch(`${API_URL}/oxapay/status`)
       const data = await res.json()
       if (data.success && data.available) {
-        setCryptrumAvailable(true)
-        setCryptrumConfig(data)
+        setOxapayAvailable(true)
+        setOxapayConfig(data)
       }
     } catch (error) {
-      console.error('Cryptrum status check failed:', error)
+      console.error('Oxapay status check failed:', error)
     }
   }
 
   // Check Crypto withdrawal availability
   const fetchCryptoWithdrawStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/cryptrum/withdraw/status`)
+      const res = await fetch(`${API_URL}/oxapay/withdraw/status`)
       const data = await res.json()
       if (data.success && data.available) {
         setCryptoWithdrawAvailable(true)
@@ -209,9 +209,13 @@ const WalletPage = () => {
     setError('')
 
     try {
-      const res = await fetch(`${API_URL}/cryptrum/withdraw`, {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_URL}/oxapay/withdraw`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           userId: user._id,
           amount,
@@ -236,30 +240,34 @@ const WalletPage = () => {
     setCryptoWithdrawLoading(false)
   }
 
-  // Handle Cryptrum deposit
-  const handleCryptrumDeposit = async () => {
-    if (!cryptrumAmount || parseFloat(cryptrumAmount) <= 0) {
+  // Handle Oxapay deposit
+  const handleOxapayDeposit = async () => {
+    if (!oxapayAmount || parseFloat(oxapayAmount) <= 0) {
       setError('Please enter a valid amount')
       return
     }
 
-    const amount = parseFloat(cryptrumAmount)
-    if (cryptrumConfig?.minDeposit && amount < cryptrumConfig.minDeposit) {
-      setError(`Minimum deposit is $${cryptrumConfig.minDeposit}`)
+    const amount = parseFloat(oxapayAmount)
+    if (oxapayConfig?.minDeposit && amount < oxapayConfig.minDeposit) {
+      setError(`Minimum deposit is $${oxapayConfig.minDeposit}`)
       return
     }
-    if (cryptrumConfig?.maxDeposit && amount > cryptrumConfig.maxDeposit) {
-      setError(`Maximum deposit is $${cryptrumConfig.maxDeposit}`)
+    if (oxapayConfig?.maxDeposit && amount > oxapayConfig.maxDeposit) {
+      setError(`Maximum deposit is $${oxapayConfig.maxDeposit}`)
       return
     }
 
-    setCryptrumLoading(true)
+    setOxapayLoading(true)
     setError('')
 
     try {
-      const res = await fetch(`${API_URL}/cryptrum/deposit`, {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_URL}/oxapay/deposit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           userId: user._id,
           amount: amount,
@@ -270,15 +278,15 @@ const WalletPage = () => {
 
       const data = await res.json()
       if (data.success) {
-        setCryptrumPayment(data.transaction)
-        setSuccess('Payment request created! Complete the payment using the details below.')
+        setOxapayPayment(data.transaction)
+        setSuccess('Payment request created! Complete the payment using the link below.')
       } else {
         setError(data.message || 'Failed to create payment request')
       }
     } catch (error) {
       setError(error.message || 'Error creating payment request. Please try again.')
     }
-    setCryptrumLoading(false)
+    setOxapayLoading(false)
   }
 
   const fetchCurrencies = async () => {
@@ -626,19 +634,6 @@ const WalletPage = () => {
                 >
                   <ArrowDownCircle size={isMobile ? 16 : 20} /> Deposit
                 </button>
-                {cryptrumAvailable && (
-                  <button
-                    onClick={() => {
-                      setShowCryptrumModal(true)
-                      setCryptrumPayment(null)
-                      setCryptrumAmount('')
-                      setError('')
-                    }}
-                    className={`flex items-center gap-2 bg-orange-500 text-white font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg hover:bg-orange-600 transition-colors`}
-                  >
-                    <Bitcoin size={isMobile ? 16 : 20} /> Crypto
-                  </button>
-                )}
                 <button
                   onClick={() => {
                     setShowWithdrawModal(true)
@@ -850,6 +845,20 @@ const WalletPage = () => {
             <div className="mb-4">
               <label className="block text-gray-400 text-sm mb-2">Payment Method</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                {/* Crypto (Oxapay) Option */}
+                {oxapayAvailable && (
+                  <button
+                    onClick={() => {
+                      setShowDepositModal(false)
+                      setShowOxapayModal(true)
+                      setError('')
+                    }}
+                    className="p-4 rounded-lg border transition-colors flex flex-col items-center gap-2 border-orange-500/50 bg-orange-500/10 hover:border-orange-500 hover:bg-orange-500/20"
+                  >
+                    <Bitcoin size={24} className="text-orange-500" />
+                    <span className="text-white text-sm">Crypto</span>
+                  </button>
+                )}
                 {paymentMethods.map((method) => (
                   <button
                     key={method._id}
@@ -865,7 +874,7 @@ const WalletPage = () => {
                   </button>
                 ))}
               </div>
-              {paymentMethods.length === 0 && (
+              {paymentMethods.length === 0 && !oxapayAvailable && (
                 <p className="text-gray-500 text-sm text-center py-4">No payment methods available</p>
               )}
             </div>
@@ -1057,8 +1066,8 @@ const WalletPage = () => {
         </div>
       )}
 
-      {/* Cryptrum Crypto Deposit Modal */}
-      {showCryptrumModal && (
+      {/* Oxapay Crypto Deposit Modal */}
+      {showOxapayModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-800 rounded-xl p-4 sm:p-6 w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
@@ -1068,14 +1077,14 @@ const WalletPage = () => {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-lg">Crypto Deposit</h3>
-                  <p className="text-gray-500 text-xs">via Cryptrum</p>
+                  <p className="text-gray-500 text-xs">via Oxapay</p>
                 </div>
               </div>
               <button 
                 onClick={() => {
-                  setShowCryptrumModal(false)
-                  setCryptrumPayment(null)
-                  setCryptrumAmount('')
+                  setShowOxapayModal(false)
+                  setOxapayPayment(null)
+                  setOxapayAmount('')
                   setError('')
                   setSuccess('')
                 }}
@@ -1088,20 +1097,20 @@ const WalletPage = () => {
             {error && <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">{error}</div>}
             {success && <div className="mb-4 p-3 bg-green-500/20 text-green-400 rounded-lg text-sm">{success}</div>}
 
-            {!cryptrumPayment ? (
+            {!oxapayPayment ? (
               <>
                 <div className="mb-4">
                   <label className="block text-gray-400 text-sm mb-2">Amount (USD)</label>
                   <input
                     type="number"
-                    value={cryptrumAmount}
-                    onChange={(e) => setCryptrumAmount(e.target.value)}
-                    placeholder={`Min: $${cryptrumConfig?.minDeposit || 10}`}
+                    value={oxapayAmount}
+                    onChange={(e) => setOxapayAmount(e.target.value)}
+                    placeholder={`Min: $${oxapayConfig?.minDeposit || 10}`}
                     className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
                   />
-                  {cryptrumConfig && (
+                  {oxapayConfig && (
                     <p className="text-gray-500 text-xs mt-1">
-                      Min: ${cryptrumConfig.minDeposit} • Max: ${cryptrumConfig.maxDeposit}
+                      Min: ${oxapayConfig.minDeposit} • Max: ${oxapayConfig.maxDeposit}
                     </p>
                   )}
                 </div>
@@ -1109,7 +1118,7 @@ const WalletPage = () => {
                 <div className="mb-4 p-3 bg-dark-700 rounded-lg">
                   <p className="text-gray-400 text-sm mb-2">Supported Cryptocurrencies:</p>
                   <div className="flex flex-wrap gap-2">
-                    {['USDT', 'BTC', 'ETH', 'USDC'].map(crypto => (
+                    {(oxapayConfig?.supportedCryptos || ['USDT', 'BTC', 'ETH', 'TRX']).map(crypto => (
                       <span key={crypto} className="px-2 py-1 bg-dark-600 text-white text-xs rounded">
                         {crypto}
                       </span>
@@ -1120,8 +1129,8 @@ const WalletPage = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      setShowCryptrumModal(false)
-                      setCryptrumAmount('')
+                      setShowOxapayModal(false)
+                      setOxapayAmount('')
                       setError('')
                     }}
                     className="flex-1 bg-dark-700 text-white py-3 rounded-lg hover:bg-dark-600 transition-colors"
@@ -1129,11 +1138,11 @@ const WalletPage = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={handleCryptrumDeposit}
-                    disabled={cryptrumLoading || !cryptrumAmount}
+                    onClick={handleOxapayDeposit}
+                    disabled={oxapayLoading || !oxapayAmount}
                     className="flex-1 bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {cryptrumLoading ? (
+                    {oxapayLoading ? (
                       <><RefreshCw size={16} className="animate-spin" /> Processing...</>
                     ) : (
                       'Continue to Payment'
@@ -1148,28 +1157,18 @@ const WalletPage = () => {
                     <Check size={32} className="text-green-500" />
                   </div>
                   <p className="text-white font-medium">Payment Request Created</p>
-                  <p className="text-gray-400 text-sm">Complete the payment using the details below</p>
+                  <p className="text-gray-400 text-sm">Complete the payment using the link below</p>
                 </div>
 
                 <div className="bg-dark-700 rounded-lg p-4 mb-4 space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-400 text-sm">Amount:</span>
-                    <span className="text-white font-medium">${cryptrumPayment.amount}</span>
+                    <span className="text-white font-medium">${oxapayPayment.amount}</span>
                   </div>
-                  {cryptrumPayment.cryptoAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400 text-sm">Crypto Amount:</span>
-                      <span className="text-white font-medium">{cryptrumPayment.cryptoAmount} {cryptrumPayment.cryptoCurrency}</span>
-                    </div>
-                  )}
-                  {cryptrumPayment.paymentAddress && (
-                    <div>
-                      <span className="text-gray-400 text-sm block mb-1">Payment Address:</span>
-                      <div className="bg-dark-600 p-2 rounded text-xs text-white break-all font-mono">
-                        {cryptrumPayment.paymentAddress}
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Track ID:</span>
+                    <span className="text-white font-medium text-xs">{oxapayPayment.trackId}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400 text-sm">Status:</span>
                     <span className="text-yellow-500 font-medium flex items-center gap-1">
@@ -1178,9 +1177,9 @@ const WalletPage = () => {
                   </div>
                 </div>
 
-                {cryptrumPayment.paymentUrl && (
+                {oxapayPayment.paymentUrl && (
                   <a
-                    href={cryptrumPayment.paymentUrl}
+                    href={oxapayPayment.paymentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 mb-3"
@@ -1191,9 +1190,9 @@ const WalletPage = () => {
 
                 <button
                   onClick={() => {
-                    setShowCryptrumModal(false)
-                    setCryptrumPayment(null)
-                    setCryptrumAmount('')
+                    setShowOxapayModal(false)
+                    setOxapayPayment(null)
+                    setOxapayAmount('')
                     setSuccess('')
                     fetchWallet()
                     fetchTransactions()

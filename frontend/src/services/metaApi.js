@@ -5,8 +5,6 @@
  */
 import { API_BASE_URL } from '../config/api'
 
-console.log('[MarketData] Initialized - using AllTick API via backend')
-
 class MarketDataApiService {
   constructor() {
     this.prices = new Map()

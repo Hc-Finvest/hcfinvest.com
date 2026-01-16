@@ -10,8 +10,8 @@ const cryptoTransactionSchema = new mongoose.Schema({
   // Gateway identification
   gateway: {
     type: String,
-    enum: ['cryptrum', 'other'],
-    default: 'cryptrum',
+    enum: ['oxapay', 'cryptrum', 'other'],
+    default: 'oxapay',
     required: true
   },
   
@@ -92,6 +92,32 @@ const cryptoTransactionSchema = new mongoose.Schema({
     type: Date
   },
   creditedAmount: {
+    type: Number,
+    default: 0
+  },
+  
+  // Wallet debited flag (critical for preventing double debit on withdrawals)
+  walletDebited: {
+    type: Boolean,
+    default: false
+  },
+  debitedAt: {
+    type: Date
+  },
+  debitedAmount: {
+    type: Number,
+    default: 0
+  },
+  
+  // Refund tracking (for failed withdrawals)
+  refunded: {
+    type: Boolean,
+    default: false
+  },
+  refundedAt: {
+    type: Date
+  },
+  refundedAmount: {
     type: Number,
     default: 0
   },

@@ -23,7 +23,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import RegPopupBox from "./Utilities/RegPopupBox";
 import ScrollToTopButton from "./Utilities/ScrollToTopButton";
-import Snowfall from "react-snowfall";
 import { Helmet } from "react-helmet-async";
 
 const MainContent = () => {

@@ -51,6 +51,7 @@ const AdminUserManagement = () => {
   const [addFundAmount, setAddFundAmount] = useState('')
   const [addFundReason, setAddFundReason] = useState('')
   const [blockReason, setBlockReason] = useState('')
+  const [creditAmount, setCreditAmount] = useState('')
   const [creditReason, setCreditReason] = useState('')
   const [userAccounts, setUserAccounts] = useState([])
   const [selectedAccountId, setSelectedAccountId] = useState('')

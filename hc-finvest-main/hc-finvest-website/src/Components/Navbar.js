@@ -136,6 +136,8 @@ const Navbar = () => {
                 },
               }}
               href="https://trade.hcfinvest.com/user/login"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               Login
             </Button>
@@ -149,6 +151,8 @@ const Navbar = () => {
                 },
               }}
               href="https://trade.hcfinvest.com/user/signup"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               Register
             </Button>
@@ -162,6 +166,8 @@ const Navbar = () => {
                 },
               }}
               href="https://trade.hcfinvest.com/user/signup"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               Demo Account
             </Button>
@@ -253,6 +259,8 @@ const Navbar = () => {
                   },
                 }}
                 href="https://trade.hcfinvest.com/user/login"
+              target="_blank"
+              rel="noopener noreferrer"
               >
                 Login
               </Button>
@@ -267,6 +275,8 @@ const Navbar = () => {
                   },
                 }}
                 href="https://trade.hcfinvest.com/user/signup"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 Register
               </Button>
@@ -275,6 +285,8 @@ const Navbar = () => {
                 fullWidth
                 sx={{ backgroundColor: "gray" }}
                 href="https://trade.hcfinvest.com/user/signup"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 Demo Account
               </Button>

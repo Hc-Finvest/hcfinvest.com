@@ -7,13 +7,12 @@ import {
   ArrowUpRight, ArrowDownRight, Clock, CheckCircle, XCircle
 } from 'lucide-react'
 
-const AdminCryptrum = () => {
+const AdminOxapay = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [activeTab, setActiveTab] = useState('config')
   const [showApiKey, setShowApiKey] = useState(false)
-  const [showApiSecret, setShowApiSecret] = useState(false)
   
   // Gateway config
   const [config, setConfig] = useState({
@@ -29,19 +28,12 @@ const AdminCryptrum = () => {
     description: '',
     instructions: '',
     supportedCryptos: [],
-    hasApiKey: false,
-    hasMerchantId: false,
-    hasWebhookSecret: false
+    hasMerchantApiKey: false
   })
 
-  // API credentials (separate for security)
+  // API credentials (only Merchant API Key needed)
   const [credentials, setCredentials] = useState({
-    apiKey: '',
-    apiSecret: '',
-    merchantId: '',
-    webhookSecret: '',
-    baseUrl: 'https://api.cryptrum.com/v1',
-    testMode: false
+    merchantApiKey: ''
   })
 
   // Transactions
@@ -79,6 +71,15 @@ const AdminCryptrum = () => {
     totalPayouts: { count: 0, totalAmount: 0 }
   })
 
+  // Get admin token for authenticated requests
+  const getAuthHeaders = () => {
+    const adminToken = localStorage.getItem('adminToken')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${adminToken}`
+    }
+  }
+
   useEffect(() => {
     fetchConfig()
     fetchStats()
@@ -100,7 +101,9 @@ const AdminCryptrum = () => {
   const fetchConfig = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/config`)
+      const res = await fetch(`${API_URL}/oxapay/admin/config`, {
+        headers: getAuthHeaders()
+      })
       const data = await res.json()
       if (data.success && data.gateway) {
         setConfig({
@@ -116,9 +119,7 @@ const AdminCryptrum = () => {
           description: data.gateway.description || '',
           instructions: data.gateway.instructions || '',
           supportedCryptos: data.gateway.supportedCryptos || [],
-          hasApiKey: data.gateway.hasApiKey || false,
-          hasMerchantId: data.gateway.hasMerchantId || false,
-          hasWebhookSecret: data.gateway.hasWebhookSecret || false
+          hasMerchantApiKey: data.gateway.hasMerchantApiKey || false
         })
       }
     } catch (error) {
@@ -130,7 +131,9 @@ const AdminCryptrum = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/stats`)
+      const res = await fetch(`${API_URL}/oxapay/admin/stats`, {
+        headers: getAuthHeaders()
+      })
       const data = await res.json()
       if (data.success) {
         setStats(data.stats)
@@ -143,10 +146,12 @@ const AdminCryptrum = () => {
   const fetchTransactions = async () => {
     setTxLoading(true)
     try {
-      let url = `${API_URL}/cryptrum/admin/transactions?page=${txPage}&limit=20`
+      let url = `${API_URL}/oxapay/admin/transactions?page=${txPage}&limit=20`
       if (txFilter) url += `&status=${txFilter}`
       
-      const res = await fetch(url)
+      const res = await fetch(url, {
+        headers: getAuthHeaders()
+      })
       const data = await res.json()
       if (data.success) {
         setTransactions(data.transactions || [])
@@ -161,7 +166,9 @@ const AdminCryptrum = () => {
   const fetchPayouts = async () => {
     setPayoutLoading(true)
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/payouts?limit=50`)
+      const res = await fetch(`${API_URL}/oxapay/admin/payouts?limit=50`, {
+        headers: getAuthHeaders()
+      })
       const data = await res.json()
       if (data.success) {
         setPayouts(data.payouts || [])
@@ -181,7 +188,9 @@ const AdminCryptrum = () => {
       return
     }
     try {
-      const res = await fetch(`${API_URL}/admin/users`)
+      const res = await fetch(`${API_URL}/admin/users`, {
+        headers: getAuthHeaders()
+      })
       const data = await res.json()
       if (data.users) {
         const filtered = data.users.filter(u => 
@@ -198,7 +207,9 @@ const AdminCryptrum = () => {
   const fetchWithdrawalRequests = async () => {
     setWithdrawalLoading(true)
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/withdrawal-requests?status=pending`)
+      const res = await fetch(`${API_URL}/oxapay/admin/withdrawal-requests?status=pending`, {
+        headers: getAuthHeaders()
+      })
       const data = await res.json()
       if (data.success) {
         setWithdrawalRequests(data.requests || [])
@@ -215,9 +226,9 @@ const AdminCryptrum = () => {
     
     setWithdrawalLoading(true)
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/approve-withdrawal/${id}`, {
+      const res = await fetch(`${API_URL}/oxapay/admin/approve-withdrawal/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ adminNotes: 'Approved by admin' })
       })
       const data = await res.json()
@@ -239,9 +250,9 @@ const AdminCryptrum = () => {
     
     setWithdrawalLoading(true)
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/reject-withdrawal/${id}`, {
+      const res = await fetch(`${API_URL}/oxapay/admin/reject-withdrawal/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ reason: reason || 'Rejected by admin' })
       })
       const data = await res.json()
@@ -266,9 +277,9 @@ const AdminCryptrum = () => {
 
     setPayoutLoading(true)
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/payout`, {
+      const res = await fetch(`${API_URL}/oxapay/admin/payout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           userId: payoutForm.userId,
           amount: parseFloat(payoutForm.amount),
@@ -299,19 +310,17 @@ const AdminCryptrum = () => {
     
     try {
       const payload = {
-        ...config,
-        ...credentials
+        ...config
       }
       
-      // Only include credentials if they have values
-      if (!credentials.apiKey) delete payload.apiKey
-      if (!credentials.apiSecret) delete payload.apiSecret
-      if (!credentials.merchantId) delete payload.merchantId
-      if (!credentials.webhookSecret) delete payload.webhookSecret
+      // Only include merchantApiKey if it has a value
+      if (credentials.merchantApiKey) {
+        payload.merchantApiKey = credentials.merchantApiKey
+      }
 
-      const res = await fetch(`${API_URL}/cryptrum/admin/config`, {
+      const res = await fetch(`${API_URL}/oxapay/admin/config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       })
       
@@ -319,14 +328,8 @@ const AdminCryptrum = () => {
       if (data.success) {
         setMessage({ type: 'success', text: 'Configuration saved successfully!' })
         fetchConfig()
-        // Clear credential fields after save
-        setCredentials(prev => ({
-          ...prev,
-          apiKey: '',
-          apiSecret: '',
-          merchantId: '',
-          webhookSecret: ''
-        }))
+        // Clear credential field after save
+        setCredentials({ merchantApiKey: '' })
       } else {
         setMessage({ type: 'error', text: data.message || 'Failed to save configuration' })
       }
@@ -340,9 +343,9 @@ const AdminCryptrum = () => {
     if (!confirm('Are you sure you want to manually credit this transaction?')) return
     
     try {
-      const res = await fetch(`${API_URL}/cryptrum/admin/manual-credit/${transactionId}`, {
+      const res = await fetch(`${API_URL}/oxapay/admin/manual-credit/${transactionId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ adminNotes: 'Manually credited by admin' })
       })
       const data = await res.json()
@@ -381,7 +384,7 @@ const AdminCryptrum = () => {
   }
 
   return (
-    <AdminLayout title="Cryptrum Payment Gateway">
+    <AdminLayout title="oxapay Payment Gateway">
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -390,7 +393,7 @@ const AdminCryptrum = () => {
               <Bitcoin size={24} className="text-orange-500" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Cryptrum Gateway</h1>
+              <h1 className="text-xl font-bold text-white">oxapay Gateway</h1>
               <p className="text-gray-400 text-sm">Crypto payment gateway configuration</p>
             </div>
           </div>
@@ -492,7 +495,7 @@ const AdminCryptrum = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white">Enable Gateway</p>
-                    <p className="text-gray-500 text-sm">Allow users to deposit via Cryptrum</p>
+                    <p className="text-gray-500 text-sm">Allow users to deposit via oxapay</p>
                   </div>
                   <button
                     onClick={() => setConfig({ ...config, isActive: !config.isActive })}
@@ -570,14 +573,14 @@ const AdminCryptrum = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-gray-400 text-sm mb-1">
-                    API Key {config.hasApiKey && <span className="text-green-500">(configured)</span>}
+                    Merchant API Key {config.hasMerchantApiKey && <span className="text-green-500">(configured)</span>}
                   </label>
                   <div className="relative">
                     <input
                       type={showApiKey ? 'text' : 'password'}
-                      value={credentials.apiKey}
-                      onChange={(e) => setCredentials({ ...credentials, apiKey: e.target.value })}
-                      placeholder={config.hasApiKey ? '••••••••••••••••' : 'Enter API Key'}
+                      value={credentials.merchantApiKey}
+                      onChange={(e) => setCredentials({ ...credentials, merchantApiKey: e.target.value })}
+                      placeholder={config.hasMerchantApiKey ? '••••••••••••••••' : 'Enter Merchant API Key'}
                       className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white pr-10"
                     />
                     <button
@@ -587,63 +590,9 @@ const AdminCryptrum = () => {
                       {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">
-                    API Secret {config.hasApiKey && <span className="text-green-500">(configured)</span>}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showApiSecret ? 'text' : 'password'}
-                      value={credentials.apiSecret}
-                      onChange={(e) => setCredentials({ ...credentials, apiSecret: e.target.value })}
-                      placeholder={config.hasApiKey ? '••••••••••••••••' : 'Enter API Secret'}
-                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white pr-10"
-                    />
-                    <button
-                      onClick={() => setShowApiSecret(!showApiSecret)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    >
-                      {showApiSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">
-                    Merchant ID {config.hasMerchantId && <span className="text-green-500">(configured)</span>}
-                  </label>
-                  <input
-                    type="text"
-                    value={credentials.merchantId}
-                    onChange={(e) => setCredentials({ ...credentials, merchantId: e.target.value })}
-                    placeholder={config.hasMerchantId ? '••••••••••••••••' : 'Enter Merchant ID'}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">
-                    Webhook Secret {config.hasWebhookSecret && <span className="text-green-500">(configured)</span>}
-                  </label>
-                  <input
-                    type="password"
-                    value={credentials.webhookSecret}
-                    onChange={(e) => setCredentials({ ...credentials, webhookSecret: e.target.value })}
-                    placeholder={config.hasWebhookSecret ? '••••••••••••••••' : 'Enter Webhook Secret'}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">API Base URL</label>
-                  <input
-                    type="text"
-                    value={credentials.baseUrl}
-                    onChange={(e) => setCredentials({ ...credentials, baseUrl: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white"
-                  />
+                  <p className="text-gray-500 text-xs mt-1">
+                    Get this from your Oxapay merchant dashboard. Used for both deposits and withdrawals.
+                  </p>
                 </div>
 
                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
@@ -651,10 +600,23 @@ const AdminCryptrum = () => {
                     <AlertTriangle size={16} className="text-yellow-500 mt-0.5" />
                     <div className="text-sm">
                       <p className="text-yellow-500 font-medium">Webhook URL</p>
-                      <p className="text-gray-400 mt-1">Configure this URL in your Cryptrum dashboard:</p>
+                      <p className="text-gray-400 mt-1">Configure this URL in your Oxapay dashboard:</p>
                       <code className="block mt-1 p-2 bg-dark-900 rounded text-xs text-green-400 break-all">
-                        {window.location.origin.replace(':5173', ':5001')}/api/cryptrum/webhook
+                        {window.location.origin.replace(':5173', ':5000')}/api/oxapay/webhook
                       </code>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Shield size={16} className="text-blue-500 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="text-blue-500 font-medium">Security Note</p>
+                      <p className="text-gray-400 mt-1">
+                        Webhook signatures are verified using HMAC-SHA512 with your Merchant API Key.
+                        Ensure your webhook URL is configured correctly in Oxapay dashboard.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1076,4 +1038,4 @@ const AdminCryptrum = () => {
   )
 }
 
-export default AdminCryptrum
+export default AdminOxapay
