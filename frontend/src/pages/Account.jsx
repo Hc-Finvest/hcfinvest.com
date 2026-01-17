@@ -1407,12 +1407,12 @@ const Account = () => {
               </div>
             </div>
 
-            {/* To Account Selection */}
+            {/* To Account Selection - Only show live accounts (exclude demo) */}
             <div className="mb-4">
               <label className="block text-gray-400 text-sm mb-2">To Account</label>
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {userAccounts
-                  .filter(acc => acc._id !== selectedAccount._id && acc.status === 'Active')
+                  .filter(acc => acc._id !== selectedAccount._id && acc.status === 'Active' && !acc.isDemo && !acc.accountTypeId?.isDemo)
                   .map(acc => (
                     <button
                       key={acc._id}
@@ -1431,8 +1431,8 @@ const Account = () => {
                       <span className="text-gray-400 text-sm">${acc.balance.toLocaleString()}</span>
                     </button>
                   ))}
-                {userAccounts.filter(acc => acc._id !== selectedAccount._id && acc.status === 'Active').length === 0 && (
-                  <p className="text-gray-500 text-sm text-center py-2">No other accounts available</p>
+                {userAccounts.filter(acc => acc._id !== selectedAccount._id && acc.status === 'Active' && !acc.isDemo && !acc.accountTypeId?.isDemo).length === 0 && (
+                  <p className="text-gray-500 text-sm text-center py-2">No live accounts available for transfer</p>
                 )}
               </div>
             </div>

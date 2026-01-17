@@ -147,12 +147,15 @@ const Dashboard = () => {
 
   const fetchTrades = async () => {
     try {
-      // Fetch trades for all user accounts
+      // Fetch trades for all user accounts (exclude demo accounts)
       let allTrades = []
       let charges = 0
       let pnl = 0
       
-      for (const account of userAccounts) {
+      // Filter out demo accounts - only show live account trades
+      const liveAccounts = userAccounts.filter(acc => !acc.isDemo && !acc.accountTypeId?.isDemo)
+      
+      for (const account of liveAccounts) {
         // Fetch closed trades for history
         const historyRes = await fetch(`${API_URL}/trade/history/${account._id}`)
         const historyData = await historyRes.json()

@@ -5,6 +5,8 @@ import TradingAccount from '../models/TradingAccount.js'
 import User from '../models/User.js'
 import AdminWallet from '../models/AdminWallet.js'
 import AdminWalletTransaction from '../models/AdminWalletTransaction.js'
+import KYC from '../models/KYC.js'
+import UserBankAccount from '../models/UserBankAccount.js'
 
 const router = express.Router()
 
@@ -83,6 +85,25 @@ router.post('/withdraw', async (req, res) => {
     }
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' })
+    }
+
+    // SECURITY CHECK 1: Verify KYC is approved
+    const kyc = await KYC.findOne({ userId, status: 'approved' })
+    if (!kyc) {
+      return res.status(400).json({ 
+        message: 'KYC verification required before withdrawal. Please complete your KYC first.' 
+      })
+    }
+
+    // SECURITY CHECK 2: Verify user has at least one approved payment method
+    const verifiedPaymentMethod = await UserBankAccount.findOne({ 
+      userId, 
+      status: 'Approved' 
+    })
+    if (!verifiedPaymentMethod) {
+      return res.status(400).json({ 
+        message: 'Please add and verify a withdrawal method (Bank/UPI) before requesting withdrawal.' 
+      })
     }
 
     // Get wallet
@@ -220,15 +241,34 @@ router.post('/transfer-from-trading', async (req, res) => {
   }
 })
 
-// GET /api/wallet/transactions/:userId - Get user transactions
+// GET /api/wallet/transactions/:userId - Get user transactions (excludes demo account transactions)
 router.get('/transactions/:userId', async (req, res) => {
   try {
     const { userId } = req.params
     if (!isValidObjectId(userId)) {
       return res.status(400).json({ message: 'Invalid user ID' })
     }
-    const transactions = await Transaction.find({ userId })
-      .sort({ createdAt: -1 })
+    
+    // Get all demo account IDs for this user
+    const demoAccounts = await TradingAccount.find({ 
+      userId, 
+      $or: [{ isDemo: true }] 
+    }).select('_id')
+    const demoAccountIds = demoAccounts.map(acc => acc._id)
+    
+    // Exclude demo-related transactions
+    const transactions = await Transaction.find({ 
+      userId,
+      // Exclude demo transaction types
+      type: { $nin: ['Demo_Credit', 'Demo_Reset'] },
+      // Exclude transactions involving demo accounts
+      $and: [
+        { $or: [{ tradingAccountId: { $exists: false } }, { tradingAccountId: null }, { tradingAccountId: { $nin: demoAccountIds } }] },
+        { $or: [{ toTradingAccountId: { $exists: false } }, { toTradingAccountId: null }, { toTradingAccountId: { $nin: demoAccountIds } }] },
+        { $or: [{ fromTradingAccountId: { $exists: false } }, { fromTradingAccountId: null }, { fromTradingAccountId: { $nin: demoAccountIds } }] }
+      ]
+    }).sort({ createdAt: -1 })
+    
     res.json({ transactions })
   } catch (error) {
     res.status(500).json({ message: 'Error fetching transactions', error: error.message })

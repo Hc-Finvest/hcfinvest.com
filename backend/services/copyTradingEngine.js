@@ -476,6 +476,91 @@ class CopyTradingEngine {
         copyTrade.followerPnl = result.realizedPnl
         copyTrade.status = 'CLOSED'
         copyTrade.closedAt = new Date()
+        
+        // ========== IMMEDIATE COMMISSION CALCULATION (MT5-STYLE) ==========
+        // Only apply commission on PROFITABLE trades
+        let commissionAmount = 0
+        let masterCommissionCredited = 0
+        
+        if (realizedPnl > 0) {
+          try {
+            // Get master's commission percentage
+            const master = await MasterTrader.findById(copyTrade.masterId)
+            if (master && master.approvedCommissionPercentage > 0) {
+              const commissionPercentage = master.approvedCommissionPercentage
+              const adminSharePercentage = master.adminSharePercentage || 30
+              
+              // Calculate commission from profit
+              commissionAmount = realizedPnl * (commissionPercentage / 100)
+              const adminShare = commissionAmount * (adminSharePercentage / 100)
+              masterCommissionCredited = commissionAmount - adminShare
+              
+              // Deduct commission from follower's profit (already added to balance above)
+              if (followerAccount && followerAccount.balance >= commissionAmount) {
+                followerAccount.balance -= commissionAmount
+                await followerAccount.save()
+                
+                // Credit master's trading account immediately
+                const masterAccount = await TradingAccount.findById(master.tradingAccountId)
+                if (masterAccount) {
+                  masterAccount.balance += masterCommissionCredited
+                  await masterAccount.save()
+                  console.log(`[CopyTrade] Commission credited to master account: $${masterCommissionCredited.toFixed(2)}`)
+                }
+                
+                // Update master's commission stats
+                master.totalCommissionEarned += masterCommissionCredited
+                await master.save()
+                
+                // Create commission record for audit trail (idempotent - uses copyTrade._id)
+                const existingCommission = await CopyCommission.findOne({ 
+                  masterId: copyTrade.masterId,
+                  followerId: copyTrade.followerId,
+                  copyTradeId: copyTrade._id 
+                })
+                
+                if (!existingCommission) {
+                  await CopyCommission.create({
+                    masterId: copyTrade.masterId,
+                    followerId: copyTrade.followerId,
+                    followerUserId: copyTrade.followerUserId,
+                    followerAccountId: copyTrade.followerAccountId,
+                    tradingDay: this.getTradingDay(),
+                    dailyProfit: realizedPnl,
+                    commissionPercentage,
+                    totalCommission: commissionAmount,
+                    adminShare,
+                    masterShare: masterCommissionCredited,
+                    adminSharePercentage,
+                    status: 'SETTLED',
+                    deductedAt: new Date(),
+                    settledAt: new Date(),
+                    copyTradeId: copyTrade._id  // For idempotency
+                  })
+                }
+                
+                // Mark commission as applied on the copy trade
+                copyTrade.commissionApplied = true
+                copyTrade.commissionAmount = commissionAmount
+                copyTrade.masterCommission = masterCommissionCredited
+                
+                console.log(`[CopyTrade] Commission: Profit=$${realizedPnl.toFixed(2)}, Commission=$${commissionAmount.toFixed(2)}, Master gets=$${masterCommissionCredited.toFixed(2)}`)
+              } else {
+                console.log(`[CopyTrade] Insufficient balance for commission deduction`)
+              }
+            }
+          } catch (commError) {
+            console.error(`[CopyTrade] Error calculating commission:`, commError)
+          }
+        } else {
+          // No commission on loss trades
+          copyTrade.commissionApplied = true
+          copyTrade.commissionAmount = 0
+          copyTrade.masterCommission = 0
+          console.log(`[CopyTrade] No commission - trade closed in loss: $${realizedPnl.toFixed(2)}`)
+        }
+        // ========== END COMMISSION CALCULATION ==========
+        
         await copyTrade.save()
 
         // Update follower stats
@@ -484,6 +569,7 @@ class CopyTradingEngine {
           follower.stats.activeCopiedTrades -= 1
           if (result.realizedPnl >= 0) {
             follower.stats.totalProfit += result.realizedPnl
+            follower.stats.totalCommissionPaid += commissionAmount
             follower.dailyProfit += result.realizedPnl
           } else {
             follower.stats.totalLoss += Math.abs(result.realizedPnl)
@@ -492,11 +578,13 @@ class CopyTradingEngine {
           await follower.save()
         }
 
-        console.log(`[CopyTrade] Closed follower trade ${copyTrade.followerTradeId}, PnL: ${result.realizedPnl}`)
+        console.log(`[CopyTrade] Closed follower trade ${copyTrade.followerTradeId}, PnL: ${result.realizedPnl}, Net after commission: ${(realizedPnl - commissionAmount).toFixed(2)}`)
         return {
           copyTradeId: copyTrade._id,
           status: 'SUCCESS',
-          pnl: result.realizedPnl
+          pnl: result.realizedPnl,
+          commission: commissionAmount,
+          masterCommission: masterCommissionCredited
         }
 
       } catch (error) {

@@ -3,6 +3,7 @@ import oxapayService from '../services/oxapayService.js'
 import PaymentGateway from '../models/PaymentGateway.js'
 import CryptoTransaction from '../models/CryptoTransaction.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
+import KYC from '../models/KYC.js'
 
 const router = express.Router()
 
@@ -97,6 +98,15 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
 
     if (amount <= 0) {
       return res.status(400).json({ success: false, message: 'Amount must be greater than 0' })
+    }
+
+    // SECURITY CHECK: Verify KYC is approved before crypto withdrawal
+    const kyc = await KYC.findOne({ userId, status: 'approved' })
+    if (!kyc) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'KYC verification required before withdrawal. Please complete your KYC first.' 
+      })
     }
 
     // Validate gateway

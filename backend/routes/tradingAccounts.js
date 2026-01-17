@@ -347,6 +347,11 @@ router.post('/account-transfer', async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access to source account' })
     }
 
+    // SECURITY: Block transfers from demo accounts
+    if (fromAccount.isDemo) {
+      return res.status(400).json({ message: 'Cannot transfer funds from a demo account' })
+    }
+
     // Verify PIN if required
     if (!skipPinVerification) {
       const isPinValid = await bcrypt.compare(pin, fromAccount.pin)
@@ -373,6 +378,11 @@ router.post('/account-transfer', async (req, res) => {
     // Verify target account ownership
     if (toAccount.userId.toString() !== userId) {
       return res.status(403).json({ message: 'Unauthorized access to target account' })
+    }
+
+    // SECURITY: Block transfers to demo accounts
+    if (toAccount.isDemo) {
+      return res.status(400).json({ message: 'Cannot transfer funds to a demo account' })
     }
 
     if (toAccount.status !== 'Active') {

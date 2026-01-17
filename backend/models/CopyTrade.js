@@ -109,6 +109,15 @@ const copyTradeSchema = new mongoose.Schema({
   commissionApplied: {
     type: Boolean,
     default: false
+  },
+  // Per-trade commission tracking (MT5-style)
+  commissionAmount: {
+    type: Number,
+    default: 0
+  },
+  masterCommission: {
+    type: Number,
+    default: 0
   }
 }, { timestamps: true })
 

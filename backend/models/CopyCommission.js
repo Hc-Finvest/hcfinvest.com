@@ -77,6 +77,12 @@ const copyCommissionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
+  },
+  // For per-trade commission (MT5-style) - ensures idempotency
+  copyTradeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CopyTrade',
+    default: null
   }
 }, { timestamps: true })
 
