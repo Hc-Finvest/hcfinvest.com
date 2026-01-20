@@ -83,7 +83,7 @@ const MainContent = () => {
                 Forex - Indices - Metals - Stock - Commodities -
                 Cryptocurrency - ETFs
               </p>
-              <a href="https://trade.hcfinvest.com/signup" class="hero-btn">Get Started</a>
+              <a href="https://trade.hcfinvest.com/user/signup" class="hero-btn">Get Started</a>
               <div class="scroll-indicator">
                 <span>Scroll Down</span>
                 <div class="mouse"></div>

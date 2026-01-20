@@ -1260,7 +1260,7 @@ const TradingPage = () => {
           {!isMobile && (
             <>
               <span className={`ml-3 text-xs ${accountType === 'challenge' ? 'text-yellow-500' : 'text-teal-400'}`}>
-                {accountType === 'challenge' ? 'Challenge' : 'Standard'} - {account?.accountId}
+                {accountType === 'challenge' ? 'Challenge' : (account?.accountTypeId?.name || 'Standard')} - {account?.accountId}
               </span>
               <span className="text-gray-400 ml-3 text-xs">Balance: <span className="text-white">${accountSummary.balance?.toFixed(2) || '0.00'}</span></span>
             </>
@@ -2169,7 +2169,7 @@ const TradingPage = () => {
             </>
           )}
           <div className="flex-1" />
-          {!isMobile && <span className="text-gray-400 shrink-0">Standard - {account?.accountId}</span>}
+          {!isMobile && <span className="text-gray-400 shrink-0">{account?.accountTypeId?.name || 'Standard'} - {account?.accountId}</span>}
           <span className="text-green-500 ml-2 sm:ml-3 shrink-0 flex items-center gap-1">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
             Live

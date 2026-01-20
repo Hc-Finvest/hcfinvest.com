@@ -50,7 +50,7 @@ const MainContentCard2 = () => {
     <div className="container py-5">
       <div className="text-center mb-4">
         <a
-          href="https://trade.hcfinvest.com/signup"
+          href="https://trade.hcfinvest.com/user/signup"
           className="btn px-5 py-3 rounded-pill"
           style={{
             backgroundColor: '#ff8c00',
