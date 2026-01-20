@@ -13,6 +13,7 @@ const AdminOxapay = () => {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [activeTab, setActiveTab] = useState('config')
   const [showApiKey, setShowApiKey] = useState(false)
+  const [validatingKey, setValidatingKey] = useState(false)
   
   // Gateway config
   const [config, setConfig] = useState({
@@ -180,6 +181,36 @@ const AdminOxapay = () => {
       console.error('Error fetching payouts:', error)
     }
     setPayoutLoading(false)
+  }
+
+  const handleValidateApiKey = async () => {
+    if (!credentials.merchantApiKey) {
+      setMessage({ type: 'error', text: 'Please enter a Merchant API Key' })
+      return
+    }
+    
+    setValidatingKey(true)
+    try {
+      const res = await fetch(`${API_URL}/oxapay/admin/validate-key`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ merchantApiKey: credentials.merchantApiKey })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        setMessage({ type: 'success', text: `✓ API Key is valid! ${data.currencies} currencies available.` })
+      } else {
+        setMessage({ type: 'error', text: `✗ Invalid API Key: ${data.message}` })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Error validating API Key: ${error.message}` })
+    }
+    setValidatingKey(false)
+    setTimeout(() => setMessage({ type: '', text: '' }), 5000)
   }
 
   const searchUsers = async (search) => {
@@ -593,6 +624,14 @@ const AdminOxapay = () => {
                   <p className="text-gray-500 text-xs mt-1">
                     Get this from your Oxapay merchant dashboard. Used for both deposits and withdrawals.
                   </p>
+                  <button
+                    onClick={handleValidateApiKey}
+                    disabled={validatingKey || !credentials.merchantApiKey}
+                    className="mt-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {validatingKey ? <RefreshCw size={14} className="animate-spin" /> : <Shield size={14} />}
+                    {validatingKey ? 'Validating...' : 'Validate API Key'}
+                  </button>
                 </div>
 
                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
@@ -602,7 +641,7 @@ const AdminOxapay = () => {
                       <p className="text-yellow-500 font-medium">Webhook URL</p>
                       <p className="text-gray-400 mt-1">Configure this URL in your Oxapay dashboard:</p>
                       <code className="block mt-1 p-2 bg-dark-900 rounded text-xs text-green-400 break-all">
-                        {window.location.origin.replace(':5173', ':5000')}/api/oxapay/webhook
+                        https://api.hcfinvest.com/api/oxapay/webhook
                       </code>
                     </div>
                   </div>

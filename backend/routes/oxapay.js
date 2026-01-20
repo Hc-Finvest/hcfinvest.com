@@ -410,6 +410,38 @@ router.put('/admin/config', adminMiddleware, async (req, res) => {
   }
 })
 
+// POST /api/oxapay/admin/validate-key - Validate Merchant API Key (admin only)
+router.post('/admin/validate-key', adminMiddleware, async (req, res) => {
+  try {
+    const { merchantApiKey } = req.body
+    
+    if (!merchantApiKey) {
+      return res.status(400).json({ success: false, message: 'Merchant API Key is required' })
+    }
+
+    // Test the API key by making a simple request to Oxapay
+    // Using the supported currencies endpoint as a test
+    const testResponse = await fetch('https://api.oxapay.com/v1/payment/currencies', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'merchant_api_key': merchantApiKey
+      }
+    })
+
+    const result = await testResponse.json()
+    
+    if (result.status === 200) {
+      res.json({ success: true, message: 'API Key is valid', currencies: result.data?.length || 0 })
+    } else {
+      res.json({ success: false, message: result.message || 'Invalid API Key' })
+    }
+  } catch (error) {
+    console.error('[Oxapay] API Key validation error:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // GET /api/oxapay/admin/stats - Get transaction statistics (admin only)
 router.get('/admin/stats', adminMiddleware, async (req, res) => {
   try {

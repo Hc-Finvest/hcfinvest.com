@@ -1314,7 +1314,7 @@ const TradingPage = () => {
               </div>
               
               {/* Category Tabs */}
-              <div className={`flex items-center gap-1 px-3 py-2 border-b overflow-x-auto ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <div className={`flex items-center gap-1 px-3 py-2 border-b overflow-x-auto scrollbar-hide ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 <button className="text-gray-600 hover:text-yellow-500 shrink-0">
                   <Star size={14} />
                 </button>
