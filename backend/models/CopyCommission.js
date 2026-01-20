@@ -86,8 +86,10 @@ const copyCommissionSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-// Compound index to prevent duplicate daily commissions
-copyCommissionSchema.index({ masterId: 1, followerId: 1, tradingDay: 1 }, { unique: true })
+// Compound index for per-trade commission (MT5-style) - allows multiple commissions per day
+// Unique on copyTradeId when present (per-trade), or masterId+followerId+tradingDay for legacy daily batch
+copyCommissionSchema.index({ copyTradeId: 1 }, { unique: true, sparse: true })
+copyCommissionSchema.index({ masterId: 1, followerId: 1, tradingDay: 1 })
 copyCommissionSchema.index({ masterId: 1, status: 1 })
 copyCommissionSchema.index({ tradingDay: 1, status: 1 })
 
