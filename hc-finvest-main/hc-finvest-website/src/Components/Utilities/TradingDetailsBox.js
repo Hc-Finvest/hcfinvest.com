@@ -210,7 +210,7 @@ const TradingDetailsBox = () => {
           <div className="big-buttons mt-5 d-flex flex-column flex-md-row justify-content-center align-items-center gap-3">
             <button className="btn" style={{ backgroundColor: "#ff8c00", color: "white", border: "none" }}>
               <a
-                href="https://www.heddgecapitals.com/signup"
+                href="https://trade.hcfinvest.com/signup"
                 style={{
                   textDecoration: "none",
                   color: "inherit",
@@ -222,7 +222,7 @@ const TradingDetailsBox = () => {
             </button>
             <button className="btn btn-outline-light">
               <a
-                href="https://www.heddgecapitals.com/login"
+                href="https://trade.hcfinvest.com/login"
                 style={{
                   textDecoration: "none",
                   color: "inherit",

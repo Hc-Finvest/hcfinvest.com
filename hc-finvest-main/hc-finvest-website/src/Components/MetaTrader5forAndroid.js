@@ -518,7 +518,7 @@ const MetaTrader5forAndroid = () => {
             <Grid item size={2} sx={{ border: "0px solid red" }}>
               <a
                 _ngcontent-ng-c673006511=""
-                // href="mailto:support@heddgecapitals.com"
+                // href="mailto:support@hcfinvest.com"
                 class="text-white text-decoration-none"
               >
                 <svg

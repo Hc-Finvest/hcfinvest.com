@@ -220,7 +220,7 @@ const ContactUs = () => {
         Email
       </Typography>
       <Typography sx={{ mb: 1, color: "#555" }}>
-         <span>support&#64;heddgecapitals.com</span>
+         <span>support&#64;hcfinvest.com</span>
       </Typography>
     </div>
   </div>

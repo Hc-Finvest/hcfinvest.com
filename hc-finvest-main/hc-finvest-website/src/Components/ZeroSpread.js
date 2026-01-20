@@ -138,13 +138,13 @@ const ZeroSpread = () => {
 
           <div className="d-flex flex-column flex-sm-row justify-content-lg-end gap-2 mt-3">
             <a
-              href="https://www.heddgecapitals.com/signup"
+              href="https://trade.hcfinvest.com/signup"
               className="btn mb-2 mb-sm-0" style={{ backgroundColor: "#ff8c00", color: "white", border: "none" }}
             >
               Create Live Account
             </a>
             <a
-              href="https://www.heddgecapitals.com/signup"
+              href="https://trade.hcfinvest.com/signup"
               className="btn"
               style={{ backgroundColor: "#ff8c00", color: "white" }}
             >
