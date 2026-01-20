@@ -238,6 +238,14 @@ const ProfilePage = () => {
           ...kycForm
         })
       })
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        alert(errorData.message || `Server error: ${res.status}`)
+        setKycLoading(false)
+        return
+      }
+      
       const data = await res.json()
       if (data.success) {
         alert('KYC submitted successfully! Please wait for approval.')
@@ -248,7 +256,7 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error submitting KYC:', error)
-      alert('Failed to submit KYC')
+      alert('Failed to submit KYC: ' + (error.message || 'Network error'))
     }
     setKycLoading(false)
   }

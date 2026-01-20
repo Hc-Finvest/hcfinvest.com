@@ -13,8 +13,11 @@ const isValidObjectId = (id) => {
 router.post('/submit', async (req, res) => {
   try {
     const { userId, documentType, documentNumber, frontImage, backImage, selfieImage } = req.body
+    
+    console.log('[KYC] Submit request received:', { userId, documentType, documentNumber, hasFrontImage: !!frontImage, hasBackImage: !!backImage, hasSelfieImage: !!selfieImage })
 
     if (!isValidObjectId(userId)) {
+      console.log('[KYC] Invalid user ID:', userId)
       return res.status(400).json({ success: false, message: 'Invalid user ID' })
     }
     if (!documentType || !documentNumber || !frontImage) {
@@ -42,6 +45,9 @@ router.post('/submit', async (req, res) => {
         message: 'You already have a pending KYC submission. Please wait for review.'
       })
     }
+
+    // Delete any previously rejected KYC for this user before creating new one
+    await KYC.deleteMany({ userId, status: 'rejected' })
 
     const kyc = new KYC({
       userId,
