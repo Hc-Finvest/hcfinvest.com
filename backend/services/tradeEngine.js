@@ -297,7 +297,11 @@ class TradeEngine {
   async closeTrade(tradeId, currentBid, currentAsk, closedBy = 'USER', adminId = null) {
     const trade = await Trade.findById(tradeId).populate({ path: 'tradingAccountId', populate: { path: 'accountTypeId' } })
     if (!trade) throw new Error('Trade not found')
-    if (trade.status !== 'OPEN') throw new Error('Trade is not open')
+    if (trade.status !== 'OPEN') {
+      // Trade already closed - return existing trade data instead of error (handles double-click/race conditions)
+      console.log(`[Trade] Trade ${tradeId} already closed (status: ${trade.status}), returning existing data`)
+      return { trade, realizedPnl: trade.realizedPnl || 0, alreadyClosed: true }
+    }
 
     const closePrice = trade.side === 'BUY' ? currentBid : currentAsk
     
