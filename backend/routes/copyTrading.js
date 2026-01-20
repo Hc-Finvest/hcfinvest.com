@@ -780,4 +780,93 @@ router.get('/admin/dashboard', async (req, res) => {
   }
 })
 
+// POST /api/copy/admin/recalculate-master-stats/:masterId - Recalculate master stats from historical trades
+router.post('/admin/recalculate-master-stats/:masterId', async (req, res) => {
+  try {
+    const { masterId } = req.params
+    if (!isValidObjectId(masterId)) {
+      return res.status(400).json({ message: 'Invalid master ID' })
+    }
+
+    const master = await MasterTrader.findById(masterId)
+    if (!master) {
+      return res.status(404).json({ message: 'Master not found' })
+    }
+
+    // Get all closed trades from master's trading account
+    const closedTrades = await Trade.find({
+      tradingAccountId: master.tradingAccountId,
+      status: 'CLOSED'
+    })
+
+    // Calculate stats
+    const totalTrades = closedTrades.length
+    const profitableTrades = closedTrades.filter(t => (t.realizedPnl || 0) > 0).length
+    const totalProfitGenerated = closedTrades.reduce((sum, t) => sum + (t.realizedPnl || 0), 0)
+    const winRate = totalTrades > 0 ? Math.round((profitableTrades / totalTrades) * 100) : 0
+
+    // Update master stats
+    master.stats.totalTrades = totalTrades
+    master.stats.profitableTrades = profitableTrades
+    master.stats.totalProfitGenerated = totalProfitGenerated
+    master.stats.winRate = winRate
+    await master.save()
+
+    res.json({
+      success: true,
+      message: 'Master stats recalculated',
+      stats: {
+        totalTrades,
+        profitableTrades,
+        totalProfitGenerated,
+        winRate
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ message: 'Error recalculating stats', error: error.message })
+  }
+})
+
+// POST /api/copy/admin/recalculate-all-master-stats - Recalculate stats for all masters
+router.post('/admin/recalculate-all-master-stats', async (req, res) => {
+  try {
+    const masters = await MasterTrader.find({})
+    const results = []
+
+    for (const master of masters) {
+      const closedTrades = await Trade.find({
+        tradingAccountId: master.tradingAccountId,
+        status: 'CLOSED'
+      })
+
+      const totalTrades = closedTrades.length
+      const profitableTrades = closedTrades.filter(t => (t.realizedPnl || 0) > 0).length
+      const totalProfitGenerated = closedTrades.reduce((sum, t) => sum + (t.realizedPnl || 0), 0)
+      const winRate = totalTrades > 0 ? Math.round((profitableTrades / totalTrades) * 100) : 0
+
+      master.stats.totalTrades = totalTrades
+      master.stats.profitableTrades = profitableTrades
+      master.stats.totalProfitGenerated = totalProfitGenerated
+      master.stats.winRate = winRate
+      await master.save()
+
+      results.push({
+        masterId: master._id,
+        displayName: master.displayName,
+        totalTrades,
+        winRate,
+        totalProfitGenerated
+      })
+    }
+
+    res.json({
+      success: true,
+      message: `Recalculated stats for ${masters.length} masters`,
+      results
+    })
+  } catch (error) {
+    res.status(500).json({ message: 'Error recalculating stats', error: error.message })
+  }
+})
+
 export default router

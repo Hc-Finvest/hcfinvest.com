@@ -396,6 +396,20 @@ class TradeEngine {
       if (master) {
         console.log(`[CopyTrade] Master trade ${trade._id} closed via ${closedBy}, closing follower trades...`)
         console.log(`[CopyTrade] Master tradingAccountId: ${tradingAccountId}, masterId: ${master._id}`)
+        
+        // Update master stats (totalTrades, winRate, profitableTrades, totalProfitGenerated)
+        master.stats.totalTrades = (master.stats.totalTrades || 0) + 1
+        master.stats.totalProfitGenerated = (master.stats.totalProfitGenerated || 0) + realizedPnl
+        if (realizedPnl > 0) {
+          master.stats.profitableTrades = (master.stats.profitableTrades || 0) + 1
+        }
+        // Calculate win rate
+        if (master.stats.totalTrades > 0) {
+          master.stats.winRate = Math.round((master.stats.profitableTrades / master.stats.totalTrades) * 100)
+        }
+        await master.save()
+        console.log(`[CopyTrade] Master stats updated: totalTrades=${master.stats.totalTrades}, winRate=${master.stats.winRate}%, profit=${master.stats.totalProfitGenerated.toFixed(2)}`)
+        
         // Dynamically import to avoid circular dependency
         const copyTradingEngine = (await import('./copyTradingEngine.js')).default
         // Use trade._id (ObjectId) not tradeId (could be string)

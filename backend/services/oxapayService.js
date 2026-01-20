@@ -206,8 +206,8 @@ class OxapayService {
         description: `Deposit to wallet - ${user.email}`
       }
 
-      // Call Oxapay API to create invoice
-      const response = await this.makeRequest('/payment/invoice', invoiceData)
+      // Call Oxapay API to create invoice (v1 API)
+      const response = await this.makeRequest('/v1/payment/invoice', invoiceData)
 
       // Update transaction with gateway response (v1 API uses data object)
       const data = response.data || response
@@ -658,8 +658,8 @@ class OxapayService {
         description: `Withdrawal payout - ${user.email}`
       }
 
-      // Call Oxapay API to create payout (uses merchant key from makeRequest)
-      const response = await this.makeRequest('/payout/request', payoutData)
+      // Call Oxapay API to create payout (v1 API)
+      const response = await this.makeRequest('/v1/payout/request', payoutData)
 
       // Update transaction with gateway response
       transaction.gatewayOrderId = response.trackId
