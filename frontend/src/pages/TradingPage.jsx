@@ -131,6 +131,7 @@ const TradingPage = () => {
   const [closeAllType, setCloseAllType] = useState('all') // 'all', 'profit', 'loss'
   const [modifySL, setModifySL] = useState('')
   const [modifyTP, setModifyTP] = useState('')
+  const [closingTradeIds, setClosingTradeIds] = useState(new Set()) // Track trades being closed
   
   // Kill Switch states
   const [showKillSwitchModal, setShowKillSwitchModal] = useState(false)
@@ -827,9 +828,18 @@ const TradingPage = () => {
 
   // Close a trade
   const closeTrade = async (tradeId) => {
+    // Prevent double-click - check if already closing this trade
+    if (closingTradeIds.has(tradeId)) {
+      console.log(`Trade ${tradeId} already being closed, ignoring duplicate request`)
+      return
+    }
+    
     try {
       const trade = openTrades.find(t => t._id === tradeId)
       if (!trade) return
+      
+      // Mark trade as being closed
+      setClosingTradeIds(prev => new Set([...prev, tradeId]))
 
       // Use livePrices first (real-time), fallback to instruments
       const livePrice = livePrices[trade.symbol]
@@ -840,6 +850,11 @@ const TradingPage = () => {
       
       if (!bid || !ask || bid === 0 || ask === 0) {
         setTradeError('Price not available. Please wait for prices to load.')
+        setClosingTradeIds(prev => {
+          const next = new Set(prev)
+          next.delete(tradeId)
+          return next
+        })
         return
       }
 
@@ -866,6 +881,13 @@ const TradingPage = () => {
     } catch (error) {
       console.error('Error closing trade:', error)
       setTradeError('Failed to close trade')
+    } finally {
+      // Remove from closing set
+      setClosingTradeIds(prev => {
+        const next = new Set(prev)
+        next.delete(tradeId)
+        return next
+      })
     }
 
     setTimeout(() => {
