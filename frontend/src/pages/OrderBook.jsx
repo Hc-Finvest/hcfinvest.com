@@ -44,8 +44,10 @@ const OrderBook = () => {
   const [closedTrades, setClosedTrades] = useState([])
   const [pendingOrders, setPendingOrders] = useState([])
   const [livePrices, setLivePrices] = useState({})
-  const [historyFilter, setHistoryFilter] = useState('all') // all, today, week, month, year
+  const [historyFilter, setHistoryFilter] = useState('all') // all, today, week, month, year, custom
   const [currentPage, setCurrentPage] = useState(1)
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
   const itemsPerPage = 20
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -207,6 +209,13 @@ const OrderBook = () => {
       if (historyFilter === 'year') {
         const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
         return tradeDate >= yearAgo
+      }
+      if (historyFilter === 'custom' && customStartDate) {
+        const startDate = new Date(customStartDate)
+        startDate.setHours(0, 0, 0, 0)
+        const endDate = customEndDate ? new Date(customEndDate) : new Date(customStartDate)
+        endDate.setHours(23, 59, 59, 999)
+        return tradeDate >= startDate && tradeDate <= endDate
       }
       return true
     })
@@ -567,6 +576,33 @@ const OrderBook = () => {
                           {filter.label}
                         </button>
                       ))}
+                      
+                      {/* Custom Date Picker */}
+                      <div className="flex items-center gap-2 ml-2">
+                        <input
+                          type="date"
+                          value={customStartDate}
+                          onChange={(e) => {
+                            setCustomStartDate(e.target.value)
+                            if (!customEndDate) setCustomEndDate(e.target.value)
+                            setHistoryFilter('custom')
+                            setCurrentPage(1)
+                          }}
+                          className="px-2 py-1 rounded-lg text-xs bg-dark-700 border border-gray-700 text-white"
+                        />
+                        <span className="text-gray-500 text-xs">to</span>
+                        <input
+                          type="date"
+                          value={customEndDate}
+                          onChange={(e) => {
+                            setCustomEndDate(e.target.value)
+                            setHistoryFilter('custom')
+                            setCurrentPage(1)
+                          }}
+                          className="px-2 py-1 rounded-lg text-xs bg-dark-700 border border-gray-700 text-white"
+                        />
+                      </div>
+                      
                       <span className="ml-auto text-gray-500 text-xs">
                         {getFilteredHistory().length} trades | P&L: <span className={getHistoryTotalPnl() >= 0 ? 'text-green-500' : 'text-red-500'}>${getHistoryTotalPnl().toFixed(2)}</span>
                       </span>
