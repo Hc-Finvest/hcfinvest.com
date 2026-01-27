@@ -76,13 +76,18 @@ class OxapayService {
     console.log(`[Oxapay] API call to ${fullUrl} (baseUrl: ${this.baseUrl})`)
 
     try {
+      // Oxapay API expects 'merchant' key in request body, not headers
+      const requestBody = {
+        merchant: this.merchantApiKey,
+        ...data
+      }
+      
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'merchant_api_key': this.merchantApiKey
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(requestBody)
       })
 
       const result = await response.json()
