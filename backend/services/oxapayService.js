@@ -75,7 +75,8 @@ class OxapayService {
     }
 
     const fullUrl = `${this.baseUrl}${endpoint}`
-    console.log(`[Oxapay] API call to ${fullUrl} (baseUrl: ${this.baseUrl})`)
+    console.log(`[Oxapay] API call to ${fullUrl}`)
+    console.log(`[Oxapay] Using merchant key: ${this.merchantApiKey ? this.merchantApiKey.substring(0, 6) + '...' : 'NOT SET'}`)
 
     try {
       // Oxapay API expects 'merchant' key in request body, not headers
