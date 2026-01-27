@@ -1757,7 +1757,9 @@ const TradingPage = () => {
                       today.setHours(0, 0, 0, 0)
                       
                       if (historyDateFilter === 'single' && historyStartDate) {
-                        const selectedDate = new Date(historyStartDate)
+                        // Parse date string as local date (YYYY-MM-DD format)
+                        const [year, month, day] = historyStartDate.split('-').map(Number)
+                        const selectedDate = new Date(year, month - 1, day)
                         selectedDate.setHours(0, 0, 0, 0)
                         const tradeDate = new Date(closeDate)
                         tradeDate.setHours(0, 0, 0, 0)
@@ -1844,7 +1846,9 @@ const TradingPage = () => {
                           today.setHours(0, 0, 0, 0)
                           
                           if (historyDateFilter === 'single' && historyStartDate) {
-                            const selectedDate = new Date(historyStartDate)
+                            // Parse date string as local date (YYYY-MM-DD format)
+                            const [year, month, day] = historyStartDate.split('-').map(Number)
+                            const selectedDate = new Date(year, month - 1, day)
                             selectedDate.setHours(0, 0, 0, 0)
                             const tradeDate = new Date(closeDate)
                             tradeDate.setHours(0, 0, 0, 0)
