@@ -14,6 +14,7 @@ class OxapayService {
   constructor() {
     this.baseUrl = process.env.OXAPAY_API_URL || 'https://api.oxapay.com'
     this.merchantApiKey = process.env.OXAPAY_MERCHANT_API_KEY || ''
+    this.payoutApiKey = process.env.OXAPAY_PAYOUT_API_KEY || ''
     
     console.log(`[Oxapay] Service initialized`)
   }
@@ -24,6 +25,7 @@ class OxapayService {
       const gateway = await PaymentGateway.findOne({ name: 'oxapay' })
       if (gateway && gateway.apiConfig) {
         this.merchantApiKey = gateway.apiConfig.merchantApiKey || this.merchantApiKey
+        this.payoutApiKey = gateway.apiConfig.payoutApiKey || this.payoutApiKey
         if (gateway.apiConfig.baseUrl) {
           this.baseUrl = gateway.apiConfig.baseUrl
         }
@@ -64,7 +66,7 @@ class OxapayService {
       .digest('hex')
   }
 
-  // Make API request to Oxapay using Merchant API Key
+  // Make API request to Oxapay using Merchant API Key (for deposits/invoices)
   async makeRequest(endpoint, data = {}) {
     await this.loadConfig()
 
@@ -102,6 +104,48 @@ class OxapayService {
       return result
     } catch (error) {
       console.error(`[Oxapay] API Error (${endpoint}):`, error.message)
+      throw error
+    }
+  }
+
+  // Make API request to Oxapay using Payout API Key (for withdrawals/payouts)
+  async makePayoutRequest(endpoint, data = {}) {
+    await this.loadConfig()
+
+    if (!this.payoutApiKey) {
+      throw new Error('Oxapay Payout API Key not configured. Please set payout API key in admin panel or .env file.')
+    }
+
+    const fullUrl = `${this.baseUrl}${endpoint}`
+    console.log(`[Oxapay] Payout API call to ${fullUrl}`)
+
+    try {
+      // Oxapay Payout API expects 'key' in request body
+      const requestBody = {
+        key: this.payoutApiKey,
+        ...data
+      }
+      
+      const response = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      const result = await response.json()
+      
+      // Oxapay API returns result: 100 for success
+      if (result.result !== 100) {
+        console.error(`[Oxapay] Payout API Error:`, result)
+        throw new Error(result.message || `Payout API Error: ${result.result}`)
+      }
+
+      console.log(`[Oxapay] Payout API response received for ${endpoint}`)
+      return result
+    } catch (error) {
+      console.error(`[Oxapay] Payout API Error (${endpoint}):`, error.message)
       throw error
     }
   }
@@ -653,24 +697,24 @@ class OxapayService {
     })
 
     try {
-      // Prepare payout request for Oxapay API using Merchant API Key
+      // Prepare payout request for Oxapay Payout API
       const payoutData = {
         address: walletAddress,
         amount: amount,
         currency: cryptoCurrency,
         network: network,
         callbackUrl: process.env.OXAPAY_WEBHOOK_URL || `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/oxapay/webhook`,
-        description: `Withdrawal payout - ${user.email}`
+        description: options.description || `Payout to ${user.email}`
       }
 
-      // Call Oxapay API to create payout (v1 API)
-      const response = await this.makeRequest('/v1/payout/request', payoutData)
+      // Call Oxapay Payout API using payout key
+      const response = await this.makePayoutRequest('/api/send', payoutData)
 
       // Update transaction with gateway response
       transaction.gatewayOrderId = response.trackId
       transaction.gatewayPaymentId = response.trackId
 
-      if (response.status === 'Confirmed' || response.status === 'confirmed') {
+      if (response.status === 'Confirmed' || response.status === 'confirmed' || response.status === 'Complete') {
         transaction.status = 'success'
       }
 

@@ -32,9 +32,10 @@ const AdminOxapay = () => {
     hasMerchantApiKey: false
   })
 
-  // API credentials (only Merchant API Key needed)
+  // API credentials (Merchant API Key for deposits, Payout API Key for withdrawals)
   const [credentials, setCredentials] = useState({
-    merchantApiKey: ''
+    merchantApiKey: '',
+    payoutApiKey: ''
   })
 
   // Transactions
@@ -344,9 +345,12 @@ const AdminOxapay = () => {
         ...config
       }
       
-      // Only include merchantApiKey if it has a value
+      // Only include API keys if they have values
       if (credentials.merchantApiKey) {
         payload.merchantApiKey = credentials.merchantApiKey
+      }
+      if (credentials.payoutApiKey) {
+        payload.payoutApiKey = credentials.payoutApiKey
       }
 
       const res = await fetch(`${API_URL}/oxapay/admin/config`, {
@@ -359,8 +363,8 @@ const AdminOxapay = () => {
       if (data.success) {
         setMessage({ type: 'success', text: 'Configuration saved successfully!' })
         fetchConfig()
-        // Clear credential field after save
-        setCredentials({ merchantApiKey: '' })
+        // Clear credential fields after save
+        setCredentials({ merchantApiKey: '', payoutApiKey: '' })
       } else {
         setMessage({ type: 'error', text: data.message || 'Failed to save configuration' })
       }
@@ -622,7 +626,7 @@ const AdminOxapay = () => {
                     </button>
                   </div>
                   <p className="text-gray-500 text-xs mt-1">
-                    Get this from your Oxapay merchant dashboard. Used for both deposits and withdrawals.
+                    Get this from your Oxapay merchant dashboard. Used for deposits/invoices.
                   </p>
                   <button
                     onClick={handleValidateApiKey}
@@ -632,6 +636,31 @@ const AdminOxapay = () => {
                     {validatingKey ? <RefreshCw size={14} className="animate-spin" /> : <Shield size={14} />}
                     {validatingKey ? 'Validating...' : 'Validate API Key'}
                   </button>
+                </div>
+
+                {/* Payout API Key */}
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">
+                    Payout API Key <span className="text-orange-500">(for withdrawals)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={credentials.payoutApiKey}
+                      onChange={(e) => setCredentials({ ...credentials, payoutApiKey: e.target.value })}
+                      placeholder="Enter Payout API Key"
+                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white pr-10"
+                    />
+                    <button
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Get this from Oxapay Payout section. Required for sending crypto payouts/withdrawals.
+                  </p>
                 </div>
 
                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">

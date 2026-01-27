@@ -395,9 +395,10 @@ router.put('/admin/config', adminMiddleware, async (req, res) => {
     if (description !== undefined) gateway.description = description
     if (instructions !== undefined) gateway.instructions = instructions
 
-    // Update API config (only Merchant API Key needed)
+    // Update API config (Merchant API Key for deposits, Payout API Key for withdrawals)
     if (!gateway.apiConfig) gateway.apiConfig = {}
     if (merchantApiKey) gateway.apiConfig.merchantApiKey = merchantApiKey
+    if (req.body.payoutApiKey) gateway.apiConfig.payoutApiKey = req.body.payoutApiKey
 
     await gateway.save()
 
