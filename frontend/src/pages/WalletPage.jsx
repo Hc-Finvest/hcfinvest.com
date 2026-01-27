@@ -140,11 +140,15 @@ const WalletPage = () => {
   }, [])
 
   useEffect(() => {
-    fetchChallengeStatus()
-    if (user._id) {
-      fetchWallet()
-      fetchTransactions()
+    // Redirect to login if user not authenticated
+    if (!user || !user._id) {
+      navigate('/user/login')
+      return
     }
+    
+    fetchChallengeStatus()
+    fetchWallet()
+    fetchTransactions()
     fetchPaymentMethods()
     fetchCurrencies()
     fetchOxapayStatus()
@@ -242,6 +246,13 @@ const WalletPage = () => {
 
   // Handle Oxapay deposit
   const handleOxapayDeposit = async () => {
+    // Validate user is logged in
+    if (!user || !user._id) {
+      setError('Please login to continue')
+      navigate('/user/login')
+      return
+    }
+
     if (!oxapayAmount || parseFloat(oxapayAmount) <= 0) {
       setError('Please enter a valid amount')
       return
@@ -262,6 +273,12 @@ const WalletPage = () => {
 
     try {
       const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Session expired. Please login again.')
+        navigate('/user/login')
+        return
+      }
+
       const res = await fetch(`${API_URL}/oxapay/deposit`, {
         method: 'POST',
         headers: { 

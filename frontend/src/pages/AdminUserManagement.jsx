@@ -53,6 +53,8 @@ const AdminUserManagement = () => {
   const [blockReason, setBlockReason] = useState('')
   const [creditAmount, setCreditAmount] = useState('')
   const [creditReason, setCreditReason] = useState('')
+  const [removeCreditAmount, setRemoveCreditAmount] = useState('')
+  const [removeCreditReason, setRemoveCreditReason] = useState('')
   const [userAccounts, setUserAccounts] = useState([])
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [accountFundAmount, setAccountFundAmount] = useState('')
@@ -190,6 +192,8 @@ const AdminUserManagement = () => {
     setBlockReason('')
     setCreditAmount('')
     setCreditReason('')
+    setRemoveCreditAmount('')
+    setRemoveCreditReason('')
     setUserAccounts([])
     setSelectedAccountId('')
     
@@ -420,6 +424,52 @@ const AdminUserManagement = () => {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Error adding credit' })
+    }
+    setActionLoading(false)
+  }
+
+  const handleRemoveCredit = async () => {
+    if (!removeCreditAmount || parseFloat(removeCreditAmount) <= 0) {
+      setMessage({ type: 'error', text: 'Please enter a valid amount' })
+      return
+    }
+    if (!selectedAccountId) {
+      setMessage({ type: 'error', text: 'Please select a trading account' })
+      return
+    }
+
+    const selectedAcc = userAccounts.find(acc => acc._id === selectedAccountId)
+    if (selectedAcc && parseFloat(removeCreditAmount) > (selectedAcc.credit || 0)) {
+      setMessage({ type: 'error', text: 'Cannot remove more credit than available' })
+      return
+    }
+
+    setActionLoading(true)
+    try {
+      const response = await fetch(`${API_URL}/admin/trading-account/${selectedAccountId}/remove-credit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: parseFloat(removeCreditAmount),
+          reason: removeCreditReason || 'Admin credit removal',
+          adminId: adminUser._id
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setMessage({ type: 'success', text: `$${removeCreditAmount} credit removed successfully` })
+        await fetchUserAccounts(selectedUser._id)
+        setTimeout(() => {
+          setModalType('tradingAccounts')
+          fetchUsers()
+        }, 1500)
+      } else {
+        const data = await response.json()
+        setMessage({ type: 'error', text: data.message || 'Failed to remove credit' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error removing credit' })
     }
     setActionLoading(false)
   }
@@ -770,6 +820,14 @@ const AdminUserManagement = () => {
                           >
                             <Gift size={14} /> Credit
                           </button>
+                          {acc.credit > 0 && (
+                            <button 
+                              onClick={() => { setSelectedAccountId(acc._id); setModalType('removeCredit'); }}
+                              className="flex-1 py-2 text-xs bg-pink-500/20 text-pink-500 rounded-lg hover:bg-pink-500/30 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <Minus size={14} /> Remove Credit
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1085,6 +1143,81 @@ const AdminUserManagement = () => {
                     className="flex-1 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
                   >
                     {actionLoading ? 'Processing...' : 'Add Credit'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Remove Credit */}
+            {modalType === 'removeCredit' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-pink-500 mb-2">
+                  <Minus size={20} />
+                  <h4 className="font-semibold">Remove Credit/Bonus</h4>
+                </div>
+                <div className="bg-pink-500/10 p-3 rounded-lg">
+                  <p className="text-pink-400 text-sm">
+                    This will withdraw/reverse credit from the selected trading account. The credit amount will be reduced accordingly.
+                  </p>
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Select Trading Account</label>
+                  <select
+                    value={selectedAccountId}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500"
+                  >
+                    {userAccounts.filter(acc => acc.credit > 0).length === 0 && <option value="">No accounts with credit</option>}
+                    {userAccounts.filter(acc => acc.credit > 0).map(acc => (
+                      <option key={acc._id} value={acc._id}>
+                        {acc.accountId} - Balance: ${acc.balance?.toFixed(2)} | Credit: ${acc.credit?.toFixed(2) || '0.00'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedAccountId && (
+                  <div className="bg-dark-700 p-3 rounded-lg">
+                    <p className="text-gray-500 text-xs mb-1">Available Credit</p>
+                    <p className="text-pink-400 text-xl font-bold">
+                      ${userAccounts.find(acc => acc._id === selectedAccountId)?.credit?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Amount to Remove ($)</label>
+                  <input
+                    type="number"
+                    value={removeCreditAmount}
+                    onChange={(e) => setRemoveCreditAmount(e.target.value)}
+                    placeholder="Enter amount to remove"
+                    min="0"
+                    step="0.01"
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Reason (Optional)</label>
+                  <input
+                    type="text"
+                    value={removeCreditReason}
+                    onChange={(e) => setRemoveCreditReason(e.target.value)}
+                    placeholder="e.g., Bonus reversal, Credit adjustment"
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button 
+                    onClick={() => setModalType('tradingAccounts')}
+                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button 
+                    onClick={handleRemoveCredit}
+                    disabled={actionLoading || !selectedAccountId || !removeCreditAmount}
+                    className="flex-1 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading ? 'Processing...' : 'Remove Credit'}
                   </button>
                 </div>
               </div>

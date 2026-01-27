@@ -48,6 +48,12 @@ const MobileTradingApp = () => {
   const [showModifyModal, setShowModifyModal] = useState(false)
   const [selectedTradeForModify, setSelectedTradeForModify] = useState(null)
   const [modifySL, setModifySL] = useState('')
+  
+  // History date filter states
+  const [historyDateFilter, setHistoryDateFilter] = useState('all') // 'all', 'today', 'week', 'month', 'custom'
+  const [historyStartDate, setHistoryStartDate] = useState('')
+  const [historyEndDate, setHistoryEndDate] = useState('')
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [modifyTP, setModifyTP] = useState('')
   const [isModifying, setIsModifying] = useState(false)
   
@@ -342,7 +348,7 @@ const MobileTradingApp = () => {
     try {
       const res = await fetch(`${API_URL}/trade/pending/${selectedAccount._id}`)
       const data = await res.json()
-      if (data.success) setPendingOrders(data.orders || [])
+      if (data.success) setPendingOrders(data.trades || [])
     } catch (e) {}
   }
 
@@ -379,50 +385,70 @@ const MobileTradingApp = () => {
     setShowOrderPanel(true)
   }
 
-  const executeOrder = async () => {
+  const executeOrder = () => {
     if (!selectedAccount || !selectedInstrument || isExecuting) return
-    setIsExecuting(true)
 
     const prices = livePrices[selectedInstrument.symbol] || {}
     
     // Check if market data is available
     if (!prices.bid || !prices.ask || prices.bid <= 0 || prices.ask <= 0) {
-      showNotification('Market is closed or no price data available', 'error')
-      setIsExecuting(false)
+      showNotification('Market is closed or no price data', 'error')
       return
     }
 
-    try {
-      const res = await fetch(`${API_URL}/trade/open`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user._id,
-          tradingAccountId: selectedAccount._id,
-          symbol: selectedInstrument.symbol,
-          segment: selectedInstrument.category,
-          side: orderSide,
-          orderType: orderType === 'market' ? 'MARKET' : 'PENDING',
-          quantity: parseFloat(volume),
-          bid: prices.bid,
-          ask: prices.ask,
-          sl: stopLoss ? parseFloat(stopLoss) : null,
-          tp: takeProfit ? parseFloat(takeProfit) : null
-        })
+    // INSTANT: Show success before any async operation
+    const executionPrice = orderSide === 'BUY' ? prices.ask : prices.bid
+    const tradeId = `temp_${Date.now()}`
+    const optimisticTrade = {
+      _id: tradeId,
+      symbol: selectedInstrument.symbol,
+      side: orderSide,
+      quantity: parseFloat(volume),
+      openPrice: executionPrice,
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+      isOptimistic: true
+    }
+    
+    // Instant feedback - close panel and show success immediately
+    setShowOrderPanel(false)
+    showNotification(`${orderSide} ${volume} ${selectedInstrument.symbol} @ ${executionPrice.toFixed(5)}`, 'success')
+    setOpenTrades(prev => [optimisticTrade, ...prev])
+    setIsExecuting(true)
+
+    // Fire and forget - API call in background
+    fetch(`${API_URL}/trade/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user._id,
+        tradingAccountId: selectedAccount._id,
+        symbol: selectedInstrument.symbol,
+        segment: selectedInstrument.category,
+        side: orderSide,
+        orderType: orderType === 'market' ? 'MARKET' : 'PENDING',
+        quantity: parseFloat(volume),
+        bid: prices.bid,
+        ask: prices.ask,
+        sl: stopLoss ? parseFloat(stopLoss) : null,
+        tp: takeProfit ? parseFloat(takeProfit) : null
       })
-      const data = await res.json()
+    })
+    .then(res => res.json())
+    .then(data => {
       if (data.success) {
-        setShowOrderPanel(false)
         fetchOpenTrades()
         fetchAccountSummary()
-        showNotification('Order executed successfully!', 'success')
       } else {
+        setOpenTrades(prev => prev.filter(t => t._id !== tradeId))
         showNotification(data.message || 'Order failed', 'error')
       }
-    } catch (e) {
+    })
+    .catch(() => {
+      setOpenTrades(prev => prev.filter(t => t._id !== tradeId))
       showNotification('Error executing order', 'error')
-    }
-    setIsExecuting(false)
+    })
+    .finally(() => setIsExecuting(false))
   }
 
   const closeTrade = async (tradeId) => {
@@ -1097,51 +1123,227 @@ const MobileTradingApp = () => {
         )}
 
         {tradeTab === 'history' && (
-          tradeHistory.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
-              <FileText size={48} className="mb-2 opacity-50" />
-              <p>No trade history</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-800">
-              {tradeHistory.map(trade => (
-                <div key={trade._id} className="p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-medium">{trade.symbol}</span>
-                      <span className={`text-xs ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                        {trade.side}
+          <div className="flex flex-col h-full">
+            {/* Date Filter Section */}
+            <div className="p-3 bg-dark-800 border-b border-gray-800">
+              {/* Single Date Picker */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-gray-400 text-xs">Select Date:</span>
+                <input
+                  type="date"
+                  value={historyStartDate}
+                  onChange={(e) => {
+                    setHistoryStartDate(e.target.value)
+                    setHistoryEndDate(e.target.value)
+                    setHistoryDateFilter('single')
+                  }}
+                  className="flex-1 bg-dark-700 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+              
+              {/* Quick Filter Buttons */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {[
+                  { key: 'all', label: 'All' },
+                  { key: 'today', label: 'Today' },
+                  { key: 'week', label: 'This Week' },
+                  { key: 'month', label: 'This Month' }
+                ].map(filter => (
+                  <button
+                    key={filter.key}
+                    onClick={() => {
+                      setHistoryDateFilter(filter.key)
+                      if (filter.key === 'today') {
+                        const today = new Date().toISOString().split('T')[0]
+                        setHistoryStartDate(today)
+                        setHistoryEndDate(today)
+                      } else {
+                        setHistoryStartDate('')
+                        setHistoryEndDate('')
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${
+                      historyDateFilter === filter.key
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Daily P/L Summary */}
+              {(() => {
+                const filteredTrades = tradeHistory.filter(trade => {
+                  if (!trade.closedAt) return false
+                  const closeDate = new Date(trade.closedAt)
+                  const today = new Date()
+                  today.setHours(0, 0, 0, 0)
+                  
+                  if (historyDateFilter === 'single' && historyStartDate) {
+                    const selectedDate = new Date(historyStartDate)
+                    selectedDate.setHours(0, 0, 0, 0)
+                    const tradeDate = new Date(closeDate)
+                    tradeDate.setHours(0, 0, 0, 0)
+                    return tradeDate.getTime() === selectedDate.getTime()
+                  }
+                  if (historyDateFilter === 'today') {
+                    const tradeDate = new Date(closeDate)
+                    tradeDate.setHours(0, 0, 0, 0)
+                    return tradeDate.getTime() === today.getTime()
+                  }
+                  if (historyDateFilter === 'week') {
+                    const weekAgo = new Date(today)
+                    weekAgo.setDate(weekAgo.getDate() - 7)
+                    return closeDate >= weekAgo
+                  }
+                  if (historyDateFilter === 'month') {
+                    const monthAgo = new Date(today)
+                    monthAgo.setMonth(monthAgo.getMonth() - 1)
+                    return closeDate >= monthAgo
+                  }
+                  return true
+                })
+                
+                const totalPnl = filteredTrades.reduce((sum, t) => sum + (t.realizedPnl || 0), 0)
+                const totalTrades = filteredTrades.length
+                const winTrades = filteredTrades.filter(t => t.realizedPnl > 0).length
+                const winRate = totalTrades > 0 ? ((winTrades / totalTrades) * 100).toFixed(1) : 0
+                
+                return (
+                  <div className="mt-3 p-3 bg-dark-700 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-400 text-xs">
+                        {historyDateFilter === 'single' && historyStartDate 
+                          ? `P/L for ${new Date(historyStartDate).toLocaleDateString()}` 
+                          : 'Period P/L'}
                       </span>
-                      {trade.closedBy === 'ADMIN' && (
-                        <span className="text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded">
-                          Admin Close
-                        </span>
-                      )}
+                      <span className={`text-lg font-bold ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
+                      </span>
                     </div>
-                    <span className={`font-semibold ${trade.realizedPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {trade.realizedPnl >= 0 ? '+' : ''}${trade.realizedPnl?.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                    <span>{trade.quantity} lots</span>
-                    <span>{new Date(trade.closedAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-400">Open: <span className="text-white">{trade.openPrice?.toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</span></span>
-                      <span className="text-gray-400">Close: <span className="text-white">{trade.closePrice?.toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</span></span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">{totalTrades} trades</span>
+                      <span className="text-gray-500">Win Rate: <span className={winRate >= 50 ? 'text-green-500' : 'text-red-500'}>{winRate}%</span></span>
                     </div>
                   </div>
-                  {(trade.commission > 0 || trade.swap !== 0) && (
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                      {trade.commission > 0 && <span>Comm: ${trade.commission?.toFixed(2)}</span>}
-                      {trade.swap !== 0 && <span>Swap: ${trade.swap?.toFixed(2)}</span>}
-                    </div>
-                  )}
-                </div>
-              ))}
+                )
+              })()}
             </div>
-          )
+            
+            {/* Trade History List */}
+            <div className="flex-1 overflow-y-auto">
+              {(() => {
+                const filteredTrades = tradeHistory.filter(trade => {
+                  if (!trade.closedAt) return false
+                  const closeDate = new Date(trade.closedAt)
+                  const today = new Date()
+                  today.setHours(0, 0, 0, 0)
+                  
+                  if (historyDateFilter === 'single' && historyStartDate) {
+                    const selectedDate = new Date(historyStartDate)
+                    selectedDate.setHours(0, 0, 0, 0)
+                    const tradeDate = new Date(closeDate)
+                    tradeDate.setHours(0, 0, 0, 0)
+                    return tradeDate.getTime() === selectedDate.getTime()
+                  }
+                  if (historyDateFilter === 'today') {
+                    const tradeDate = new Date(closeDate)
+                    tradeDate.setHours(0, 0, 0, 0)
+                    return tradeDate.getTime() === today.getTime()
+                  }
+                  if (historyDateFilter === 'week') {
+                    const weekAgo = new Date(today)
+                    weekAgo.setDate(weekAgo.getDate() - 7)
+                    return closeDate >= weekAgo
+                  }
+                  if (historyDateFilter === 'month') {
+                    const monthAgo = new Date(today)
+                    monthAgo.setMonth(monthAgo.getMonth() - 1)
+                    return closeDate >= monthAgo
+                  }
+                  return true
+                })
+                
+                // Group trades by date
+                const groupedByDate = filteredTrades.reduce((groups, trade) => {
+                  const date = new Date(trade.closedAt).toLocaleDateString()
+                  if (!groups[date]) groups[date] = { trades: [], pnl: 0 }
+                  groups[date].trades.push(trade)
+                  groups[date].pnl += trade.realizedPnl || 0
+                  return groups
+                }, {})
+                
+                const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a))
+                
+                if (filteredTrades.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8">
+                      <FileText size={48} className="mb-2 opacity-50" />
+                      <p>No trades for selected period</p>
+                    </div>
+                  )
+                }
+                
+                return (
+                  <div>
+                    {sortedDates.map(date => (
+                      <div key={date}>
+                        {/* Date Header with Daily P/L */}
+                        <div className="sticky top-0 bg-dark-900 px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                          <span className="text-gray-400 text-xs font-medium">{date}</span>
+                          <span className={`text-xs font-semibold ${groupedByDate[date].pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {groupedByDate[date].pnl >= 0 ? '+' : ''}${groupedByDate[date].pnl.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Trades for this date */}
+                        <div className="divide-y divide-gray-800">
+                          {groupedByDate[date].trades.map(trade => (
+                            <div key={trade._id} className="p-4">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-medium">{trade.symbol}</span>
+                                  <span className={`text-xs ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
+                                    {trade.side}
+                                  </span>
+                                  {trade.closedBy === 'ADMIN' && (
+                                    <span className="text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded">
+                                      Admin Close
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`font-semibold ${trade.realizedPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {trade.realizedPnl >= 0 ? '+' : ''}${trade.realizedPnl?.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                <span>{trade.quantity} lots</span>
+                                <span>{new Date(trade.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-gray-400">Open: <span className="text-white">{trade.openPrice?.toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</span></span>
+                                  <span className="text-gray-400">Close: <span className="text-white">{trade.closePrice?.toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</span></span>
+                                </div>
+                              </div>
+                              {(trade.commission > 0 || trade.swap !== 0) && (
+                                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                  {trade.commission > 0 && <span>Comm: ${trade.commission?.toFixed(2)}</span>}
+                                  {trade.swap !== 0 && <span>Swap: ${trade.swap?.toFixed(2)}</span>}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
         )}
       </div>
     </div>
