@@ -50,7 +50,7 @@ const MobileTradingApp = () => {
   const [modifySL, setModifySL] = useState('')
   
   // History date filter states
-  const [historyDateFilter, setHistoryDateFilter] = useState('all') // 'all', 'today', 'week', 'month', 'custom'
+  const [historyDateFilter, setHistoryDateFilter] = useState('month') // 'all', 'today', 'week', 'month', 'custom' - default to month to show recent trades
   const [historyStartDate, setHistoryStartDate] = useState('')
   const [historyEndDate, setHistoryEndDate] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false)

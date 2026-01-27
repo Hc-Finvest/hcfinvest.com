@@ -44,7 +44,7 @@ const OrderBook = () => {
   const [closedTrades, setClosedTrades] = useState([])
   const [pendingOrders, setPendingOrders] = useState([])
   const [livePrices, setLivePrices] = useState({})
-  const [historyFilter, setHistoryFilter] = useState('all') // all, today, week, month, year, custom
+  const [historyFilter, setHistoryFilter] = useState('month') // all, today, week, month, year, custom - default to month to show recent trades
   const [currentPage, setCurrentPage] = useState(1)
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')

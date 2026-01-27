@@ -134,7 +134,7 @@ const TradingPage = () => {
   const [closingTradeIds, setClosingTradeIds] = useState(new Set()) // Track trades being closed
   
   // History date filter states
-  const [historyDateFilter, setHistoryDateFilter] = useState('all') // 'all', 'today', 'week', 'month', '3months', 'custom'
+  const [historyDateFilter, setHistoryDateFilter] = useState('month') // 'all', 'today', 'week', 'month', '3months', 'custom' - default to month to show recent trades
   const [historyStartDate, setHistoryStartDate] = useState('')
   const [historyEndDate, setHistoryEndDate] = useState('')
   const [showHistoryDatePicker, setShowHistoryDatePicker] = useState(false)
