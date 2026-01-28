@@ -1640,18 +1640,37 @@ const TradingPage = () => {
               <div className="flex flex-col h-full">
                 {/* Date Filter Bar */}
                 <div className={`p-3 border-b flex flex-wrap items-center gap-3 ${isDarkMode ? 'border-gray-800 bg-[#0a0a0a]' : 'border-gray-200 bg-gray-50'}`}>
-                  {/* Single Date Picker */}
+                  {/* Date Range Picker (From - To) */}
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Select Date:</span>
+                    <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>From:</span>
                     <input
                       type="date"
                       value={historyStartDate}
                       onChange={(e) => {
                         setHistoryStartDate(e.target.value)
-                        setHistoryEndDate(e.target.value)
-                        setHistoryDateFilter('single')
+                        if (!historyEndDate || e.target.value > historyEndDate) {
+                          setHistoryEndDate(e.target.value)
+                        }
+                        setHistoryDateFilter('custom')
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs border ${
+                      className={`px-2 py-1.5 rounded-lg text-xs border ${
+                        isDarkMode 
+                          ? 'bg-dark-700 border-gray-700 text-white' 
+                          : 'bg-white border-gray-300 text-gray-700'
+                      }`}
+                    />
+                    <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>To:</span>
+                    <input
+                      type="date"
+                      value={historyEndDate}
+                      onChange={(e) => {
+                        setHistoryEndDate(e.target.value)
+                        if (!historyStartDate) {
+                          setHistoryStartDate(e.target.value)
+                        }
+                        setHistoryDateFilter('custom')
+                      }}
+                      className={`px-2 py-1.5 rounded-lg text-xs border ${
                         isDarkMode 
                           ? 'bg-dark-700 border-gray-700 text-white' 
                           : 'bg-white border-gray-300 text-gray-700'
@@ -1673,14 +1692,11 @@ const TradingPage = () => {
                       >
                         <Clock size={12} />
                         {historyDateFilter === 'all' && 'All Time'}
-                        {historyDateFilter === 'single' && historyStartDate && `${new Date(historyStartDate).toLocaleDateString()}`}
                         {historyDateFilter === 'today' && `Today`}
                         {historyDateFilter === 'week' && 'Last Week'}
                         {historyDateFilter === 'month' && 'Last Month'}
                         {historyDateFilter === '3months' && 'Last 3 Months'}
-                        {historyDateFilter === 'custom' && historyStartDate && historyEndDate 
-                          ? `${historyStartDate} - ${historyEndDate}` 
-                          : historyDateFilter === 'custom' ? 'Custom Period' : ''}
+                        {historyDateFilter === 'custom' && 'Custom Range'}
                         <ChevronDown size={12} />
                       </button>
                       
@@ -1693,14 +1709,13 @@ const TradingPage = () => {
                             { key: 'week', label: 'Last Week', date: `${new Date(Date.now() - 7*24*60*60*1000).toLocaleDateString()} - ${new Date().toLocaleDateString()}` },
                             { key: 'month', label: 'Last Month', date: `${new Date(Date.now() - 30*24*60*60*1000).toLocaleDateString()} - ${new Date().toLocaleDateString()}` },
                             { key: '3months', label: 'Last 3 Months', date: `${new Date(Date.now() - 90*24*60*60*1000).toLocaleDateString()} - ${new Date().toLocaleDateString()}` },
-                            { key: 'all', label: 'All Time', date: '' },
-                            { key: 'custom', label: 'Custom Period', date: '' }
+                            { key: 'all', label: 'All Time', date: '' }
                           ].map(option => (
                             <button
                               key={option.key}
                               onClick={() => {
                                 setHistoryDateFilter(option.key)
-                                if (option.key !== 'custom') setShowHistoryDatePicker(false)
+                                setShowHistoryDatePicker(false)
                               }}
                               className={`w-full px-4 py-2.5 text-left flex items-center justify-between hover:bg-opacity-10 ${
                                 historyDateFilter === option.key ? 'bg-blue-500/10' : ''
@@ -1713,36 +1728,6 @@ const TradingPage = () => {
                               {historyDateFilter === option.key && <Check size={14} className="text-blue-500" />}
                             </button>
                           ))}
-                          
-                          {historyDateFilter === 'custom' && (
-                            <div className={`p-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                              <div className="flex gap-2 items-center mb-2">
-                                <input
-                                  type="date"
-                                  value={historyStartDate}
-                                  onChange={(e) => setHistoryStartDate(e.target.value)}
-                                  className={`flex-1 px-2 py-1.5 rounded text-xs border ${
-                                    isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'
-                                  }`}
-                                />
-                                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>to</span>
-                                <input
-                                  type="date"
-                                  value={historyEndDate}
-                                  onChange={(e) => setHistoryEndDate(e.target.value)}
-                                  className={`flex-1 px-2 py-1.5 rounded text-xs border ${
-                                    isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'
-                                  }`}
-                                />
-                              </div>
-                              <button
-                                onClick={() => setShowHistoryDatePicker(false)}
-                                className="w-full py-1.5 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                              >
-                                Apply
-                              </button>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -1785,11 +1770,19 @@ const TradingPage = () => {
                         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
                         return closeDate >= threeMonthsAgo
                       }
-                      if (historyDateFilter === 'custom' && historyStartDate && historyEndDate) {
-                        const start = new Date(historyStartDate)
-                        const end = new Date(historyEndDate)
+                      if (historyDateFilter === 'custom' && historyStartDate) {
+                        // Parse date strings as local dates (YYYY-MM-DD format)
+                        const [startYear, startMonth, startDay] = historyStartDate.split('-').map(Number)
+                        const start = new Date(startYear, startMonth - 1, startDay)
+                        start.setHours(0, 0, 0, 0)
+                        
+                        const endDateStr = historyEndDate || historyStartDate
+                        const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number)
+                        const end = new Date(endYear, endMonth - 1, endDay)
                         end.setHours(23, 59, 59, 999)
-                        return closeDate >= start && closeDate <= end
+                        
+                        const tradeDate = new Date(closeDate)
+                        return tradeDate >= start && tradeDate <= end
                       }
                       return true
                     })
@@ -1874,11 +1867,19 @@ const TradingPage = () => {
                             threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
                             return closeDate >= threeMonthsAgo
                           }
-                          if (historyDateFilter === 'custom' && historyStartDate && historyEndDate) {
-                            const start = new Date(historyStartDate)
-                            const end = new Date(historyEndDate)
+                          if (historyDateFilter === 'custom' && historyStartDate) {
+                            // Parse date strings as local dates (YYYY-MM-DD format)
+                            const [startYear, startMonth, startDay] = historyStartDate.split('-').map(Number)
+                            const start = new Date(startYear, startMonth - 1, startDay)
+                            start.setHours(0, 0, 0, 0)
+                            
+                            const endDateStr = historyEndDate || historyStartDate
+                            const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number)
+                            const end = new Date(endYear, endMonth - 1, endDay)
                             end.setHours(23, 59, 59, 999)
-                            return closeDate >= start && closeDate <= end
+                            
+                            const tradeDate = new Date(closeDate)
+                            return tradeDate >= start && tradeDate <= end
                           }
                           return true
                         })
