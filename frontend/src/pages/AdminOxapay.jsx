@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import { 
   Settings, Save, RefreshCw, Check, X, AlertTriangle, 
-  DollarSign, Shield, Eye, EyeOff, Bitcoin, Wallet,
+  DollarSign, Shield, Bitcoin, Wallet,
   ArrowUpRight, ArrowDownRight, Clock, CheckCircle, XCircle
 } from 'lucide-react'
 
@@ -12,8 +12,6 @@ const AdminOxapay = () => {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [activeTab, setActiveTab] = useState('config')
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [validatingKey, setValidatingKey] = useState(false)
   
   // Gateway config
   const [config, setConfig] = useState({
@@ -32,11 +30,6 @@ const AdminOxapay = () => {
     hasMerchantApiKey: false
   })
 
-  // API credentials (Merchant API Key for deposits, Payout API Key for withdrawals)
-  const [credentials, setCredentials] = useState({
-    merchantApiKey: '',
-    payoutApiKey: ''
-  })
 
   // Transactions
   const [transactions, setTransactions] = useState([])
@@ -184,36 +177,6 @@ const AdminOxapay = () => {
     setPayoutLoading(false)
   }
 
-  const handleValidateApiKey = async () => {
-    if (!credentials.merchantApiKey) {
-      setMessage({ type: 'error', text: 'Please enter a Merchant API Key' })
-      return
-    }
-    
-    setValidatingKey(true)
-    try {
-      const res = await fetch(`${API_URL}/oxapay/admin/validate-key`, {
-        method: 'POST',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ merchantApiKey: credentials.merchantApiKey })
-      })
-      const data = await res.json()
-      
-      if (data.success) {
-        setMessage({ type: 'success', text: `✓ API Key is valid! ${data.currencies} currencies available.` })
-      } else {
-        setMessage({ type: 'error', text: `✗ Invalid API Key: ${data.message}` })
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: `Error validating API Key: ${error.message}` })
-    }
-    setValidatingKey(false)
-    setTimeout(() => setMessage({ type: '', text: '' }), 5000)
-  }
-
   const searchUsers = async (search) => {
     if (!search || search.length < 2) {
       setUsers([])
@@ -341,16 +304,9 @@ const AdminOxapay = () => {
     setMessage({ type: '', text: '' })
     
     try {
+      // Only save config settings, not API keys (API keys are managed in server .env)
       const payload = {
         ...config
-      }
-      
-      // Only include API keys if they have values
-      if (credentials.merchantApiKey) {
-        payload.merchantApiKey = credentials.merchantApiKey
-      }
-      if (credentials.payoutApiKey) {
-        payload.payoutApiKey = credentials.payoutApiKey
       }
 
       const res = await fetch(`${API_URL}/oxapay/admin/config`, {
@@ -363,8 +319,6 @@ const AdminOxapay = () => {
       if (data.success) {
         setMessage({ type: 'success', text: 'Configuration saved successfully!' })
         fetchConfig()
-        // Clear credential fields after save
-        setCredentials({ merchantApiKey: '', payoutApiKey: '' })
       } else {
         setMessage({ type: 'error', text: data.message || 'Failed to save configuration' })
       }
@@ -599,68 +553,23 @@ const AdminOxapay = () => {
               </div>
             </div>
 
-            {/* API Credentials */}
+            {/* API Status Info */}
             <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Shield size={18} /> API Credentials
+                <Shield size={18} /> API Status
               </h3>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">
-                    Merchant API Key {config.hasMerchantApiKey && <span className="text-green-500">(configured)</span>}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={credentials.merchantApiKey}
-                      onChange={(e) => setCredentials({ ...credentials, merchantApiKey: e.target.value })}
-                      placeholder={config.hasMerchantApiKey ? '••••••••••••••••' : 'Enter Merchant API Key'}
-                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white pr-10"
-                    />
-                    <button
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    >
-                      {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Shield size={16} className="text-green-500 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="text-green-500 font-medium">API Keys Configured</p>
+                      <p className="text-gray-400 mt-1">
+                        Oxapay API keys are configured in the server environment. Use the enable/disable toggle above to control gateway visibility for users.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-gray-500 text-xs mt-1">
-                    Get this from your Oxapay merchant dashboard. Used for deposits/invoices.
-                  </p>
-                  <button
-                    onClick={handleValidateApiKey}
-                    disabled={validatingKey || !credentials.merchantApiKey}
-                    className="mt-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {validatingKey ? <RefreshCw size={14} className="animate-spin" /> : <Shield size={14} />}
-                    {validatingKey ? 'Validating...' : 'Validate API Key'}
-                  </button>
-                </div>
-
-                {/* Payout API Key */}
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">
-                    Payout API Key <span className="text-orange-500">(for withdrawals)</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={credentials.payoutApiKey}
-                      onChange={(e) => setCredentials({ ...credentials, payoutApiKey: e.target.value })}
-                      placeholder="Enter Payout API Key"
-                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white pr-10"
-                    />
-                    <button
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    >
-                      {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  <p className="text-gray-500 text-xs mt-1">
-                    Get this from Oxapay Payout section. Required for sending crypto payouts/withdrawals.
-                  </p>
                 </div>
 
                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
@@ -668,23 +577,10 @@ const AdminOxapay = () => {
                     <AlertTriangle size={16} className="text-yellow-500 mt-0.5" />
                     <div className="text-sm">
                       <p className="text-yellow-500 font-medium">Webhook URL</p>
-                      <p className="text-gray-400 mt-1">Configure this URL in your Oxapay dashboard:</p>
+                      <p className="text-gray-400 mt-1">Ensure this URL is configured in your Oxapay dashboard:</p>
                       <code className="block mt-1 p-2 bg-dark-900 rounded text-xs text-green-400 break-all">
                         https://api.hcfinvest.com/api/oxapay/webhook
                       </code>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <Shield size={16} className="text-blue-500 mt-0.5" />
-                    <div className="text-sm">
-                      <p className="text-blue-500 font-medium">Security Note</p>
-                      <p className="text-gray-400 mt-1">
-                        Webhook signatures are verified using HMAC-SHA512 with your Merchant API Key.
-                        Ensure your webhook URL is configured correctly in Oxapay dashboard.
-                      </p>
                     </div>
                   </div>
                 </div>
