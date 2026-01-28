@@ -115,6 +115,7 @@ class OxapayService {
 
     const fullUrl = `${this.baseUrl}${endpoint}`
     console.log(`[Oxapay] Payout API call to ${fullUrl}`)
+    console.log(`[Oxapay] Payout request data:`, JSON.stringify(data))
 
     try {
       // Oxapay Payout API expects key in header as 'payout_api_key'
