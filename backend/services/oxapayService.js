@@ -79,18 +79,14 @@ class OxapayService {
     console.log(`[Oxapay] Using merchant key: ${this.merchantApiKey ? this.merchantApiKey.substring(0, 6) + '...' : 'NOT SET'}`)
 
     try {
-      // Oxapay API expects 'merchant' key in request body, not headers
-      const requestBody = {
-        merchant: this.merchantApiKey,
-        ...data
-      }
-      
+      // Oxapay API expects merchant key in header as 'merchant_api_key'
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'merchant_api_key': this.merchantApiKey
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(data)
       })
 
       const result = await response.json()
