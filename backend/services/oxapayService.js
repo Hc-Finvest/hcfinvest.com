@@ -117,26 +117,22 @@ class OxapayService {
     console.log(`[Oxapay] Payout API call to ${fullUrl}`)
 
     try {
-      // Oxapay Payout API expects 'key' in request body
-      const requestBody = {
-        key: this.payoutApiKey,
-        ...data
-      }
-      
+      // Oxapay Payout API expects key in header as 'payout_api_key'
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'payout_api_key': this.payoutApiKey
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(data)
       })
 
       const result = await response.json()
       
-      // Oxapay API returns result: 100 for success
-      if (result.result !== 100) {
+      // Oxapay Payout API returns status: 200 for success
+      if (result.status !== 200) {
         console.error(`[Oxapay] Payout API Error:`, result)
-        throw new Error(result.message || `Payout API Error: ${result.result}`)
+        throw new Error(result.message || `Payout API Error: ${result.status}`)
       }
 
       console.log(`[Oxapay] Payout API response received for ${endpoint}`)
@@ -700,30 +696,33 @@ class OxapayService {
         amount: amount,
         currency: cryptoCurrency,
         network: network,
-        callbackUrl: process.env.OXAPAY_WEBHOOK_URL || `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/oxapay/webhook`,
+        callback_url: process.env.OXAPAY_WEBHOOK_URL || `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/oxapay/webhook`,
         description: options.description || `Payout to ${user.email}`
       }
 
-      // Call Oxapay Payout API using payout key
-      const response = await this.makePayoutRequest('/api/send', payoutData)
+      // Call Oxapay Payout API using payout key (endpoint: /v1/payout)
+      const response = await this.makePayoutRequest('/v1/payout', payoutData)
 
-      // Update transaction with gateway response
-      transaction.gatewayOrderId = response.trackId
-      transaction.gatewayPaymentId = response.trackId
+      // Update transaction with gateway response (Oxapay returns data.track_id)
+      const trackId = response.data?.track_id
+      transaction.gatewayOrderId = trackId
+      transaction.gatewayPaymentId = trackId
 
-      if (response.status === 'Confirmed' || response.status === 'confirmed' || response.status === 'Complete') {
+      // Check status from response.data.status
+      const payoutStatus = response.data?.status
+      if (payoutStatus === 'complete' || payoutStatus === 'confirmed') {
         transaction.status = 'success'
       }
 
       await transaction.save()
 
-      console.log(`[Oxapay] Payout created: ${transaction._id}, trackId: ${response.trackId}`)
+      console.log(`[Oxapay] Payout created: ${transaction._id}, trackId: ${trackId}`)
 
       return {
         success: true,
         transaction: {
           id: transaction._id,
-          trackId: response.trackId,
+          trackId: trackId,
           amount,
           cryptoCurrency,
           walletAddress,
