@@ -628,13 +628,13 @@ class OxapayService {
     return await this.atomicRefundWithdrawal(transaction._id, errorMessage)
   }
 
-  // Create a withdrawal/payout request using Merchant API Key
+  // Create a withdrawal/payout request using Payout API Key
   async createPayout(userId, amount, cryptoCurrency = 'USDT', walletAddress, network = 'TRC20', options = {}) {
     await this.loadConfig()
 
-    // Validate API key is configured
-    if (!this.merchantApiKey) {
-      throw new Error('Oxapay Merchant API Key not configured')
+    // Validate Payout API key is configured
+    if (!this.payoutApiKey) {
+      throw new Error('Oxapay Payout API Key not configured')
     }
 
     // Validate gateway is active
@@ -643,7 +643,8 @@ class OxapayService {
       throw new Error('Oxapay payment gateway is not available')
     }
 
-    if (!gateway.withdrawalEnabled) {
+    // Skip withdrawal enabled check for admin payouts (options.isAdminPayout)
+    if (!options.isAdminPayout && !gateway.withdrawalEnabled) {
       throw new Error('Crypto withdrawals are not enabled')
     }
 

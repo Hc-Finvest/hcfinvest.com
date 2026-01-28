@@ -700,7 +700,7 @@ router.post('/admin/payout', adminMiddleware, async (req, res) => {
       cryptoCurrency || 'USDT',
       walletAddress,
       network || 'TRC20',
-      { adminNotes }
+      { adminNotes, isAdminPayout: true }
     )
 
     res.json(result)
