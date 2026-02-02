@@ -1129,19 +1129,32 @@ const MobileTradingApp = () => {
           <div className="flex flex-col h-full">
             {/* Date Filter Section */}
             <div className="p-3 bg-dark-800 border-b border-gray-800">
-              {/* Single Date Picker */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-gray-400 text-xs">Select Date:</span>
-                <input
-                  type="date"
-                  value={historyStartDate}
-                  onChange={(e) => {
-                    setHistoryStartDate(e.target.value)
-                    setHistoryEndDate(e.target.value)
-                    setHistoryDateFilter('single')
-                  }}
-                  className="flex-1 bg-dark-700 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-                />
+              {/* From/To Date Pickers */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <span className="text-gray-400 text-xs block mb-1">From:</span>
+                  <input
+                    type="date"
+                    value={historyStartDate}
+                    onChange={(e) => {
+                      setHistoryStartDate(e.target.value)
+                      setHistoryDateFilter('custom')
+                    }}
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <span className="text-gray-400 text-xs block mb-1">To:</span>
+                  <input
+                    type="date"
+                    value={historyEndDate}
+                    onChange={(e) => {
+                      setHistoryEndDate(e.target.value)
+                      setHistoryDateFilter('custom')
+                    }}
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm"
+                  />
+                </div>
               </div>
               
               {/* Quick Filter Buttons */}
@@ -1184,14 +1197,23 @@ const MobileTradingApp = () => {
                   const today = new Date()
                   today.setHours(0, 0, 0, 0)
                   
-                  if (historyDateFilter === 'single' && historyStartDate) {
-                    // Parse date string as local date (YYYY-MM-DD format)
-                    const [year, month, day] = historyStartDate.split('-').map(Number)
-                    const selectedDate = new Date(year, month - 1, day)
-                    selectedDate.setHours(0, 0, 0, 0)
+                  if (historyDateFilter === 'custom' && (historyStartDate || historyEndDate)) {
                     const tradeDate = new Date(closeDate)
                     tradeDate.setHours(0, 0, 0, 0)
-                    return tradeDate.getTime() === selectedDate.getTime()
+                    
+                    if (historyStartDate) {
+                      const [year, month, day] = historyStartDate.split('-').map(Number)
+                      const startDate = new Date(year, month - 1, day)
+                      startDate.setHours(0, 0, 0, 0)
+                      if (tradeDate < startDate) return false
+                    }
+                    if (historyEndDate) {
+                      const [year, month, day] = historyEndDate.split('-').map(Number)
+                      const endDate = new Date(year, month - 1, day)
+                      endDate.setHours(23, 59, 59, 999)
+                      if (tradeDate > endDate) return false
+                    }
+                    return true
                   }
                   if (historyDateFilter === 'today') {
                     const tradeDate = new Date(closeDate)
@@ -1220,8 +1242,8 @@ const MobileTradingApp = () => {
                   <div className="mt-3 p-3 bg-dark-700 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-gray-400 text-xs">
-                        {historyDateFilter === 'single' && historyStartDate 
-                          ? `P/L for ${new Date(historyStartDate).toLocaleDateString()}` 
+                        {historyDateFilter === 'custom' && (historyStartDate || historyEndDate)
+                          ? `P/L: ${historyStartDate || 'Start'} to ${historyEndDate || 'End'}` 
                           : 'Period P/L'}
                       </span>
                       <span className={`text-lg font-bold ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -1246,14 +1268,23 @@ const MobileTradingApp = () => {
                   const today = new Date()
                   today.setHours(0, 0, 0, 0)
                   
-                  if (historyDateFilter === 'single' && historyStartDate) {
-                    // Parse date string as local date (YYYY-MM-DD format)
-                    const [year, month, day] = historyStartDate.split('-').map(Number)
-                    const selectedDate = new Date(year, month - 1, day)
-                    selectedDate.setHours(0, 0, 0, 0)
+                  if (historyDateFilter === 'custom' && (historyStartDate || historyEndDate)) {
                     const tradeDate = new Date(closeDate)
                     tradeDate.setHours(0, 0, 0, 0)
-                    return tradeDate.getTime() === selectedDate.getTime()
+                    
+                    if (historyStartDate) {
+                      const [year, month, day] = historyStartDate.split('-').map(Number)
+                      const startDate = new Date(year, month - 1, day)
+                      startDate.setHours(0, 0, 0, 0)
+                      if (tradeDate < startDate) return false
+                    }
+                    if (historyEndDate) {
+                      const [year, month, day] = historyEndDate.split('-').map(Number)
+                      const endDate = new Date(year, month - 1, day)
+                      endDate.setHours(23, 59, 59, 999)
+                      if (tradeDate > endDate) return false
+                    }
+                    return true
                   }
                   if (historyDateFilter === 'today') {
                     const tradeDate = new Date(closeDate)

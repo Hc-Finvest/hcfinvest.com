@@ -11,7 +11,9 @@ dotenv.config()
 // MetaAPI Configuration
 const METAAPI_TOKEN = () => process.env.METAAPI_TOKEN || ''
 const METAAPI_ACCOUNT_ID = () => process.env.METAAPI_ACCOUNT_ID || ''
-const METAAPI_BASE_URL = 'https://mt-client-api-v1.london.agiliumtrade.ai'
+// Region can be: london, new-york, singapore, etc. Default to new-york
+const METAAPI_REGION = () => process.env.METAAPI_REGION || 'new-york'
+const METAAPI_BASE_URL = () => `https://mt-client-api-v1.${METAAPI_REGION()}.agiliumtrade.ai`
 
 // Symbol Categories with display names
 const SYMBOL_CATEGORIES = {
@@ -160,14 +162,14 @@ class MetaApiService {
     }
 
     console.log(`[MetaAPI] Connecting with account: ${accountId.substring(0, 8)}...`)
+    console.log(`[MetaAPI] Region: ${METAAPI_REGION()}, Base URL: ${METAAPI_BASE_URL()}`)
     this.connectionStartTime = Date.now()
 
     // Test connection by fetching account info
     try {
-      const response = await fetch(
-        `${METAAPI_BASE_URL}/users/current/accounts/${accountId}`,
-        { headers: this.getHeaders() }
-      )
+      const url = `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}`
+      console.log(`[MetaAPI] Testing connection: ${url}`)
+      const response = await fetch(url, { headers: this.getHeaders() })
 
       if (!response.ok) {
         const error = await response.text()
@@ -211,39 +213,28 @@ class MetaApiService {
 
   /**
    * Fetch prices for all symbols from MetaAPI
+   * MetaAPI only supports fetching one symbol at a time, so we batch requests
    */
   async fetchAllPrices() {
     const accountId = METAAPI_ACCOUNT_ID()
     if (!accountId || !this.isConnected) return
 
     try {
-      // Fetch current prices for all symbols
-      // MetaAPI allows fetching multiple symbols at once
-      const symbolsParam = ALL_SYMBOLS.join(',')
+      // Fetch prices in parallel batches to avoid rate limiting
+      const batchSize = 10
+      const batches = []
       
-      const response = await fetch(
-        `${METAAPI_BASE_URL}/users/current/accounts/${accountId}/symbols/${symbolsParam}/current-price`,
-        { headers: this.getHeaders() }
-      )
-
-      if (!response.ok) {
-        // Try fetching symbols one by one as fallback
-        await this.fetchPricesIndividually()
-        return
+      for (let i = 0; i < ALL_SYMBOLS.length; i += batchSize) {
+        batches.push(ALL_SYMBOLS.slice(i, i + batchSize))
       }
 
-      const prices = await response.json()
-      
-      if (Array.isArray(prices)) {
-        prices.forEach(price => {
-          this.updatePrice(price)
-        })
-      } else if (prices.symbol) {
-        // Single price response
-        this.updatePrice(prices)
+      for (const batch of batches) {
+        const promises = batch.map(symbol => this.fetchSymbolPrice(accountId, symbol))
+        await Promise.all(promises)
       }
 
       this.lastUpdate = Date.now()
+      this.lastError = null
 
     } catch (error) {
       // Silent fail for polling - don't spam logs
@@ -255,25 +246,21 @@ class MetaApiService {
   }
 
   /**
-   * Fetch prices individually (fallback method)
+   * Fetch price for a single symbol
    */
-  async fetchPricesIndividually() {
-    const accountId = METAAPI_ACCOUNT_ID()
-    
-    for (const symbol of ALL_SYMBOLS) {
-      try {
-        const response = await fetch(
-          `${METAAPI_BASE_URL}/users/current/accounts/${accountId}/symbols/${symbol}/current-price`,
-          { headers: this.getHeaders() }
-        )
+  async fetchSymbolPrice(accountId, symbol) {
+    try {
+      const response = await fetch(
+        `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/${symbol}/current-price`,
+        { headers: this.getHeaders() }
+      )
 
-        if (response.ok) {
-          const price = await response.json()
-          this.updatePrice(price)
-        }
-      } catch (e) {
-        // Skip failed symbols
+      if (response.ok) {
+        const price = await response.json()
+        this.updatePrice(price)
       }
+    } catch (e) {
+      // Skip failed symbols silently
     }
   }
 
