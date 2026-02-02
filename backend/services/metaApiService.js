@@ -165,10 +165,11 @@ class MetaApiService {
     console.log(`[MetaAPI] Region: ${METAAPI_REGION()}, Base URL: ${METAAPI_BASE_URL()}`)
     this.connectionStartTime = Date.now()
 
-    // Test connection by fetching account info
+    // Test connection by fetching a price for a common symbol (EURUSD)
     try {
-      const url = `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}`
-      console.log(`[MetaAPI] Testing connection: ${url}`)
+      const testSymbol = 'EURUSD'
+      const url = `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/${testSymbol}/current-price`
+      console.log(`[MetaAPI] Testing connection with ${testSymbol}...`)
       const response = await fetch(url, { headers: this.getHeaders() })
 
       if (!response.ok) {
@@ -178,8 +179,8 @@ class MetaApiService {
         return
       }
 
-      const accountInfo = await response.json()
-      console.log(`[MetaAPI] Connected to account: ${accountInfo.name || accountId}`)
+      const priceData = await response.json()
+      console.log(`[MetaAPI] Connected! Test price - ${testSymbol}: Bid=${priceData.bid}, Ask=${priceData.ask}`)
       this.isConnected = true
       this.lastError = null
 
