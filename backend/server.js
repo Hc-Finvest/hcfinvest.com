@@ -28,7 +28,7 @@ import emailRoutes from './routes/email.js'
 import oxapayRoutes from './routes/oxapay.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import marketDataService from './services/marketDataService.js'
+import metaApiService from './services/metaApiService.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -50,15 +50,15 @@ const io = new Server(httpServer, {
 const connectedClients = new Map()
 const priceSubscribers = new Set()
 
-// Price cache for real-time streaming (populated by AllTick via marketDataService)
+// Price cache for real-time streaming (populated by MetaAPI)
 const priceCache = new Map()
 
-// Initialize AllTick market data connection
-console.log('[Server] Initializing AllTick market data service...')
-marketDataService.connect()
+// Initialize MetaAPI market data connection
+console.log('[Server] Initializing MetaAPI market data service...')
+metaApiService.connect()
 
-// Subscribe to price updates from AllTick and update cache
-marketDataService.addSubscriber((symbol, priceData) => {
+// Subscribe to price updates from MetaAPI and update cache
+metaApiService.addSubscriber((symbol, priceData) => {
   priceCache.set(symbol, priceData)
 })
 
@@ -67,19 +67,21 @@ setInterval(() => {
   if (priceSubscribers.size === 0) return
   
   const now = Date.now()
-  const allPrices = marketDataService.getAllPrices()
+  const allPrices = metaApiService.getAllPrices()
+  const pricesByCategory = metaApiService.getPricesByCategory()
   
   // Update local cache
   Object.entries(allPrices).forEach(([symbol, price]) => {
     priceCache.set(symbol, price)
   })
   
-  // Broadcast to all price subscribers
+  // Broadcast to all price subscribers (includes category-wise data)
   io.to('prices').emit('priceStream', {
     prices: allPrices,
+    categories: pricesByCategory,
     updated: allPrices,
     timestamp: now,
-    provider: 'alltick'
+    provider: 'metaapi'
   })
 }, 500)
 

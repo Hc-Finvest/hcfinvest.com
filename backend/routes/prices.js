@@ -1,12 +1,12 @@
 import express from 'express'
-import marketDataService from '../services/marketDataService.js'
+import metaApiService from '../services/metaApiService.js'
 
 const router = express.Router()
 
 // GET /api/prices/status - Get market data service status
 router.get('/status', async (req, res) => {
   try {
-    const status = marketDataService.getStatus()
+    const status = metaApiService.getStatus()
     res.json({ success: true, status })
   } catch (error) {
     console.error('Error fetching status:', error)
@@ -17,10 +17,25 @@ router.get('/status', async (req, res) => {
 // GET /api/prices/symbols - Get all supported symbols
 router.get('/symbols', async (req, res) => {
   try {
-    const symbols = marketDataService.getSupportedSymbols()
+    const symbols = metaApiService.getSupportedSymbols()
     res.json({ success: true, symbols })
   } catch (error) {
     console.error('Error fetching symbols:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/prices/categories - Get all categories with symbols and prices
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = metaApiService.getPricesByCategory()
+    res.json({ 
+      success: true, 
+      categories,
+      provider: 'metaapi'
+    })
+  } catch (error) {
+    console.error('Error fetching categories:', error)
     res.status(500).json({ success: false, message: error.message })
   }
 })
@@ -31,15 +46,16 @@ router.get('/:symbol', async (req, res) => {
     const { symbol } = req.params
     
     // Check if symbol is supported
-    if (!marketDataService.isSymbolSupported(symbol)) {
+    if (!metaApiService.isSymbolSupported(symbol)) {
       return res.status(404).json({ 
         success: false, 
         message: `Symbol ${symbol} is not supported` 
       })
     }
     
-    // Get price from AllTick market data service
-    const price = marketDataService.getPrice(symbol)
+    // Get price from MetaAPI market data service
+    const price = metaApiService.getPrice(symbol)
+    const symbolInfo = metaApiService.getSymbolInfo(symbol)
     
     if (price && price.bid) {
       res.json({ 
@@ -48,9 +64,10 @@ router.get('/:symbol', async (req, res) => {
           bid: price.bid,
           ask: price.ask,
           spread: price.spread,
-          time: price.time
+          time: price.time,
+          ...symbolInfo
         },
-        provider: 'alltick'
+        provider: 'metaapi'
       })
     } else {
       res.status(404).json({ 
@@ -74,16 +91,18 @@ router.post('/batch', async (req, res) => {
     
     const prices = {}
     
-    // Get all prices from AllTick market data service
+    // Get all prices from MetaAPI market data service
     for (const symbol of symbols) {
-      if (marketDataService.isSymbolSupported(symbol)) {
-        const price = marketDataService.getPrice(symbol)
+      if (metaApiService.isSymbolSupported(symbol)) {
+        const price = metaApiService.getPrice(symbol)
+        const symbolInfo = metaApiService.getSymbolInfo(symbol)
         if (price && price.bid) {
           prices[symbol] = {
             bid: price.bid,
             ask: price.ask,
             spread: price.spread,
-            time: price.time
+            time: price.time,
+            ...symbolInfo
           }
         }
       }
@@ -92,7 +111,7 @@ router.post('/batch', async (req, res) => {
     res.json({ 
       success: true, 
       prices,
-      provider: 'alltick',
+      provider: 'metaapi',
       count: Object.keys(prices).length
     })
   } catch (error) {
@@ -104,11 +123,13 @@ router.post('/batch', async (req, res) => {
 // GET /api/prices/all - Get all current prices
 router.get('/', async (req, res) => {
   try {
-    const prices = marketDataService.getAllPrices()
+    const prices = metaApiService.getAllPrices()
+    const categories = metaApiService.getPricesByCategory()
     res.json({ 
       success: true, 
       prices,
-      provider: 'alltick',
+      categories,
+      provider: 'metaapi',
       count: Object.keys(prices).length
     })
   } catch (error) {

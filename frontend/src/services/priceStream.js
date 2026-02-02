@@ -8,7 +8,9 @@ class PriceStreamService {
   constructor() {
     this.socket = null
     this.prices = {}
+    this.categories = {}
     this.subscribers = new Map()
+    this.categorySubscribers = new Map()
     this.isConnected = false
     this.reconnectAttempts = 0
     this.maxReconnectAttempts = 10
@@ -34,19 +36,33 @@ class PriceStreamService {
     })
 
     this.socket.on('priceStream', (data) => {
-      const { prices, updated, timestamp } = data
+      const { prices, categories, updated, timestamp } = data
       
       // Update local price cache
       if (prices) {
         this.prices = { ...this.prices, ...prices }
       }
       
-      // Notify all subscribers
+      // Update categories cache
+      if (categories) {
+        this.categories = categories
+      }
+      
+      // Notify all price subscribers
       this.subscribers.forEach((callback, id) => {
         try {
           callback(this.prices, updated, timestamp)
         } catch (e) {
           console.error('[PriceStream] Subscriber error:', e)
+        }
+      })
+      
+      // Notify all category subscribers
+      this.categorySubscribers.forEach((callback, id) => {
+        try {
+          callback(this.categories, timestamp)
+        } catch (e) {
+          console.error('[PriceStream] Category subscriber error:', e)
         }
       })
     })
@@ -70,6 +86,7 @@ class PriceStreamService {
     }
     this.isConnected = false
     this.subscribers.clear()
+    this.categorySubscribers.clear()
   }
 
   subscribe(id, callback) {
@@ -85,10 +102,32 @@ class PriceStreamService {
     return () => this.unsubscribe(id)
   }
 
+  // Subscribe to category-wise price updates
+  subscribeToCategories(id, callback) {
+    this.categorySubscribers.set(id, callback)
+    // Connect if not already connected
+    if (!this.socket?.connected) {
+      this.connect()
+    }
+    // Send current categories immediately
+    if (Object.keys(this.categories).length > 0) {
+      callback(this.categories, Date.now())
+    }
+    return () => this.unsubscribeFromCategories(id)
+  }
+
   unsubscribe(id) {
     this.subscribers.delete(id)
     // Disconnect if no subscribers
-    if (this.subscribers.size === 0) {
+    if (this.subscribers.size === 0 && this.categorySubscribers.size === 0) {
+      this.disconnect()
+    }
+  }
+
+  unsubscribeFromCategories(id) {
+    this.categorySubscribers.delete(id)
+    // Disconnect if no subscribers
+    if (this.subscribers.size === 0 && this.categorySubscribers.size === 0) {
       this.disconnect()
     }
   }
@@ -99,6 +138,16 @@ class PriceStreamService {
 
   getAllPrices() {
     return this.prices
+  }
+
+  // Get all categories with prices
+  getCategories() {
+    return this.categories
+  }
+
+  // Get prices for a specific category
+  getCategoryPrices(category) {
+    return this.categories[category] || null
   }
 
   // Calculate PnL for a trade using current prices

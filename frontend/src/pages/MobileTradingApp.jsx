@@ -641,7 +641,7 @@ const MobileTradingApp = () => {
               </div>
               <div>
                 <p className="text-white font-medium text-sm">{selectedAccount.accountId}</p>
-                <p className="text-gray-400 text-xs">{selectedAccount.accountType || 'Standard'}</p>
+                <p className="text-gray-400 text-xs">{selectedAccount.accountTypeId?.name || 'Standard'}</p>
               </div>
             </div>
             <ChevronRight size={18} className={`text-gray-400 transition-transform ${showAccountSelector ? 'rotate-90' : ''}`} />
@@ -660,7 +660,10 @@ const MobileTradingApp = () => {
                       selectedAccount._id === acc._id ? 'bg-accent-green/20 border border-accent-green/50' : 'bg-dark-700'
                     }`}
                   >
-                    <span className="text-white text-sm">{acc.accountId}</span>
+                    <div className="text-left">
+                      <span className="text-white text-sm block">{acc.accountId}</span>
+                      <span className="text-gray-500 text-xs">{acc.accountTypeId?.name || 'Standard'}</span>
+                    </div>
                     {selectedAccount._id === acc._id && <Check size={14} className="text-accent-green" />}
                   </button>
                 ))}
