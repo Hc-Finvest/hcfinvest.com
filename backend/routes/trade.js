@@ -239,16 +239,7 @@ router.post('/close', async (req, res) => {
 
     // Note: Copy trading close is now handled inside tradeEngine.closeTrade()
     // This ensures SL/TP triggered closes also propagate to followers
-
-    // Process IB commission for the closed trade
-    try {
-      const ibResult = await ibEngine.processTradeCommission(result.trade)
-      if (ibResult.processed) {
-        console.log(`IB commission processed for trade ${result.trade._id}: ${ibResult.commissions?.length || 0} IBs credited`)
-      }
-    } catch (ibError) {
-      console.error('Error processing IB commission:', ibError)
-    }
+    // Note: IB commission is also processed inside tradeEngine.closeTrade() - no need to call again here
 
     res.json({
       success: true,

@@ -7,6 +7,7 @@ import TradeSettings from '../models/TradeSettings.js'
 import AdminLog from '../models/AdminLog.js'
 import tradeEngine from '../services/tradeEngine.js'
 import copyTradingEngine from '../services/copyTradingEngine.js'
+import ibEngine from '../services/ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
 
 const router = express.Router()
@@ -178,6 +179,14 @@ router.put('/edit/:tradeId', async (req, res) => {
           if (account.balance < 0) account.balance = 0
           await account.save()
         }
+        
+        // Process IB commission for this trade (trade is being closed via edit)
+        try {
+          await ibEngine.processTradeCommission(trade)
+          console.log(`[AdminTrade] IB commission processed for edited trade ${trade._id}`)
+        } catch (ibError) {
+          console.error('[AdminTrade] Error processing IB commission for edited trade:', ibError.message)
+        }
       }
     } else if (realizedPnl !== undefined && realizedPnl !== null) {
       // Just update P&L without closing
@@ -270,6 +279,14 @@ router.post('/close/:tradeId', async (req, res) => {
       account.balance += realizedPnl
       if (account.balance < 0) account.balance = 0
       await account.save()
+    }
+
+    // Process IB commission for this trade
+    try {
+      await ibEngine.processTradeCommission(trade)
+      console.log(`[AdminTrade] IB commission processed for trade ${tradeId}`)
+    } catch (ibError) {
+      console.error('[AdminTrade] Error processing IB commission:', ibError.message)
     }
 
     // Check if this is a master trader's trade and close follower trades

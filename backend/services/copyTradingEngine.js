@@ -6,6 +6,7 @@ import CopySettings from '../models/CopySettings.js'
 import Trade from '../models/Trade.js'
 import TradingAccount from '../models/TradingAccount.js'
 import tradeEngine from './tradeEngine.js'
+import ibEngine from './ibEngineNew.js'
 
 class CopyTradingEngine {
   constructor() {
@@ -518,8 +519,11 @@ class CopyTradingEngine {
                 }
                 
                 // Update master's commission stats
-                master.totalCommissionEarned += masterCommissionCredited
+                // IMPORTANT: Update both pendingCommission (for withdrawal tracking) and totalCommissionEarned
+                master.pendingCommission = (master.pendingCommission || 0) + masterCommissionCredited
+                master.totalCommissionEarned = (master.totalCommissionEarned || 0) + masterCommissionCredited
                 await master.save()
+                console.log(`[CopyTrade] Master commission stats updated: pendingCommission=$${master.pendingCommission.toFixed(2)}, totalEarned=$${master.totalCommissionEarned.toFixed(2)}`)
                 
                 // Create commission record for audit trail (idempotent - uses copyTrade._id)
                 const existingCommission = await CopyCommission.findOne({ 
@@ -585,6 +589,14 @@ class CopyTradingEngine {
             follower.dailyLoss += Math.abs(result.realizedPnl)
           }
           await follower.save()
+        }
+
+        // Process IB commission for the follower trade (follower may have been referred by an IB)
+        try {
+          await ibEngine.processTradeCommission(followerTrade)
+          console.log(`[CopyTrade] IB commission processed for follower trade ${copyTrade.followerTradeId}`)
+        } catch (ibError) {
+          console.error(`[CopyTrade] Error processing IB commission for follower trade:`, ibError.message)
         }
 
         console.log(`[CopyTrade] Closed follower trade ${copyTrade.followerTradeId}, PnL: ${result.realizedPnl}, Net after commission: ${(realizedPnl - commissionAmount).toFixed(2)}`)
