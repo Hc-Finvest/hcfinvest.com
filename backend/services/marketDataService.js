@@ -158,6 +158,10 @@ class MarketDataService {
       return
     }
 
+    // Log token info for debugging (first 6 chars only for security)
+    const tokenPreview = token.length > 6 ? `${token.substring(0, 6)}...` : 'TOO_SHORT'
+    console.log(`[MarketData] Token configured: ${tokenPreview} (length: ${token.length})`)
+
     const wsUrl = `${ALLTICK_WS_URL}?token=${token}`
     console.log('[MarketData] Connecting to AllTick WebSocket...')
     this.connectionStartTime = Date.now()
@@ -190,6 +194,13 @@ class MarketDataService {
       this.ws.on('error', (error) => {
         console.error('[MarketData] WebSocket error:', error.message)
         this.lastError = error.message
+        
+        // Provide specific guidance for common errors
+        if (error.message.includes('401')) {
+          console.error('[MarketData] ERROR 401: Invalid or expired ALLTICK_API_TOKEN. Please check your token in .env file.')
+        } else if (error.message.includes('429')) {
+          console.error('[MarketData] ERROR 429: Rate limit exceeded. Too many connection attempts. Will retry with backoff.')
+        }
       })
 
       this.ws.on('close', (code, reason) => {
