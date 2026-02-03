@@ -197,7 +197,7 @@ class TradeEngine {
   }
 
   // Open a new trade
-  async openTrade(userId, tradingAccountId, symbol, segment, side, orderType, quantity, bid, ask, sl = null, tp = null, userLeverage = null) {
+  async openTrade(userId, tradingAccountId, symbol, segment, side, orderType, quantity, bid, ask, sl = null, tp = null, userLeverage = null, pendingPriceInput = null) {
     const account = await TradingAccount.findById(tradingAccountId).populate('accountTypeId')
     if (!account) throw new Error('Trading account not found')
 
@@ -216,7 +216,14 @@ class TradeEngine {
     console.log(`Charges retrieved: spread=${charges.spreadValue}, commission=${charges.commissionValue}, commissionType=${charges.commissionType}`)
 
     // Calculate execution price with spread
-    const openPrice = this.calculateExecutionPrice(side, bid, ask, charges.spreadValue, charges.spreadType)
+    // For pending orders, use the user-specified pending price
+    // For market orders, calculate based on bid/ask with spread
+    let openPrice
+    if (orderType !== 'MARKET' && pendingPriceInput) {
+      openPrice = pendingPriceInput
+    } else {
+      openPrice = this.calculateExecutionPrice(side, bid, ask, charges.spreadValue, charges.spreadType)
+    }
 
     // Get contract size based on symbol
     const contractSize = this.getContractSize(symbol)
@@ -280,7 +287,7 @@ class TradeEngine {
       swap: 0,
       floatingPnl: 0,
       status: orderType === 'MARKET' ? 'OPEN' : 'PENDING',
-      pendingPrice: orderType !== 'MARKET' ? openPrice : null
+      pendingPrice: orderType !== 'MARKET' ? (pendingPriceInput || openPrice) : null
     })
 
     // Deduct commission from trading account balance when trade opens

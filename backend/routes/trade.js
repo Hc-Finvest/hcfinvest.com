@@ -24,6 +24,7 @@ router.post('/open', async (req, res) => {
       bid, 
       ask, 
       leverage,
+      pendingPrice,
       sl, 
       tp 
     } = req.body
@@ -134,7 +135,8 @@ router.post('/open', async (req, res) => {
       parseFloat(ask),
       sl ? parseFloat(sl) : null,
       tp ? parseFloat(tp) : null,
-      leverage // Pass user-selected leverage
+      leverage, // Pass user-selected leverage
+      pendingPrice ? parseFloat(pendingPrice) : null // Pass pending price for limit/stop orders
     )
 
     // Check if this is a master trader and copy to followers

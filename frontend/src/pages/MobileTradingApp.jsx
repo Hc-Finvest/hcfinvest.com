@@ -34,10 +34,13 @@ const MobileTradingApp = () => {
   const [chartTabs, setChartTabs] = useState([{ symbol: 'XAUUSD', name: 'Gold' }])
   const [activeChartTab, setActiveChartTab] = useState('XAUUSD')
   const [orderType, setOrderType] = useState('market')
+  const [pendingOrderType, setPendingOrderType] = useState('BUY_LIMIT') // BUY_LIMIT, BUY_STOP, SELL_LIMIT, SELL_STOP
+  const [pendingPrice, setPendingPrice] = useState('')
   const [orderSide, setOrderSide] = useState('BUY')
   const [volume, setVolume] = useState('0.01')
   const [stopLoss, setStopLoss] = useState('')
   const [takeProfit, setTakeProfit] = useState('')
+  const [selectedLeverage, setSelectedLeverage] = useState('1:200')
   const [isExecuting, setIsExecuting] = useState(false)
   const [accountSummary, setAccountSummary] = useState({ balance: 0, equity: 0, credit: 0, freeMargin: 0, usedMargin: 0, floatingPnl: 0 })
   const [expandedTrade, setExpandedTrade] = useState(null)
@@ -385,7 +388,7 @@ const MobileTradingApp = () => {
     setShowOrderPanel(true)
   }
 
-  const executeOrder = () => {
+  const executeOrder = (side) => {
     if (!selectedAccount || !selectedInstrument || isExecuting) return
 
     const prices = livePrices[selectedInstrument.symbol] || {}
@@ -396,24 +399,53 @@ const MobileTradingApp = () => {
       return
     }
 
+    // Determine the actual order type
+    let actualOrderType = 'MARKET'
+    let actualSide = side
+    
+    if (orderType === 'pending') {
+      // Validate pending price
+      if (!pendingPrice || parseFloat(pendingPrice) <= 0) {
+        showNotification('Please enter a valid pending price', 'error')
+        return
+      }
+      actualOrderType = pendingOrderType
+      // Extract side from pending order type
+      actualSide = pendingOrderType.startsWith('BUY') ? 'BUY' : 'SELL'
+    }
+
     // INSTANT: Show success before any async operation
-    const executionPrice = orderSide === 'BUY' ? prices.ask : prices.bid
+    const executionPrice = orderType === 'pending' 
+      ? parseFloat(pendingPrice) 
+      : (actualSide === 'BUY' ? prices.ask : prices.bid)
+    
     const tradeId = `temp_${Date.now()}`
+    const isPending = orderType === 'pending'
+    
     const optimisticTrade = {
       _id: tradeId,
       symbol: selectedInstrument.symbol,
-      side: orderSide,
+      side: actualSide,
+      orderType: actualOrderType,
       quantity: parseFloat(volume),
       openPrice: executionPrice,
-      status: 'OPEN',
+      pendingPrice: isPending ? parseFloat(pendingPrice) : null,
+      status: isPending ? 'PENDING' : 'OPEN',
       createdAt: new Date().toISOString(),
       isOptimistic: true
     }
     
     // Instant feedback - close panel and show success immediately
     setShowOrderPanel(false)
-    showNotification(`${orderSide} ${volume} ${selectedInstrument.symbol} @ ${executionPrice.toFixed(5)}`, 'success')
-    setOpenTrades(prev => [optimisticTrade, ...prev])
+    
+    if (isPending) {
+      showNotification(`${actualOrderType} order placed: ${volume} ${selectedInstrument.symbol} @ ${executionPrice.toFixed(5)}`, 'success')
+      setPendingOrders(prev => [optimisticTrade, ...prev])
+    } else {
+      showNotification(`${actualSide} ${volume} ${selectedInstrument.symbol} @ ${executionPrice.toFixed(5)}`, 'success')
+      setOpenTrades(prev => [optimisticTrade, ...prev])
+    }
+    
     setIsExecuting(true)
 
     // Fire and forget - API call in background
@@ -425,11 +457,13 @@ const MobileTradingApp = () => {
         tradingAccountId: selectedAccount._id,
         symbol: selectedInstrument.symbol,
         segment: selectedInstrument.category,
-        side: orderSide,
-        orderType: orderType === 'market' ? 'MARKET' : 'PENDING',
+        side: actualSide,
+        orderType: actualOrderType,
         quantity: parseFloat(volume),
         bid: prices.bid,
         ask: prices.ask,
+        leverage: selectedLeverage,
+        pendingPrice: isPending ? parseFloat(pendingPrice) : null,
         sl: stopLoss ? parseFloat(stopLoss) : null,
         tp: takeProfit ? parseFloat(takeProfit) : null
       })
@@ -438,14 +472,23 @@ const MobileTradingApp = () => {
     .then(data => {
       if (data.success) {
         fetchOpenTrades()
+        fetchPendingOrders()
         fetchAccountSummary()
       } else {
-        setOpenTrades(prev => prev.filter(t => t._id !== tradeId))
+        if (isPending) {
+          setPendingOrders(prev => prev.filter(t => t._id !== tradeId))
+        } else {
+          setOpenTrades(prev => prev.filter(t => t._id !== tradeId))
+        }
         showNotification(data.message || 'Order failed', 'error')
       }
     })
     .catch(() => {
-      setOpenTrades(prev => prev.filter(t => t._id !== tradeId))
+      if (isPending) {
+        setPendingOrders(prev => prev.filter(t => t._id !== tradeId))
+      } else {
+        setOpenTrades(prev => prev.filter(t => t._id !== tradeId))
+      }
       showNotification('Error executing order', 'error')
     })
     .finally(() => setIsExecuting(false))
@@ -1571,17 +1614,34 @@ const MobileTradingApp = () => {
                 </button>
               </div>
 
-              {/* Leverage Display */}
-              <div className="flex items-center justify-between bg-dark-700 rounded-lg px-4 py-2 mb-4">
-                <span className="text-gray-400 text-sm">Leverage</span>
-                <span className="text-yellow-500 font-bold">{selectedAccount?.leverage || '1:100'}</span>
+              {/* Leverage Selector */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Leverage</span>
+                  <span className="text-yellow-500 font-bold">{selectedLeverage}</span>
+                </div>
+                <div className="grid grid-cols-5 gap-1">
+                  {['1:50', '1:100', '1:200', '1:300', '1:500'].map(lev => (
+                    <button
+                      key={lev}
+                      onClick={() => setSelectedLeverage(lev)}
+                      className={`py-2 rounded-lg text-xs font-medium ${
+                        selectedLeverage === lev
+                          ? 'bg-yellow-500 text-black'
+                          : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
+                      }`}
+                    >
+                      {lev}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* One-Click Buy/Sell */}
               <div className="flex gap-3 mb-4">
                 <button
-                  onClick={() => { setOrderSide('SELL'); executeOrder() }}
-                  disabled={isExecuting}
+                  onClick={() => executeOrder('SELL')}
+                  disabled={isExecuting || orderType === 'pending'}
                   className="flex-1 py-3 bg-red-600 rounded-xl disabled:opacity-50"
                 >
                   <p className="text-white text-xs">SELL</p>
@@ -1590,8 +1650,8 @@ const MobileTradingApp = () => {
                   </p>
                 </button>
                 <button
-                  onClick={() => { setOrderSide('BUY'); executeOrder() }}
-                  disabled={isExecuting}
+                  onClick={() => executeOrder('BUY')}
+                  disabled={isExecuting || orderType === 'pending'}
                   className="flex-1 py-3 bg-blue-600 rounded-xl disabled:opacity-50"
                 >
                   <p className="text-white text-xs">BUY</p>
@@ -1628,6 +1688,65 @@ const MobileTradingApp = () => {
                   Pending
                 </button>
               </div>
+
+              {/* Pending Order Type Selector */}
+              {orderType === 'pending' && (
+                <div className="mb-4">
+                  <label className="text-gray-400 text-sm mb-2 block">Order Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'BUY_LIMIT', label: 'Buy Limit', color: 'blue' },
+                      { value: 'SELL_LIMIT', label: 'Sell Limit', color: 'red' },
+                      { value: 'BUY_STOP', label: 'Buy Stop', color: 'blue' },
+                      { value: 'SELL_STOP', label: 'Sell Stop', color: 'red' }
+                    ].map(type => (
+                      <button
+                        key={type.value}
+                        onClick={() => setPendingOrderType(type.value)}
+                        className={`py-2 rounded-lg text-xs font-medium border ${
+                          pendingOrderType === type.value
+                            ? type.color === 'blue' 
+                              ? 'bg-blue-500/20 border-blue-500 text-blue-500' 
+                              : 'bg-red-500/20 border-red-500 text-red-500'
+                            : 'bg-dark-700 border-gray-700 text-gray-400'
+                        }`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Price Input */}
+              {orderType === 'pending' && (
+                <div className="mb-4">
+                  <label className="text-gray-400 text-sm mb-2 block">
+                    Pending Price
+                    <span className="text-gray-500 text-xs ml-2">
+                      (Current: {pendingOrderType.startsWith('BUY') 
+                        ? getPrice(selectedInstrument.symbol).ask?.toFixed(5) 
+                        : getPrice(selectedInstrument.symbol).bid?.toFixed(5)})
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={pendingPrice}
+                    onChange={(e) => setPendingPrice(e.target.value)}
+                    placeholder={pendingOrderType.includes('LIMIT') 
+                      ? (pendingOrderType === 'BUY_LIMIT' ? 'Below current price' : 'Above current price')
+                      : (pendingOrderType === 'BUY_STOP' ? 'Above current price' : 'Below current price')
+                    }
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white"
+                  />
+                  <p className="text-gray-500 text-xs mt-1">
+                    {pendingOrderType === 'BUY_LIMIT' && 'Executes when price drops to this level'}
+                    {pendingOrderType === 'SELL_LIMIT' && 'Executes when price rises to this level'}
+                    {pendingOrderType === 'BUY_STOP' && 'Executes when price rises to this level'}
+                    {pendingOrderType === 'SELL_STOP' && 'Executes when price drops to this level'}
+                  </p>
+                </div>
+              )}
 
               {/* Volume */}
               <div className="mb-4">
@@ -1679,22 +1798,34 @@ const MobileTradingApp = () => {
               </div>
 
               {/* Buy/Sell Buttons */}
-              <div className="flex gap-3">
+              {orderType === 'market' ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => executeOrder('SELL')}
+                    disabled={isExecuting}
+                    className="flex-1 py-4 bg-red-500 text-white font-semibold rounded-xl disabled:opacity-50"
+                  >
+                    {isExecuting ? 'Executing...' : 'SELL'}
+                  </button>
+                  <button
+                    onClick={() => executeOrder('BUY')}
+                    disabled={isExecuting}
+                    className="flex-1 py-4 bg-blue-500 text-white font-semibold rounded-xl disabled:opacity-50"
+                  >
+                    {isExecuting ? 'Executing...' : 'BUY'}
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={() => { setOrderSide('SELL'); executeOrder() }}
-                  disabled={isExecuting}
-                  className="flex-1 py-4 bg-red-500 text-white font-semibold rounded-xl disabled:opacity-50"
+                  onClick={() => executeOrder(pendingOrderType.startsWith('BUY') ? 'BUY' : 'SELL')}
+                  disabled={isExecuting || !pendingPrice}
+                  className={`w-full py-4 text-white font-semibold rounded-xl disabled:opacity-50 ${
+                    pendingOrderType.startsWith('BUY') ? 'bg-blue-500' : 'bg-red-500'
+                  }`}
                 >
-                  {isExecuting ? 'Executing...' : 'SELL'}
+                  {isExecuting ? 'Placing Order...' : `Place ${pendingOrderType.replace('_', ' ')}`}
                 </button>
-                <button
-                  onClick={() => { setOrderSide('BUY'); executeOrder() }}
-                  disabled={isExecuting}
-                  className="flex-1 py-4 bg-blue-500 text-white font-semibold rounded-xl disabled:opacity-50"
-                >
-                  {isExecuting ? 'Executing...' : 'BUY'}
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
