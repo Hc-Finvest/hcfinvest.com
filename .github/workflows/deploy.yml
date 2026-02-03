@@ -1,14 +1,19 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
+  # Only deploy manually - not on every push
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm deployment'
+        required: true
+        default: ''
 
 jobs:
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'deploy' }}
 
     steps:
       - name: Checkout code
@@ -31,19 +36,6 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
-      - name: Create Backup on Server
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            cd ${{ secrets.DEPLOY_PATH }}
-            BACKUP_DIR="$HOME/backups/$(date +%Y%m%d_%H%M%S)"
-            mkdir -p $BACKUP_DIR
-            cp -r backend $BACKUP_DIR/ 2>/dev/null || true
-            cp -r frontend/dist $BACKUP_DIR/ 2>/dev/null || true
-            # Keep only last 5 backups
-            ls -dt $HOME/backups/*/ 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
-            echo "Backup created at $BACKUP_DIR"
-          EOF
 
       - name: Deploy Backend
         run: |
