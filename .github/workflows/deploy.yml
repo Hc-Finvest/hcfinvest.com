@@ -1,0 +1,76 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Create Backup on Server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH }}
+            BACKUP_DIR="$HOME/backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p $BACKUP_DIR
+            cp -r backend $BACKUP_DIR/ 2>/dev/null || true
+            cp -r frontend/dist $BACKUP_DIR/ 2>/dev/null || true
+            # Keep only last 5 backups
+            ls -dt $HOME/backups/*/ 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+            echo "Backup created at $BACKUP_DIR"
+          EOF
+
+      - name: Deploy Backend
+        run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'uploads' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./backend/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_PATH }}/backend/
+
+      - name: Deploy Frontend
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./frontend/dist/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_PATH }}/frontend/dist/
+
+      - name: Install Dependencies & Restart PM2
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH }}/backend
+            npm install --production
+            pm2 restart hcfinvest-backend
+            pm2 save
+            echo "✅ Deployment complete!"
+          EOF
+
+      - name: Health Check
+        run: |
+          sleep 10
+          curl -f http://${{ secrets.SERVER_IP }}:5000/api/health || echo "Health check endpoint not available"

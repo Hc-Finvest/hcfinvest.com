@@ -200,9 +200,19 @@ app.use('/api/oxapay', oxapayRoutes)
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
-// Health check
+// Health check endpoints
 app.get('/', (req, res) => {
   res.json({ message: 'HCF Invest API is running' })
+})
+
+// Health check for CI/CD pipeline
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '1.0.0'
+  })
 })
 
 const PORT = process.env.PORT || 5000
