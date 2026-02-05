@@ -120,6 +120,7 @@ const TradingPage = () => {
     floatingPnl: 0
   })
   const [livePrices, setLivePrices] = useState({}) // Store live prices separately
+  const [priceUpdateTick, setPriceUpdateTick] = useState(0) // Force re-render on price updates
   const [adminSpreads, setAdminSpreads] = useState({}) // Store admin-set spreads
   
   // Modal states for iOS-style popups
@@ -219,6 +220,9 @@ const TradingPage = () => {
         })
         return merged
       })
+      
+      // Force re-render for P/L calculation
+      setPriceUpdateTick(prev => prev + 1)
       
       // Update instruments with live prices (only if price is valid)
       setInstruments(prev => prev.map(inst => {

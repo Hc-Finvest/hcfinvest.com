@@ -27,6 +27,7 @@ const MobileTradingApp = () => {
   const [tradeHistory, setTradeHistory] = useState([])
   const [instruments, setInstruments] = useState([])
   const [livePrices, setLivePrices] = useState({})
+  const [priceUpdateTick, setPriceUpdateTick] = useState(0) // Force re-render on price updates
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
@@ -164,6 +165,9 @@ const MobileTradingApp = () => {
         })
         return merged
       })
+      
+      // Force re-render for P/L calculation
+      setPriceUpdateTick(prev => prev + 1)
       
       // Update instruments with live prices (only if price is valid)
       setInstruments(prev => prev.map(inst => {

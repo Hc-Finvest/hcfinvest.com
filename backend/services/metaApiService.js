@@ -207,24 +207,64 @@ class MetaApiService {
   startFallbackPriceSimulation() {
     this.isConnected = true // Mark as connected so prices flow
     
-    // Base prices for simulation
-    const basePrices = {
+    // Base prices for simulation - will be updated with random walk
+    this.simulatedPrices = {
       EURUSD: 1.0850, GBPUSD: 1.2650, USDJPY: 154.50, USDCHF: 0.8850,
       AUDUSD: 0.6550, NZDUSD: 0.6050, USDCAD: 1.3650, EURGBP: 0.8580,
       EURJPY: 167.50, GBPJPY: 195.50, XAUUSD: 2650.00, XAGUSD: 31.50,
       BTCUSD: 98500, ETHUSD: 3450, SOLUSD: 195, BNBUSD: 680,
-      US30: 43500, US500: 5950, US100: 21200, UK100: 8250
+      XRPUSD: 2.45, ADAUSD: 0.95, DOGEUSD: 0.32, DOTUSD: 7.50,
+      MATICUSD: 0.85, LTCUSD: 105, AVAXUSD: 38, LINKUSD: 22,
+      US30: 43500, US500: 5950, US100: 21200, UK100: 8250,
+      EURNZD: 1.8450, AUDCAD: 0.9050, AUDCHF: 0.5850, AUDNZD: 1.1050,
+      AUDJPY: 101.50, CADJPY: 113.50, CHFJPY: 174.50, NZDJPY: 93.50,
+      EURAUD: 1.6550, EURCAD: 1.4850, EURCHF: 0.9650, GBPAUD: 1.9350,
+      GBPCAD: 1.7250, GBPCHF: 1.1250, GBPNZD: 2.0950, NZDCAD: 0.8250,
+      NZDCHF: 0.5350, CADCHF: 0.6450, USOIL: 78.50, UKOIL: 82.50,
+      NGAS: 2.85, COPPER: 4.25, XPTUSD: 985, XPDUSD: 1050
     }
     
-    // Simulate price updates every second
+    // Simulate realistic price movements every 500ms
     this.pollInterval = setInterval(() => {
       ALL_SYMBOLS.forEach(symbol => {
-        const basePrice = basePrices[symbol] || 1.0
-        // Add small random variation (±0.05%)
-        const variation = (Math.random() - 0.5) * 0.001
-        const bid = basePrice * (1 + variation)
-        const spreadPercent = symbol.includes('USD') && !symbol.includes('XAU') ? 0.0001 : 0.0005
-        const ask = bid * (1 + spreadPercent)
+        // Get current price or use default
+        let currentPrice = this.simulatedPrices[symbol] || 1.0
+        
+        // Random walk with momentum - more realistic price movement
+        // Variation: ±0.02% to ±0.05% per tick depending on asset type
+        let variationPercent
+        if (symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL')) {
+          variationPercent = 0.0008 // Crypto: more volatile
+        } else if (symbol.includes('XAU') || symbol.includes('XAG')) {
+          variationPercent = 0.0004 // Metals: medium volatility
+        } else if (symbol.includes('US') || symbol.includes('UK') || symbol.includes('JP')) {
+          variationPercent = 0.0003 // Indices: medium volatility
+        } else {
+          variationPercent = 0.00025 // Forex: lower volatility
+        }
+        
+        const change = (Math.random() - 0.5) * 2 * variationPercent
+        const newPrice = currentPrice * (1 + change)
+        
+        // Store the new price for next iteration (random walk)
+        this.simulatedPrices[symbol] = newPrice
+        
+        // Calculate spread based on asset type
+        let spreadPips
+        if (symbol.includes('JPY')) {
+          spreadPips = 0.02 // 2 pips for JPY pairs
+        } else if (symbol.includes('XAU')) {
+          spreadPips = 0.50 // 50 cents for gold
+        } else if (symbol.includes('BTC')) {
+          spreadPips = 50 // $50 for BTC
+        } else if (symbol.includes('ETH')) {
+          spreadPips = 2 // $2 for ETH
+        } else {
+          spreadPips = 0.00015 // 1.5 pips for major forex
+        }
+        
+        const bid = newPrice
+        const ask = newPrice + spreadPips
         
         this.updatePrice({
           symbol,
@@ -234,9 +274,9 @@ class MetaApiService {
         })
       })
       this.lastUpdate = Date.now()
-    }, 1000)
+    }, 500) // Update every 500ms for smoother price movement
     
-    console.log('[MetaAPI] Fallback price simulation started')
+    console.log('[MetaAPI] Fallback price simulation started (500ms interval)')
   }
 
   /**
