@@ -2,9 +2,11 @@
  * MetaAPI Market Data Service
  * Streams real-time forex, metals, crypto, and indices prices via MetaAPI
  * Organized by categories for frontend display
+ * Uses PriceNormalizer for tick throttling and proper rounding
  */
 
 import dotenv from 'dotenv'
+import priceNormalizer from './priceNormalizer.js'
 
 dotenv.config()
 
@@ -353,6 +355,7 @@ class MetaApiService {
 
   /**
    * Update price in cache and notify subscribers
+   * Uses PriceNormalizer for proper rounding and tick throttling
    */
   updatePrice(priceData) {
     if (!priceData || !priceData.symbol) return
@@ -361,11 +364,16 @@ class MetaApiService {
     
     if (!bid || !ask || bid <= 0 || ask <= 0) return
 
+    // Use price normalizer for proper rounding
+    const normalized = priceNormalizer.normalizePrice(symbol, bid, ask, time ? new Date(time).getTime() : Date.now())
+    
     const priceInfo = {
-      bid: parseFloat(bid),
-      ask: parseFloat(ask),
-      spread: parseFloat(ask) - parseFloat(bid),
-      time: time ? new Date(time).getTime() : Date.now(),
+      bid: normalized.bid,
+      ask: normalized.ask,
+      spread: normalized.spread,
+      time: normalized.timestamp,
+      decimals: normalized.decimals,
+      pipSize: normalized.pipSize,
       provider: 'metaapi',
       category: SYMBOL_TO_CATEGORY[symbol] || 'Other',
       ...SYMBOL_INFO[symbol]
@@ -374,7 +382,10 @@ class MetaApiService {
     this.prices.set(symbol, priceInfo)
     this.totalTicksReceived++
 
-    // Notify subscribers
+    // Add to normalizer buffer for throttled emission
+    priceNormalizer.addTick(symbol, normalized.bid, normalized.ask, normalized.timestamp)
+
+    // Notify subscribers immediately (for backward compatibility)
     this.notifySubscribers(symbol, priceInfo)
   }
 

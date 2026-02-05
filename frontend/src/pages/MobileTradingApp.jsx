@@ -625,7 +625,15 @@ const MobileTradingApp = () => {
     { name: 'Instructions', icon: FileText, path: '/instructions' },
   ]
 
-  const getPrice = (symbol) => livePrices[symbol] || { bid: 0, ask: 0 }
+  const getPrice = (symbol) => livePrices[symbol] || { bid: 0, ask: 0, decimals: 5 }
+  
+  // Format price with correct decimal places based on symbol
+  const formatPrice = (price, symbol) => {
+    if (!price || price <= 0) return '0.00000'
+    const priceData = livePrices[symbol]
+    const decimals = priceData?.decimals || 5
+    return price.toFixed(decimals)
+  }
 
   const calculatePnl = (trade) => {
     const prices = getPrice(trade.symbol)

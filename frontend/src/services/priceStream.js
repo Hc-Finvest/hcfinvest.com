@@ -38,7 +38,7 @@ class PriceStreamService {
     this.socket.on('priceStream', (data) => {
       const { prices, categories, updated, timestamp } = data
       
-      // Update local price cache
+      // Update local price cache with all prices
       if (prices) {
         this.prices = { ...this.prices, ...prices }
       }
@@ -48,10 +48,10 @@ class PriceStreamService {
         this.categories = categories
       }
       
-      // Notify all price subscribers
+      // Notify all price subscribers with updated prices only (throttled)
       this.subscribers.forEach((callback, id) => {
         try {
-          callback(this.prices, updated, timestamp)
+          callback(this.prices, updated || {}, timestamp)
         } catch (e) {
           console.error('[PriceStream] Subscriber error:', e)
         }
@@ -63,6 +63,30 @@ class PriceStreamService {
           callback(this.categories, timestamp)
         } catch (e) {
           console.error('[PriceStream] Category subscriber error:', e)
+        }
+      })
+    })
+
+    // Handle full price snapshots (fallback every 2s)
+    this.socket.on('priceSnapshot', (data) => {
+      const { prices, categories, timestamp } = data
+      
+      // Full update of price cache
+      if (prices) {
+        this.prices = prices
+      }
+      
+      // Update categories cache
+      if (categories) {
+        this.categories = categories
+      }
+      
+      // Notify subscribers with full snapshot
+      this.subscribers.forEach((callback, id) => {
+        try {
+          callback(this.prices, prices, timestamp)
+        } catch (e) {
+          console.error('[PriceStream] Subscriber error:', e)
         }
       })
     })

@@ -500,6 +500,14 @@ const TradingPage = () => {
     return 'Forex'
   }
 
+  // Format price with correct decimal places based on symbol
+  const formatPrice = (price, symbol) => {
+    if (!price || price <= 0) return '0.00000'
+    const priceData = livePrices[symbol]
+    const decimals = priceData?.decimals || 5
+    return price.toFixed(decimals)
+  }
+
   // Calculate display price with admin spread applied
   // This shows users the actual execution price they'll get
   const getDisplayPrice = (symbol, side, rawBid, rawAsk) => {

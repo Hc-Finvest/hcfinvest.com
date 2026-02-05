@@ -29,6 +29,7 @@ import oxapayRoutes from './routes/oxapay.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import metaApiService from './services/metaApiService.js'
+import priceNormalizer from './services/priceNormalizer.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -62,7 +63,33 @@ metaApiService.addSubscriber((symbol, priceData) => {
   priceCache.set(symbol, priceData)
 })
 
-// Broadcast prices to connected clients every 500ms
+// Subscribe to throttled price updates from PriceNormalizer (250ms aggregation)
+// This ensures stable, non-noisy price updates to frontend
+priceNormalizer.subscribe((updatedPrices) => {
+  if (priceSubscribers.size === 0) return
+  
+  const now = Date.now()
+  const allPrices = metaApiService.getAllPrices()
+  const pricesByCategory = metaApiService.getPricesByCategory()
+  
+  // Update local cache with normalized prices
+  Object.entries(updatedPrices).forEach(([symbol, price]) => {
+    priceCache.set(symbol, price)
+  })
+  
+  // Broadcast to all price subscribers (includes category-wise data)
+  // Only send updated prices to reduce bandwidth
+  io.to('prices').emit('priceStream', {
+    prices: allPrices,
+    categories: pricesByCategory,
+    updated: updatedPrices, // Only changed prices
+    timestamp: now,
+    provider: 'metaapi',
+    throttled: true
+  })
+})
+
+// Fallback: Send full price snapshot every 2 seconds for clients that may have missed updates
 setInterval(() => {
   if (priceSubscribers.size === 0) return
   
@@ -75,15 +102,14 @@ setInterval(() => {
     priceCache.set(symbol, price)
   })
   
-  // Broadcast to all price subscribers (includes category-wise data)
-  io.to('prices').emit('priceStream', {
+  // Broadcast full snapshot (less frequent)
+  io.to('prices').emit('priceSnapshot', {
     prices: allPrices,
     categories: pricesByCategory,
-    updated: allPrices,
     timestamp: now,
     provider: 'metaapi'
   })
-}, 500)
+}, 2000)
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
