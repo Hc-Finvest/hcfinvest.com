@@ -2,13 +2,27 @@
  * MetaAPI Market Data Service
  * Streams real-time forex, metals, crypto, and indices prices via MetaAPI
  * Organized by categories for frontend display
- * Uses PriceNormalizer for tick throttling and proper rounding
  */
 
 import dotenv from 'dotenv'
-import priceNormalizer from './priceNormalizer.js'
 
 dotenv.config()
+
+// Price decimal configuration per symbol type
+const getDecimals = (symbol) => {
+  if (symbol.includes('JPY')) return 3
+  if (symbol.includes('XAU')) return 2
+  if (symbol.includes('XAG')) return 3
+  if (symbol.includes('BTC')) return 2
+  if (symbol.includes('ETH')) return 2
+  if (['US30', 'US500', 'US100', 'UK100', 'GER40', 'JP225'].includes(symbol)) return 1
+  return 5 // Default for forex
+}
+
+const roundPrice = (price, decimals) => {
+  const multiplier = Math.pow(10, decimals)
+  return Math.round(price * multiplier) / multiplier
+}
 
 // MetaAPI Configuration
 const METAAPI_TOKEN = () => process.env.METAAPI_TOKEN || ''
@@ -152,14 +166,16 @@ class MetaApiService {
     const accountId = METAAPI_ACCOUNT_ID()
 
     if (!token) {
-      console.error('[MetaAPI] METAAPI_TOKEN not configured in .env')
+      console.error('[MetaAPI] METAAPI_TOKEN not configured - starting fallback simulation')
       this.lastError = 'METAAPI_TOKEN not configured'
+      this.startFallbackPriceSimulation()
       return
     }
 
     if (!accountId) {
-      console.error('[MetaAPI] METAAPI_ACCOUNT_ID not configured in .env')
+      console.error('[MetaAPI] METAAPI_ACCOUNT_ID not configured - starting fallback simulation')
       this.lastError = 'METAAPI_ACCOUNT_ID not configured'
+      this.startFallbackPriceSimulation()
       return
     }
 
@@ -209,22 +225,31 @@ class MetaApiService {
   startFallbackPriceSimulation() {
     this.isConnected = true // Mark as connected so prices flow
     
-    // Base prices for simulation - will be updated with random walk
-    this.simulatedPrices = {
-      EURUSD: 1.0850, GBPUSD: 1.2650, USDJPY: 154.50, USDCHF: 0.8850,
-      AUDUSD: 0.6550, NZDUSD: 0.6050, USDCAD: 1.3650, EURGBP: 0.8580,
-      EURJPY: 167.50, GBPJPY: 195.50, XAUUSD: 2650.00, XAGUSD: 31.50,
-      BTCUSD: 98500, ETHUSD: 3450, SOLUSD: 195, BNBUSD: 680,
-      XRPUSD: 2.45, ADAUSD: 0.95, DOGEUSD: 0.32, DOTUSD: 7.50,
-      MATICUSD: 0.85, LTCUSD: 105, AVAXUSD: 38, LINKUSD: 22,
-      US30: 43500, US500: 5950, US100: 21200, UK100: 8250,
-      EURNZD: 1.8450, AUDCAD: 0.9050, AUDCHF: 0.5850, AUDNZD: 1.1050,
-      AUDJPY: 101.50, CADJPY: 113.50, CHFJPY: 174.50, NZDJPY: 93.50,
-      EURAUD: 1.6550, EURCAD: 1.4850, EURCHF: 0.9650, GBPAUD: 1.9350,
-      GBPCAD: 1.7250, GBPCHF: 1.1250, GBPNZD: 2.0950, NZDCAD: 0.8250,
-      NZDCHF: 0.5350, CADCHF: 0.6450, USOIL: 78.50, UKOIL: 82.50,
-      NGAS: 2.85, COPPER: 4.25, XPTUSD: 985, XPDUSD: 1050
+    // Base prices for simulation - use existing prices if available, otherwise use realistic defaults
+    // This preserves the last known prices when switching from MetaAPI to fallback
+    const existingPrices = this.getAllPrices()
+    const defaultPrices = {
+      EURUSD: 1.0420, GBPUSD: 1.2450, USDJPY: 155.80, USDCHF: 0.9050,
+      AUDUSD: 0.6280, NZDUSD: 0.5680, USDCAD: 1.4350, EURGBP: 0.8380,
+      EURJPY: 162.30, GBPJPY: 194.00, XAUUSD: 2865.00, XAGUSD: 32.50,
+      BTCUSD: 97500, ETHUSD: 2750, SOLUSD: 205, BNBUSD: 620,
+      XRPUSD: 2.85, ADAUSD: 0.78, DOGEUSD: 0.26, DOTUSD: 5.20,
+      MATICUSD: 0.38, LTCUSD: 128, AVAXUSD: 25, LINKUSD: 19,
+      US30: 44200, US500: 6050, US100: 21500, UK100: 8550,
+      EURNZD: 1.8350, AUDCAD: 0.9020, AUDCHF: 0.5680, AUDNZD: 1.1050,
+      AUDJPY: 97.80, CADJPY: 108.60, CHFJPY: 172.10, NZDJPY: 88.50,
+      EURAUD: 1.6590, EURCAD: 1.4950, EURCHF: 0.9430, GBPAUD: 1.9820,
+      GBPCAD: 1.7850, GBPCHF: 1.1260, GBPNZD: 2.1920, NZDCAD: 0.8150,
+      NZDCHF: 0.5140, CADCHF: 0.6310, USOIL: 71.50, UKOIL: 75.20,
+      NGAS: 3.45, COPPER: 4.58, XPTUSD: 1015, XPDUSD: 985
     }
+    
+    // Merge existing prices with defaults (existing takes priority)
+    this.simulatedPrices = {}
+    Object.keys(defaultPrices).forEach(symbol => {
+      const existing = existingPrices[symbol]
+      this.simulatedPrices[symbol] = existing?.bid || defaultPrices[symbol]
+    })
     
     // Simulate realistic price movements every 500ms
     this.pollInterval = setInterval(() => {
@@ -347,6 +372,16 @@ class MetaApiService {
       if (response.ok) {
         const price = await response.json()
         this.updatePrice(price)
+        this.rateLimitHits = 0 // Reset on success
+      } else if (response.status === 429) {
+        // Rate limited - track consecutive hits
+        this.rateLimitHits = (this.rateLimitHits || 0) + 1
+        if (this.rateLimitHits >= 3 && !this.usingFallback) {
+          console.log('[MetaAPI] Rate limited - switching to fallback simulation')
+          this.usingFallback = true
+          this.stopPolling()
+          this.startFallbackPriceSimulation()
+        }
       }
     } catch (e) {
       // Skip failed symbols silently
@@ -354,8 +389,17 @@ class MetaApiService {
   }
 
   /**
+   * Stop price polling
+   */
+  stopPolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+      this.pollInterval = null
+    }
+  }
+
+  /**
    * Update price in cache and notify subscribers
-   * Uses PriceNormalizer for proper rounding and tick throttling
    */
   updatePrice(priceData) {
     if (!priceData || !priceData.symbol) return
@@ -364,16 +408,17 @@ class MetaApiService {
     
     if (!bid || !ask || bid <= 0 || ask <= 0) return
 
-    // Use price normalizer for proper rounding
-    const normalized = priceNormalizer.normalizePrice(symbol, bid, ask, time ? new Date(time).getTime() : Date.now())
+    // Round prices to correct decimal places
+    const decimals = getDecimals(symbol)
+    const roundedBid = roundPrice(parseFloat(bid), decimals)
+    const roundedAsk = roundPrice(parseFloat(ask), decimals)
     
     const priceInfo = {
-      bid: normalized.bid,
-      ask: normalized.ask,
-      spread: normalized.spread,
-      time: normalized.timestamp,
-      decimals: normalized.decimals,
-      pipSize: normalized.pipSize,
+      bid: roundedBid,
+      ask: roundedAsk,
+      spread: roundPrice(roundedAsk - roundedBid, decimals),
+      time: time ? new Date(time).getTime() : Date.now(),
+      decimals: decimals,
       provider: 'metaapi',
       category: SYMBOL_TO_CATEGORY[symbol] || 'Other',
       ...SYMBOL_INFO[symbol]
@@ -382,10 +427,7 @@ class MetaApiService {
     this.prices.set(symbol, priceInfo)
     this.totalTicksReceived++
 
-    // Add to normalizer buffer for throttled emission
-    priceNormalizer.addTick(symbol, normalized.bid, normalized.ask, normalized.timestamp)
-
-    // Notify subscribers immediately (for backward compatibility)
+    // Notify subscribers
     this.notifySubscribers(symbol, priceInfo)
   }
 
