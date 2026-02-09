@@ -140,6 +140,11 @@ const TradingPage = () => {
   const [historyEndDate, setHistoryEndDate] = useState('')
   const [showHistoryDatePicker, setShowHistoryDatePicker] = useState(false)
   
+  // History sub-tabs: Trades vs Transactions
+  const [historySubTab, setHistorySubTab] = useState('trades') // 'trades' or 'transactions'
+  const [accountTransactions, setAccountTransactions] = useState([])
+  const [transactionsSummary, setTransactionsSummary] = useState({ totalTransactions: 0, totalDeposits: 0, totalWithdrawals: 0, netFlow: 0 })
+  
   // Kill Switch states
   const [showKillSwitchModal, setShowKillSwitchModal] = useState(false)
   const [killSwitchActive, setKillSwitchActive] = useState(false)
@@ -177,6 +182,7 @@ const TradingPage = () => {
       fetchPendingOrders()
       fetchTradeHistory()
       fetchAccountSummary()
+      fetchAccountTransactions()
       
       // Refresh account data every 5 seconds to keep balance in sync
       const accountInterval = setInterval(() => {
@@ -187,6 +193,13 @@ const TradingPage = () => {
       return () => clearInterval(accountInterval)
     }
   }, [accountId])
+
+  // Refetch transactions when date filter changes
+  useEffect(() => {
+    if (accountId && activePositionTab === 'History' && historySubTab === 'transactions') {
+      fetchAccountTransactions()
+    }
+  }, [historyDateFilter, historyStartDate, historyEndDate, historySubTab])
 
   // Handle responsive layout
   useEffect(() => {
@@ -602,6 +615,29 @@ const TradingPage = () => {
       }
     } catch (error) {
       console.error('Error fetching trade history:', error)
+    }
+  }
+
+  // Fetch account transactions
+  const fetchAccountTransactions = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (historyDateFilter && historyDateFilter !== 'all') {
+        if (historyDateFilter === 'custom' && historyStartDate) {
+          params.append('startDate', historyStartDate)
+          if (historyEndDate) params.append('endDate', historyEndDate)
+        } else {
+          params.append('filter', historyDateFilter)
+        }
+      }
+      const res = await fetch(`${API_URL}/trade/transactions/${accountId}?${params.toString()}`)
+      const data = await res.json()
+      if (data.success) {
+        setAccountTransactions(data.transactions || [])
+        setTransactionsSummary(data.summary || { totalTransactions: 0, totalDeposits: 0, totalWithdrawals: 0, netFlow: 0 })
+      }
+    } catch (error) {
+      console.error('Error fetching account transactions:', error)
     }
   }
 
@@ -1651,6 +1687,30 @@ const TradingPage = () => {
 
               {activePositionTab === 'History' && (
               <div className="flex flex-col h-full">
+                {/* Sub-tabs: Trades / Transactions */}
+                <div className={`flex items-center gap-1 px-3 pt-2 border-b ${isDarkMode ? 'border-gray-800 bg-[#0a0a0a]' : 'border-gray-200 bg-gray-50'}`}>
+                  <button
+                    onClick={() => setHistorySubTab('trades')}
+                    className={`px-4 py-2 text-xs font-medium rounded-t-lg transition-colors ${
+                      historySubTab === 'trades'
+                        ? isDarkMode ? 'bg-dark-700 text-white border-b-2 border-blue-500' : 'bg-white text-gray-900 border-b-2 border-blue-500'
+                        : isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Trades ({tradeHistory.length})
+                  </button>
+                  <button
+                    onClick={() => setHistorySubTab('transactions')}
+                    className={`px-4 py-2 text-xs font-medium rounded-t-lg transition-colors ${
+                      historySubTab === 'transactions'
+                        ? isDarkMode ? 'bg-dark-700 text-white border-b-2 border-green-500' : 'bg-white text-gray-900 border-b-2 border-green-500'
+                        : isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Transactions ({accountTransactions.length})
+                  </button>
+                </div>
+
                 {/* Date Filter Bar */}
                 <div className={`p-3 border-b flex flex-wrap items-center gap-3 ${isDarkMode ? 'border-gray-800 bg-[#0a0a0a]' : 'border-gray-200 bg-gray-50'}`}>
                   {/* Date Range Picker (From - To) */}
@@ -1817,7 +1877,8 @@ const TradingPage = () => {
                   })()}
                 </div>
                 
-                {/* History Table */}
+                {/* Trades Table */}
+                {historySubTab === 'trades' && (
                 <div className="flex-1 overflow-auto">
                   <table className="w-full text-sm">
                     <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
@@ -1917,6 +1978,92 @@ const TradingPage = () => {
                     </tbody>
                   </table>
                 </div>
+                )}
+
+                {/* Transactions Table */}
+                {historySubTab === 'transactions' && (
+                <div className="flex-1 overflow-auto">
+                  {/* Transactions Summary */}
+                  <div className={`p-3 border-b flex items-center gap-6 ${isDarkMode ? 'border-gray-800 bg-[#0a0a0a]' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="text-xs">
+                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>Total: </span>
+                      <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{transactionsSummary.totalTransactions}</span>
+                    </div>
+                    <div className="text-xs">
+                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>Deposits: </span>
+                      <span className="text-green-500">+${transactionsSummary.totalDeposits?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="text-xs">
+                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>Withdrawals: </span>
+                      <span className="text-red-500">-${transactionsSummary.totalWithdrawals?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="text-xs">
+                      <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>Net: </span>
+                      <span className={`font-semibold ${transactionsSummary.netFlow >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {transactionsSummary.netFlow >= 0 ? '+' : ''}${transactionsSummary.netFlow?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <table className="w-full text-sm">
+                    <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
+                      <tr>
+                        <th className="text-left py-2 px-3 font-normal">Date</th>
+                        <th className="text-left py-2 px-3 font-normal">Type</th>
+                        <th className="text-left py-2 px-3 font-normal">Amount</th>
+                        <th className="text-left py-2 px-3 font-normal">Status</th>
+                        <th className="text-left py-2 px-3 font-normal">Reference</th>
+                        <th className="text-left py-2 px-3 font-normal">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accountTransactions.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="text-center py-8 text-gray-500">No transactions for selected period</td>
+                        </tr>
+                      ) : (
+                        accountTransactions.map(tx => {
+                          const getTypeColor = (type) => {
+                            if (['Deposit', 'Admin_Credit', 'Transfer_In', 'Wallet_To_Account', 'IB_Commission'].includes(type)) return 'text-green-500'
+                            if (['Withdrawal', 'Admin_Debit', 'Transfer_Out', 'Account_To_Wallet'].includes(type)) return 'text-red-500'
+                            return isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                          }
+                          const getStatusBadge = (status) => {
+                            if (status === 'Completed' || status === 'completed') return 'bg-green-500/20 text-green-500'
+                            if (status === 'Pending' || status === 'pending') return 'bg-yellow-500/20 text-yellow-500'
+                            if (status === 'Failed' || status === 'failed' || status === 'Rejected') return 'bg-red-500/20 text-red-500'
+                            return 'bg-gray-500/20 text-gray-500'
+                          }
+                          const formatType = (type) => {
+                            return type?.replace(/_/g, ' ') || 'Unknown'
+                          }
+                          return (
+                            <tr key={tx._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
+                              <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(tx.createdAt).toLocaleString()}</td>
+                              <td className={`py-2 px-3 text-xs font-medium ${getTypeColor(tx.type)}`}>{formatType(tx.type)}</td>
+                              <td className={`py-2 px-3 text-xs font-medium ${getTypeColor(tx.type)}`}>
+                                {['Deposit', 'Admin_Credit', 'Transfer_In', 'Wallet_To_Account', 'IB_Commission'].includes(tx.type) ? '+' : '-'}
+                                ${tx.amount?.toFixed(2) || '0.00'}
+                              </td>
+                              <td className="py-2 px-3">
+                                <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(tx.status)}`}>
+                                  {tx.status || 'Completed'}
+                                </span>
+                              </td>
+                              <td className={`py-2 px-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {tx.txHash?.slice(0, 10) || tx.referenceId?.slice(0, 10) || tx._id?.slice(-8) || '-'}
+                              </td>
+                              <td className={`py-2 px-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {tx.description || tx.reason || '-'}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                )}
               </div>
               )}
 

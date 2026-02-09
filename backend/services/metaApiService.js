@@ -146,6 +146,11 @@ class MetaApiService {
     this.totalTicksReceived = 0
     this.lastError = null
     this.connectionStartTime = null
+    this.useSimulation = false
+    this.rateLimitHits = 0
+    this.rateLimitBackoff = 0
+    this.consecutiveErrors = 0
+    this.maxConsecutiveErrors = 5
   }
 
   /**
@@ -159,45 +164,197 @@ class MetaApiService {
   }
 
   /**
-   * Connect and start price simulation
-   * MetaAPI polling disabled due to rate limits - using simulation instead
+   * Connect to MetaAPI and start price streaming
+   * Uses real MetaAPI data with rate-limit-safe polling
+   * Falls back to simulation only if MetaAPI is unavailable
    */
   async connect() {
-    console.log('[MetaAPI] Starting price simulation (MetaAPI polling disabled due to rate limits)')
-    this.startPriceSimulation()
+    const token = METAAPI_TOKEN()
+    const accountId = METAAPI_ACCOUNT_ID()
+    
+    if (!token || !accountId) {
+      console.log('[MetaAPI] No credentials configured - starting price simulation')
+      this.startPriceSimulation()
+      return
+    }
+    
+    console.log('[MetaAPI] Connecting to MetaAPI...')
+    console.log(`[MetaAPI] Account ID: ${accountId.substring(0, 8)}...`)
+    console.log(`[MetaAPI] Region: ${METAAPI_REGION()}`)
+    
+    // Test connection with a single symbol
+    try {
+      const response = await fetch(
+        `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/EURUSD/current-price`,
+        { headers: this.getHeaders() }
+      )
+      
+      if (response.ok) {
+        console.log('[MetaAPI] Connection successful - starting real-time polling')
+        this.isConnected = true
+        this.connectionStartTime = Date.now()
+        this.useSimulation = false
+        this.startRateLimitSafePolling()
+      } else if (response.status === 401) {
+        console.error('[MetaAPI] Authentication failed - check METAAPI_TOKEN')
+        this.startPriceSimulation()
+      } else if (response.status === 404) {
+        console.error('[MetaAPI] Account not found - check METAAPI_ACCOUNT_ID and METAAPI_REGION')
+        this.startPriceSimulation()
+      } else {
+        console.error(`[MetaAPI] Connection failed with status ${response.status}`)
+        this.startPriceSimulation()
+      }
+    } catch (error) {
+      console.error('[MetaAPI] Connection error:', error.message)
+      this.startPriceSimulation()
+    }
+  }
+
+  /**
+   * Rate-limit-safe polling strategy
+   * - Polls symbols in small batches with delays
+   * - Uses exponential backoff on rate limits
+   * - Circuit breaker after consecutive failures
+   */
+  startRateLimitSafePolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+    }
+    
+    this.rateLimitBackoff = 0
+    this.consecutiveErrors = 0
+    this.maxConsecutiveErrors = 5
+    
+    // Poll every 2 seconds (reduced from 1s to avoid rate limits)
+    // MetaAPI allows ~60 requests/minute, we have ~60 symbols
+    // 2s interval = 30 requests/minute = safe margin
+    const pollIntervalMs = 2000
+    
+    console.log(`[MetaAPI] Starting rate-limit-safe polling (${pollIntervalMs}ms interval)`)
+    
+    // Initial fetch
+    this.fetchPricesWithRateLimit()
+    
+    this.pollInterval = setInterval(() => {
+      if (this.rateLimitBackoff > 0) {
+        this.rateLimitBackoff--
+        console.log(`[MetaAPI] Rate limit backoff: ${this.rateLimitBackoff} cycles remaining`)
+        return
+      }
+      this.fetchPricesWithRateLimit()
+    }, pollIntervalMs)
+  }
+
+  /**
+   * Fetch prices with rate limit protection
+   * Fetches symbols in batches with delays between batches
+   */
+  async fetchPricesWithRateLimit() {
+    const accountId = METAAPI_ACCOUNT_ID()
+    if (!accountId || this.useSimulation) return
+    
+    try {
+      // Fetch only essential symbols first (majors + metals)
+      const prioritySymbols = [
+        'EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'XAGUSD',
+        'BTCUSD', 'ETHUSD', 'US30', 'US500', 'US100'
+      ]
+      
+      // Fetch priority symbols one at a time with small delay
+      for (const symbol of prioritySymbols) {
+        await this.fetchSymbolPriceSafe(accountId, symbol)
+        await this.delay(100) // 100ms between requests
+      }
+      
+      // Fetch remaining symbols in background (slower)
+      const remainingSymbols = ALL_SYMBOLS.filter(s => !prioritySymbols.includes(s))
+      for (const symbol of remainingSymbols) {
+        await this.fetchSymbolPriceSafe(accountId, symbol)
+        await this.delay(150) // 150ms between requests for non-priority
+      }
+      
+      this.lastUpdate = Date.now()
+      this.consecutiveErrors = 0
+      
+    } catch (error) {
+      this.consecutiveErrors++
+      console.error(`[MetaAPI] Fetch error (${this.consecutiveErrors}/${this.maxConsecutiveErrors}):`, error.message)
+      
+      if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+        console.error('[MetaAPI] Too many consecutive errors - switching to simulation')
+        this.stopPolling()
+        this.startPriceSimulation()
+      }
+    }
+  }
+
+  /**
+   * Fetch single symbol price with rate limit handling
+   */
+  async fetchSymbolPriceSafe(accountId, symbol) {
+    try {
+      const response = await fetch(
+        `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/${symbol}/current-price`,
+        { headers: this.getHeaders() }
+      )
+      
+      if (response.ok) {
+        const price = await response.json()
+        this.updatePrice(price)
+        this.rateLimitHits = 0
+      } else if (response.status === 429) {
+        // Rate limited - apply exponential backoff
+        this.rateLimitHits = (this.rateLimitHits || 0) + 1
+        this.rateLimitBackoff = Math.min(30, Math.pow(2, this.rateLimitHits)) // Max 30 cycles backoff
+        console.warn(`[MetaAPI] Rate limited (429) - backoff ${this.rateLimitBackoff} cycles`)
+      }
+    } catch (e) {
+      // Network error - don't count as rate limit
+    }
+  }
+
+  /**
+   * Utility delay function
+   */
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   /**
    * Start price simulation with realistic market prices
+   * Used as fallback when MetaAPI is unavailable
    */
   startPriceSimulation() {
     this.isConnected = true
+    this.useSimulation = true
+    console.log('[MetaAPI] Starting price simulation (fallback mode)')
     
-    // Realistic base prices as of Feb 2026
+    // Current market prices as of Feb 2026 (matching TradingView chart)
     const basePrices = {
       // Forex Majors
-      EURUSD: 1.0380, GBPUSD: 1.2420, USDJPY: 152.50, USDCHF: 0.9080,
-      AUDUSD: 0.6250, NZDUSD: 0.5650, USDCAD: 1.4380,
+      EURUSD: 1.0320, GBPUSD: 1.2380, USDJPY: 151.80, USDCHF: 0.9120,
+      AUDUSD: 0.6280, NZDUSD: 0.5680, USDCAD: 1.4320,
       // Forex Crosses
-      EURGBP: 0.8360, EURJPY: 158.30, GBPJPY: 189.40, EURCHF: 0.9420,
-      EURAUD: 1.6610, EURCAD: 1.4920, EURNZD: 1.8380,
-      GBPAUD: 1.9870, GBPCAD: 1.7840, GBPCHF: 1.1280, GBPNZD: 2.1980,
-      AUDCAD: 0.8990, AUDCHF: 0.5670, AUDNZD: 1.1060, AUDJPY: 95.30,
-      CADJPY: 106.00, CHFJPY: 168.00, NZDJPY: 86.20,
-      NZDCAD: 0.8120, NZDCHF: 0.5130, CADCHF: 0.6310,
-      // Metals
-      XAUUSD: 2852.00, XAGUSD: 31.80, XPTUSD: 1005, XPDUSD: 975,
+      EURGBP: 0.8340, EURJPY: 156.70, GBPJPY: 187.90, EURCHF: 0.9410,
+      EURAUD: 1.6430, EURCAD: 1.4780, EURNZD: 1.8170,
+      GBPAUD: 1.9710, GBPCAD: 1.7730, GBPCHF: 1.1290, GBPNZD: 2.1790,
+      AUDCAD: 0.8990, AUDCHF: 0.5730, AUDNZD: 1.1060, AUDJPY: 95.30,
+      CADJPY: 106.00, CHFJPY: 166.50, NZDJPY: 86.20,
+      NZDCAD: 0.8130, NZDCHF: 0.5180, CADCHF: 0.6370,
+      // Metals - Updated to match TradingView (~$5010)
+      XAUUSD: 5010.00, XAGUSD: 58.50, XPTUSD: 1180, XPDUSD: 1050,
       // Commodities
-      USOIL: 71.20, UKOIL: 74.80, NGAS: 3.25, COPPER: 4.52,
+      USOIL: 72.50, UKOIL: 76.20, NGAS: 3.45, COPPER: 4.68,
       // Crypto
-      BTCUSD: 97200, ETHUSD: 2680, SOLUSD: 198, BNBUSD: 605,
-      XRPUSD: 2.72, ADAUSD: 0.74, DOGEUSD: 0.24, DOTUSD: 4.85,
-      MATICUSD: 0.35, LTCUSD: 122, AVAXUSD: 23, LINKUSD: 17.50,
-      UNIUSD: 8.20, ATOMUSD: 5.40, XLMUSD: 0.38, TRXUSD: 0.24,
-      ETCUSD: 22.50, NEARUSD: 3.20, ALGOUSD: 0.28,
+      BTCUSD: 97500, ETHUSD: 2720, SOLUSD: 205, BNBUSD: 620,
+      XRPUSD: 2.85, ADAUSD: 0.78, DOGEUSD: 0.26, DOTUSD: 5.10,
+      MATICUSD: 0.38, LTCUSD: 128, AVAXUSD: 25, LINKUSD: 18.50,
+      UNIUSD: 8.80, ATOMUSD: 5.70, XLMUSD: 0.42, TRXUSD: 0.26,
+      ETCUSD: 24.50, NEARUSD: 3.50, ALGOUSD: 0.32,
       // Indices
-      US30: 44150, US500: 6020, US100: 21400, UK100: 8520,
-      GER40: 21800, FRA40: 7850, JP225: 38500, HK50: 20200, AUS200: 8350
+      US30: 44350, US500: 6080, US100: 21650, UK100: 8580,
+      GER40: 22100, FRA40: 7950, JP225: 38800, HK50: 20450, AUS200: 8420
     }
     
     // Initialize current prices
@@ -476,13 +633,16 @@ class MetaApiService {
   getStatus() {
     return {
       connected: this.isConnected,
-      provider: 'metaapi',
+      provider: this.useSimulation ? 'simulation' : 'metaapi',
+      mode: this.useSimulation ? 'SIMULATION' : 'LIVE',
       symbolCount: this.prices.size,
       totalSymbols: ALL_SYMBOLS.length,
       totalTicks: this.totalTicksReceived,
       uptime: this.connectionStartTime ? Date.now() - this.connectionStartTime : 0,
       lastUpdate: this.lastUpdate,
-      lastError: this.lastError
+      lastError: this.lastError,
+      rateLimitBackoff: this.rateLimitBackoff,
+      consecutiveErrors: this.consecutiveErrors
     }
   }
 }

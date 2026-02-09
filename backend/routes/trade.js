@@ -2,6 +2,7 @@ import express from 'express'
 import Trade from '../models/Trade.js'
 import TradingAccount from '../models/TradingAccount.js'
 import ChallengeAccount from '../models/ChallengeAccount.js'
+import Transaction from '../models/Transaction.js'
 import tradeEngine from '../services/tradeEngine.js'
 import propTradingEngine from '../services/propTradingEngine.js'
 import copyTradingEngine from '../services/copyTradingEngine.js'
@@ -375,30 +376,157 @@ router.get('/pending/:tradingAccountId', async (req, res) => {
 router.get('/history/:tradingAccountId', async (req, res) => {
   try {
     const { tradingAccountId } = req.params
-    const { limit = 50, offset = 0 } = req.query
+    const { limit = 50, offset = 0, startDate, endDate, filter } = req.query
 
-    const trades = await Trade.find({ 
+    // Build date filter
+    let dateFilter = {}
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    if (filter === 'today') {
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      dateFilter = { closedAt: { $gte: today, $lt: tomorrow } }
+    } else if (filter === 'week') {
+      const weekAgo = new Date(today)
+      weekAgo.setDate(weekAgo.getDate() - 7)
+      dateFilter = { closedAt: { $gte: weekAgo } }
+    } else if (filter === 'month') {
+      const monthAgo = new Date(today)
+      monthAgo.setMonth(monthAgo.getMonth() - 1)
+      dateFilter = { closedAt: { $gte: monthAgo } }
+    } else if (filter === '3months') {
+      const threeMonthsAgo = new Date(today)
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+      dateFilter = { closedAt: { $gte: threeMonthsAgo } }
+    } else if (startDate) {
+      const start = new Date(startDate)
+      start.setHours(0, 0, 0, 0)
+      const end = endDate ? new Date(endDate) : new Date(startDate)
+      end.setHours(23, 59, 59, 999)
+      dateFilter = { closedAt: { $gte: start, $lte: end } }
+    }
+
+    const query = { 
       tradingAccountId, 
-      status: 'CLOSED' 
-    })
+      status: 'CLOSED',
+      ...dateFilter
+    }
+
+    const trades = await Trade.find(query)
       .sort({ closedAt: -1 })
       .skip(parseInt(offset))
       .limit(parseInt(limit))
 
-    const total = await Trade.countDocuments({ 
-      tradingAccountId, 
-      status: 'CLOSED' 
-    })
+    const total = await Trade.countDocuments(query)
+
+    // Calculate summary stats
+    const allTrades = await Trade.find(query)
+    const totalPnl = allTrades.reduce((sum, t) => sum + (t.realizedPnl || 0), 0)
+    const winTrades = allTrades.filter(t => t.realizedPnl > 0).length
+    const winRate = allTrades.length > 0 ? ((winTrades / allTrades.length) * 100).toFixed(1) : 0
 
     res.json({
       success: true,
       trades,
       total,
       limit: parseInt(limit),
-      offset: parseInt(offset)
+      offset: parseInt(offset),
+      summary: {
+        totalTrades: allTrades.length,
+        totalPnl,
+        winTrades,
+        lossTrades: allTrades.length - winTrades,
+        winRate: parseFloat(winRate)
+      }
     })
   } catch (error) {
     console.error('Error fetching trade history:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    })
+  }
+})
+
+// GET /api/trade/transactions/:tradingAccountId - Get transactions for a trading account
+router.get('/transactions/:tradingAccountId', async (req, res) => {
+  try {
+    const { tradingAccountId } = req.params
+    const { limit = 50, offset = 0, startDate, endDate, filter } = req.query
+
+    // Build date filter
+    let dateFilter = {}
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    if (filter === 'today') {
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      dateFilter = { createdAt: { $gte: today, $lt: tomorrow } }
+    } else if (filter === 'week') {
+      const weekAgo = new Date(today)
+      weekAgo.setDate(weekAgo.getDate() - 7)
+      dateFilter = { createdAt: { $gte: weekAgo } }
+    } else if (filter === 'month') {
+      const monthAgo = new Date(today)
+      monthAgo.setMonth(monthAgo.getMonth() - 1)
+      dateFilter = { createdAt: { $gte: monthAgo } }
+    } else if (filter === '3months') {
+      const threeMonthsAgo = new Date(today)
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+      dateFilter = { createdAt: { $gte: threeMonthsAgo } }
+    } else if (startDate) {
+      const start = new Date(startDate)
+      start.setHours(0, 0, 0, 0)
+      const end = endDate ? new Date(endDate) : new Date(startDate)
+      end.setHours(23, 59, 59, 999)
+      dateFilter = { createdAt: { $gte: start, $lte: end } }
+    }
+
+    // Find transactions related to this trading account
+    const query = {
+      $or: [
+        { tradingAccountId },
+        { toTradingAccountId: tradingAccountId },
+        { fromTradingAccountId: tradingAccountId }
+      ],
+      // Exclude demo transaction types
+      type: { $nin: ['Demo_Credit', 'Demo_Reset'] },
+      ...dateFilter
+    }
+
+    const transactions = await Transaction.find(query)
+      .sort({ createdAt: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+
+    const total = await Transaction.countDocuments(query)
+
+    // Calculate summary
+    const allTransactions = await Transaction.find(query)
+    const totalDeposits = allTransactions
+      .filter(t => ['Deposit', 'Admin_Credit', 'Transfer_In', 'Wallet_To_Account'].includes(t.type))
+      .reduce((sum, t) => sum + (t.amount || 0), 0)
+    const totalWithdrawals = allTransactions
+      .filter(t => ['Withdrawal', 'Admin_Debit', 'Transfer_Out', 'Account_To_Wallet'].includes(t.type))
+      .reduce((sum, t) => sum + (t.amount || 0), 0)
+
+    res.json({
+      success: true,
+      transactions,
+      total,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      summary: {
+        totalTransactions: allTransactions.length,
+        totalDeposits,
+        totalWithdrawals,
+        netFlow: totalDeposits - totalWithdrawals
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching account transactions:', error)
     res.status(500).json({ 
       success: false, 
       message: error.message 

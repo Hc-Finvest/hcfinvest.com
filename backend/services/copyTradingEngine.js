@@ -460,22 +460,45 @@ class CopyTradingEngine {
         followerTrade.closedAt = new Date()
         await followerTrade.save()
 
-        // Update follower account balance
-        const followerAccount = await TradingAccount.findById(followerTrade.tradingAccountId)
+        // Update follower account balance using ATOMIC operation to prevent race conditions
+        // This is critical for parallel processing of multiple follower trades
+        let followerAccount = await TradingAccount.findById(followerTrade.tradingAccountId)
         if (followerAccount) {
           if (realizedPnl >= 0) {
-            followerAccount.balance += realizedPnl
+            // Profit: Use atomic $inc to add to balance
+            await TradingAccount.findByIdAndUpdate(
+              followerTrade.tradingAccountId,
+              { $inc: { balance: realizedPnl } },
+              { new: true }
+            )
+            console.log(`[CopyTrade] Balance updated atomically: +$${realizedPnl.toFixed(2)} for account ${followerTrade.tradingAccountId}`)
           } else {
+            // Loss: Need to check balance first, then apply atomically
             const loss = Math.abs(realizedPnl)
             if (followerAccount.balance >= loss) {
-              followerAccount.balance -= loss
+              // Balance can cover the loss - atomic decrement
+              await TradingAccount.findByIdAndUpdate(
+                followerTrade.tradingAccountId,
+                { $inc: { balance: -loss } },
+                { new: true }
+              )
             } else {
+              // Balance cannot cover loss - deduct from balance and credit
               const remainingLoss = loss - followerAccount.balance
-              followerAccount.balance = 0
-              followerAccount.credit = Math.max(0, (followerAccount.credit || 0) - remainingLoss)
+              const creditDeduction = Math.min(remainingLoss, followerAccount.credit || 0)
+              await TradingAccount.findByIdAndUpdate(
+                followerTrade.tradingAccountId,
+                { 
+                  $set: { balance: 0 },
+                  $inc: { credit: -creditDeduction }
+                },
+                { new: true }
+              )
             }
+            console.log(`[CopyTrade] Balance updated atomically: -$${loss.toFixed(2)} for account ${followerTrade.tradingAccountId}`)
           }
-          await followerAccount.save()
+          // Refresh followerAccount for commission calculation below
+          followerAccount = await TradingAccount.findById(followerTrade.tradingAccountId)
         }
 
         const result = { trade: followerTrade, realizedPnl }
@@ -506,17 +529,22 @@ class CopyTradingEngine {
               masterCommissionCredited = commissionAmount - adminShare
               
               // Deduct commission from follower's profit (already added to balance above)
+              // Use atomic operations to prevent race conditions
               if (followerAccount && followerAccount.balance >= commissionAmount) {
-                followerAccount.balance -= commissionAmount
-                await followerAccount.save()
+                await TradingAccount.findByIdAndUpdate(
+                  followerTrade.tradingAccountId,
+                  { $inc: { balance: -commissionAmount } },
+                  { new: true }
+                )
+                console.log(`[CopyTrade] Commission deducted atomically: -$${commissionAmount.toFixed(2)} from follower`)
                 
-                // Credit master's trading account immediately
-                const masterAccount = await TradingAccount.findById(master.tradingAccountId)
-                if (masterAccount) {
-                  masterAccount.balance += masterCommissionCredited
-                  await masterAccount.save()
-                  console.log(`[CopyTrade] Commission credited to master account: $${masterCommissionCredited.toFixed(2)}`)
-                }
+                // Credit master's trading account immediately using atomic operation
+                await TradingAccount.findByIdAndUpdate(
+                  master.tradingAccountId,
+                  { $inc: { balance: masterCommissionCredited } },
+                  { new: true }
+                )
+                console.log(`[CopyTrade] Commission credited to master account: $${masterCommissionCredited.toFixed(2)}`)
                 
                 // Update master's commission stats
                 // IMPORTANT: Update both pendingCommission (for withdrawal tracking) and totalCommissionEarned
@@ -680,11 +708,14 @@ class CopyTradingEngine {
         const adminShare = totalCommission * (adminSharePercentage / 100)
         const masterShare = totalCommission - adminShare
 
-        // Deduct from follower account
+        // Deduct from follower account using atomic operation
         const followerAccount = await TradingAccount.findById(group.followerAccountId)
         if (followerAccount && followerAccount.balance >= totalCommission) {
-          followerAccount.balance -= totalCommission
-          await followerAccount.save()
+          await TradingAccount.findByIdAndUpdate(
+            group.followerAccountId,
+            { $inc: { balance: -totalCommission } },
+            { new: true }
+          )
 
           // Create commission record
           const commission = await CopyCommission.create({
