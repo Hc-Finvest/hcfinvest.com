@@ -498,7 +498,7 @@ const AdminForexCharges = () => {
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Value</label>
-                  <input type="number" step="0.01" value={form.commissionValue} onChange={(e) => setForm({ ...form, commissionValue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="any" min="0" value={form.commissionValue} onChange={(e) => setForm({ ...form, commissionValue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. 7 per lot" />
                 </div>
               </div>
               
@@ -666,7 +666,7 @@ const AdminForexCharges = () => {
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Spread Value</label>
-                  <input type="number" step="0.01" min="0" max="10000" value={form.spreadValue} onChange={(e) => setForm({ ...form, spreadValue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="any" min="0" value={form.spreadValue} onChange={(e) => setForm({ ...form, spreadValue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. 50 for gold, 1.5 for forex" />
                 </div>
               </div>
               
@@ -810,11 +810,11 @@ const AdminForexCharges = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Swap Long (points)</label>
-                  <input type="number" step="0.01" value={form.swapLong} onChange={(e) => setForm({ ...form, swapLong: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="any" value={form.swapLong} onChange={(e) => setForm({ ...form, swapLong: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. -2.5" />
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Swap Short (points)</label>
-                  <input type="number" step="0.01" value={form.swapShort} onChange={(e) => setForm({ ...form, swapShort: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="any" value={form.swapShort} onChange={(e) => setForm({ ...form, swapShort: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. 1.5" />
                 </div>
               </div>
               

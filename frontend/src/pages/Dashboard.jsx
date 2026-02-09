@@ -310,11 +310,13 @@ const Dashboard = () => {
     }
 
     // Small delay to ensure DOM is ready
+    const colorTheme = isDarkMode ? "dark" : "light"
+    
     const timer = setTimeout(() => {
       // TradingView Timeline Widget (News)
       loadWidget(tradingViewRef, 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js', {
         "feedMode": "all_symbols",
-        "colorTheme": "dark",
+        "colorTheme": colorTheme,
         "isTransparent": true,
         "displayMode": "regular",
         "width": "100%",
@@ -324,7 +326,7 @@ const Dashboard = () => {
 
       // TradingView Economic Calendar Widget
       loadWidget(economicCalendarRef, 'https://s3.tradingview.com/external-embedding/embed-widget-events.js', {
-        "colorTheme": "dark",
+        "colorTheme": colorTheme,
         "isTransparent": true,
         "width": "100%",
         "height": "100%",
@@ -339,7 +341,7 @@ const Dashboard = () => {
         "height": "100%",
         "currencies": ["EUR", "USD", "JPY", "GBP", "CHF", "AUD", "CAD", "NZD"],
         "isTransparent": true,
-        "colorTheme": "dark",
+        "colorTheme": colorTheme,
         "locale": "en"
       })
 
@@ -351,14 +353,14 @@ const Dashboard = () => {
         "defaultScreen": "general",
         "market": "forex",
         "showToolbar": true,
-        "colorTheme": "dark",
+        "colorTheme": colorTheme,
         "locale": "en",
         "isTransparent": true
       })
     }, 100)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [isDarkMode])
 
   return (
     <div className={`h-screen flex transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>

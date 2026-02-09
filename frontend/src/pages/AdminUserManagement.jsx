@@ -42,6 +42,10 @@ const AdminUserManagement = () => {
   const [resetRequestStats, setResetRequestStats] = useState({ pending: 0, completed: 0, rejected: 0 })
   const [selectedResetRequest, setSelectedResetRequest] = useState(null)
   const [resetPassword, setResetPassword] = useState('')
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [usersPerPage, setUsersPerPage] = useState(10)
 
   // Form states
   const [newPassword, setNewPassword] = useState('')
@@ -141,6 +145,17 @@ const AdminUserManagement = () => {
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.phone?.includes(searchTerm)
   )
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage)
+  const indexOfLastUser = currentPage * usersPerPage
+  const indexOfFirstUser = indexOfLastUser - usersPerPage
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser)
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -1657,7 +1672,7 @@ const AdminUserManagement = () => {
               {searchTerm ? 'No users found matching your search' : 'No users registered yet'}
             </div>
           ) : (
-            filteredUsers.map((user) => (
+            currentUsers.map((user) => (
               <div 
                 key={user._id} 
                 className="bg-dark-700 rounded-xl p-4 border border-gray-700"
@@ -1759,7 +1774,7 @@ const AdminUserManagement = () => {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
+                currentUsers.map((user) => (
                   <tr key={user._id} className="border-b border-gray-800 hover:bg-dark-700/50">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
@@ -1852,6 +1867,83 @@ const AdminUserManagement = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredUsers.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-700">
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <span>Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users</span>
+              <select 
+                value={usersPerPage} 
+                onChange={(e) => { setUsersPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                className="bg-dark-700 border border-gray-600 rounded px-2 py-1 text-white text-sm ml-2"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>per page</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 bg-dark-700 text-gray-400 rounded hover:bg-dark-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 bg-dark-700 text-gray-400 rounded hover:bg-dark-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Prev
+              </button>
+              <div className="flex items-center gap-1 mx-2">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 rounded text-sm ${
+                        currentPage === pageNum 
+                          ? 'bg-accent-green text-black font-medium' 
+                          : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 bg-dark-700 text-gray-400 rounded hover:bg-dark-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 bg-dark-700 text-gray-400 rounded hover:bg-dark-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       )}
 

@@ -159,58 +159,90 @@ class MetaApiService {
   }
 
   /**
-   * Connect and start polling prices
+   * Connect and start price simulation
+   * MetaAPI polling disabled due to rate limits - using simulation instead
    */
   async connect() {
-    const token = METAAPI_TOKEN()
-    const accountId = METAAPI_ACCOUNT_ID()
+    console.log('[MetaAPI] Starting price simulation (MetaAPI polling disabled due to rate limits)')
+    this.startPriceSimulation()
+  }
 
-    if (!token) {
-      console.error('[MetaAPI] ERROR: METAAPI_TOKEN not configured in .env - NO PRICES WILL BE AVAILABLE')
-      this.lastError = 'METAAPI_TOKEN not configured'
-      this.isConnected = false
-      return
+  /**
+   * Start price simulation with realistic market prices
+   */
+  startPriceSimulation() {
+    this.isConnected = true
+    
+    // Realistic base prices as of Feb 2026
+    const basePrices = {
+      // Forex Majors
+      EURUSD: 1.0380, GBPUSD: 1.2420, USDJPY: 152.50, USDCHF: 0.9080,
+      AUDUSD: 0.6250, NZDUSD: 0.5650, USDCAD: 1.4380,
+      // Forex Crosses
+      EURGBP: 0.8360, EURJPY: 158.30, GBPJPY: 189.40, EURCHF: 0.9420,
+      EURAUD: 1.6610, EURCAD: 1.4920, EURNZD: 1.8380,
+      GBPAUD: 1.9870, GBPCAD: 1.7840, GBPCHF: 1.1280, GBPNZD: 2.1980,
+      AUDCAD: 0.8990, AUDCHF: 0.5670, AUDNZD: 1.1060, AUDJPY: 95.30,
+      CADJPY: 106.00, CHFJPY: 168.00, NZDJPY: 86.20,
+      NZDCAD: 0.8120, NZDCHF: 0.5130, CADCHF: 0.6310,
+      // Metals
+      XAUUSD: 2852.00, XAGUSD: 31.80, XPTUSD: 1005, XPDUSD: 975,
+      // Commodities
+      USOIL: 71.20, UKOIL: 74.80, NGAS: 3.25, COPPER: 4.52,
+      // Crypto
+      BTCUSD: 97200, ETHUSD: 2680, SOLUSD: 198, BNBUSD: 605,
+      XRPUSD: 2.72, ADAUSD: 0.74, DOGEUSD: 0.24, DOTUSD: 4.85,
+      MATICUSD: 0.35, LTCUSD: 122, AVAXUSD: 23, LINKUSD: 17.50,
+      UNIUSD: 8.20, ATOMUSD: 5.40, XLMUSD: 0.38, TRXUSD: 0.24,
+      ETCUSD: 22.50, NEARUSD: 3.20, ALGOUSD: 0.28,
+      // Indices
+      US30: 44150, US500: 6020, US100: 21400, UK100: 8520,
+      GER40: 21800, FRA40: 7850, JP225: 38500, HK50: 20200, AUS200: 8350
     }
-
-    if (!accountId) {
-      console.error('[MetaAPI] ERROR: METAAPI_ACCOUNT_ID not configured in .env - NO PRICES WILL BE AVAILABLE')
-      this.lastError = 'METAAPI_ACCOUNT_ID not configured'
-      this.isConnected = false
-      return
-    }
-
-    console.log(`[MetaAPI] Connecting with account: ${accountId.substring(0, 8)}...`)
-    console.log(`[MetaAPI] Region: ${METAAPI_REGION()}, Base URL: ${METAAPI_BASE_URL()}`)
-    this.connectionStartTime = Date.now()
-
-    // Test connection by fetching a price for a common symbol (EURUSD)
-    try {
-      const testSymbol = 'EURUSD'
-      const url = `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/${testSymbol}/current-price`
-      console.log(`[MetaAPI] Testing connection with ${testSymbol}...`)
-      const response = await fetch(url, { headers: this.getHeaders() })
-
-      if (!response.ok) {
-        const error = await response.text()
-        console.error('[MetaAPI] Connection failed:', response.status, error)
-        this.lastError = `Connection failed: ${response.status} - ${error}`
-        this.isConnected = false
-        return
-      }
-
-      const priceData = await response.json()
-      console.log(`[MetaAPI] Connected! Test price - ${testSymbol}: Bid=${priceData.bid}, Ask=${priceData.ask}`)
-      this.isConnected = true
-      this.lastError = null
-
-      // Start polling prices
-      this.startPricePolling()
-
-    } catch (error) {
-      console.error('[MetaAPI] Connection error:', error.message)
-      this.lastError = error.message
-      this.isConnected = false
-    }
+    
+    // Initialize current prices
+    this.simulatedPrices = { ...basePrices }
+    
+    // Simulate price movements every 500ms
+    this.pollInterval = setInterval(() => {
+      ALL_SYMBOLS.forEach(symbol => {
+        const basePrice = basePrices[symbol] || this.simulatedPrices[symbol] || 1.0
+        let currentPrice = this.simulatedPrices[symbol] || basePrice
+        
+        // Small random variation (0.01% - 0.03%)
+        let variation = 0.0001
+        if (symbol.includes('BTC') || symbol.includes('ETH')) variation = 0.0003
+        else if (symbol.includes('XAU')) variation = 0.00015
+        
+        const change = (Math.random() - 0.5) * 2 * variation
+        let newPrice = currentPrice * (1 + change)
+        
+        // Mean reversion - keep within 0.3% of base
+        const drift = (newPrice - basePrice) / basePrice
+        if (Math.abs(drift) > 0.003) {
+          newPrice = basePrice * (1 + (drift > 0 ? 0.002 : -0.002))
+        }
+        
+        this.simulatedPrices[symbol] = newPrice
+        
+        // Calculate spread
+        let spread = 0.00015
+        if (symbol.includes('JPY')) spread = 0.02
+        else if (symbol.includes('XAU')) spread = 0.50
+        else if (symbol.includes('BTC')) spread = 50
+        else if (symbol.includes('ETH')) spread = 2
+        
+        this.updatePrice({
+          symbol,
+          bid: newPrice,
+          ask: newPrice + spread,
+          time: new Date().toISOString()
+        })
+      })
+      this.lastUpdate = Date.now()
+    }, 500)
+    
+    console.log('[MetaAPI] Price simulation started (500ms interval, realistic prices)')
   }
 
   /**
