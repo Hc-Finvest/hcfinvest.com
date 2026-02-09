@@ -212,106 +212,146 @@ class MetaApiService {
   }
 
   /**
-   * Rate-limit-safe polling strategy
-   * - Polls symbols in small batches with delays
-   * - Uses exponential backoff on rate limits
-   * - Circuit breaker after consecutive failures
+   * Ultra-conservative polling strategy for MetaAPI
+   * - Fetches ONLY 5 essential symbols from MetaAPI
+   * - Uses simulation for all other symbols
+   * - 10-second interval between polling cycles
+   * - 2-second delay between individual requests
    */
   startRateLimitSafePolling() {
     if (this.pollInterval) {
       clearInterval(this.pollInterval)
     }
     
-    this.rateLimitBackoff = 0
-    this.consecutiveErrors = 0
-    this.maxConsecutiveErrors = 5
+    // Essential symbols to fetch from MetaAPI (only 5 to stay within limits)
+    // MetaAPI free tier: ~60 requests/minute = 1 request/second max
+    this.liveSymbols = ['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'US30']
     
-    // Poll every 2 seconds (reduced from 1s to avoid rate limits)
-    // MetaAPI allows ~60 requests/minute, we have ~60 symbols
-    // 2s interval = 30 requests/minute = safe margin
-    const pollIntervalMs = 2000
+    console.log(`[MetaAPI] HYBRID MODE: Live prices for ${this.liveSymbols.length} symbols, simulation for others`)
+    console.log(`[MetaAPI] Live symbols: ${this.liveSymbols.join(', ')}`)
     
-    console.log(`[MetaAPI] Starting rate-limit-safe polling (${pollIntervalMs}ms interval)`)
+    // Start simulation for non-live symbols first
+    this.startHybridSimulation()
+    
+    // Poll live symbols every 10 seconds (5 symbols * 2s delay = 10s per cycle)
+    const pollIntervalMs = 12000 // 12 seconds between cycles
     
     // Initial fetch
-    this.fetchPricesWithRateLimit()
+    this.fetchLiveSymbols()
     
     this.pollInterval = setInterval(() => {
-      if (this.rateLimitBackoff > 0) {
-        this.rateLimitBackoff--
-        console.log(`[MetaAPI] Rate limit backoff: ${this.rateLimitBackoff} cycles remaining`)
-        return
-      }
-      this.fetchPricesWithRateLimit()
+      this.fetchLiveSymbols()
     }, pollIntervalMs)
   }
 
   /**
-   * Fetch prices with rate limit protection
-   * Fetches symbols in batches with delays between batches
+   * Fetch only essential live symbols with generous delays
    */
-  async fetchPricesWithRateLimit() {
+  async fetchLiveSymbols() {
     const accountId = METAAPI_ACCOUNT_ID()
-    if (!accountId || this.useSimulation) return
+    if (!accountId) return
     
-    try {
-      // Fetch only essential symbols first (majors + metals)
-      const prioritySymbols = [
-        'EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'XAGUSD',
-        'BTCUSD', 'ETHUSD', 'US30', 'US500', 'US100'
-      ]
-      
-      // Fetch priority symbols one at a time with small delay
-      for (const symbol of prioritySymbols) {
-        await this.fetchSymbolPriceSafe(accountId, symbol)
-        await this.delay(100) // 100ms between requests
+    for (const symbol of this.liveSymbols) {
+      try {
+        const response = await fetch(
+          `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/${symbol}/current-price`,
+          { headers: this.getHeaders() }
+        )
+        
+        if (response.ok) {
+          const price = await response.json()
+          this.updatePrice(price)
+          this.totalTicksReceived++
+        } else if (response.status === 429) {
+          console.warn(`[MetaAPI] Rate limited on ${symbol} - skipping this cycle`)
+          break // Stop this cycle, wait for next
+        }
+      } catch (e) {
+        // Network error - continue with next symbol
       }
       
-      // Fetch remaining symbols in background (slower)
-      const remainingSymbols = ALL_SYMBOLS.filter(s => !prioritySymbols.includes(s))
-      for (const symbol of remainingSymbols) {
-        await this.fetchSymbolPriceSafe(accountId, symbol)
-        await this.delay(150) // 150ms between requests for non-priority
-      }
-      
-      this.lastUpdate = Date.now()
-      this.consecutiveErrors = 0
-      
-    } catch (error) {
-      this.consecutiveErrors++
-      console.error(`[MetaAPI] Fetch error (${this.consecutiveErrors}/${this.maxConsecutiveErrors}):`, error.message)
-      
-      if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
-        console.error('[MetaAPI] Too many consecutive errors - switching to simulation')
-        this.stopPolling()
-        this.startPriceSimulation()
-      }
+      // 2 second delay between requests (very conservative)
+      await this.delay(2000)
     }
+    
+    this.lastUpdate = Date.now()
   }
 
   /**
-   * Fetch single symbol price with rate limit handling
+   * Hybrid simulation - simulates prices for non-live symbols
+   * Live symbols are updated from MetaAPI
    */
-  async fetchSymbolPriceSafe(accountId, symbol) {
-    try {
-      const response = await fetch(
-        `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols/${symbol}/current-price`,
-        { headers: this.getHeaders() }
-      )
-      
-      if (response.ok) {
-        const price = await response.json()
-        this.updatePrice(price)
-        this.rateLimitHits = 0
-      } else if (response.status === 429) {
-        // Rate limited - apply exponential backoff
-        this.rateLimitHits = (this.rateLimitHits || 0) + 1
-        this.rateLimitBackoff = Math.min(30, Math.pow(2, this.rateLimitHits)) // Max 30 cycles backoff
-        console.warn(`[MetaAPI] Rate limited (429) - backoff ${this.rateLimitBackoff} cycles`)
-      }
-    } catch (e) {
-      // Network error - don't count as rate limit
+  startHybridSimulation() {
+    // Base prices for simulation
+    const basePrices = {
+      // Forex (non-live will be simulated)
+      USDJPY: 151.80, USDCHF: 0.9120, AUDUSD: 0.6280, NZDUSD: 0.5680, USDCAD: 1.4320,
+      EURGBP: 0.8340, EURJPY: 156.70, GBPJPY: 187.90, EURCHF: 0.9410,
+      EURAUD: 1.6430, EURCAD: 1.4780, EURNZD: 1.8170,
+      GBPAUD: 1.9710, GBPCAD: 1.7730, GBPCHF: 1.1290, GBPNZD: 2.1790,
+      AUDCAD: 0.8990, AUDCHF: 0.5730, AUDNZD: 1.1060, AUDJPY: 95.30,
+      CADJPY: 106.00, CHFJPY: 166.50, NZDJPY: 86.20,
+      NZDCAD: 0.8130, NZDCHF: 0.5180, CADCHF: 0.6370,
+      // Metals (XAUUSD is live)
+      XAGUSD: 32.50, XPTUSD: 1180, XPDUSD: 1050,
+      USOIL: 72.50, UKOIL: 76.20, NGAS: 3.45, COPPER: 4.68,
+      // Crypto (BTCUSD is live)
+      ETHUSD: 2720, SOLUSD: 205, BNBUSD: 620,
+      XRPUSD: 2.85, ADAUSD: 0.78, DOGEUSD: 0.26, DOTUSD: 5.10,
+      MATICUSD: 0.38, LTCUSD: 128, AVAXUSD: 25, LINKUSD: 18.50,
+      UNIUSD: 8.80, ATOMUSD: 5.70, XLMUSD: 0.42, TRXUSD: 0.26,
+      ETCUSD: 24.50, NEARUSD: 3.50, ALGOUSD: 0.32,
+      // Indices (US30 is live)
+      US500: 6080, US100: 21650, UK100: 8580,
+      GER40: 22100, FRA40: 7950, JP225: 38800, HK50: 20450, AUS200: 8420
     }
+    
+    this.simulatedPrices = { ...basePrices }
+    
+    // Simulate non-live symbols every 500ms
+    this.simulationInterval = setInterval(() => {
+      const nonLiveSymbols = ALL_SYMBOLS.filter(s => !this.liveSymbols.includes(s))
+      
+      nonLiveSymbols.forEach(symbol => {
+        const basePrice = basePrices[symbol] || this.simulatedPrices[symbol]
+        if (!basePrice) return
+        
+        let currentPrice = this.simulatedPrices[symbol] || basePrice
+        
+        // Small random variation
+        let variation = 0.0001
+        if (symbol.includes('BTC') || symbol.includes('ETH')) variation = 0.0003
+        else if (symbol.includes('XAU') || symbol.includes('XAG')) variation = 0.00015
+        
+        const change = (Math.random() - 0.5) * 2 * variation
+        let newPrice = currentPrice * (1 + change)
+        
+        // Mean reversion
+        const drift = (newPrice - basePrice) / basePrice
+        if (Math.abs(drift) > 0.003) {
+          newPrice = basePrice * (1 + (drift > 0 ? 0.002 : -0.002))
+        }
+        
+        this.simulatedPrices[symbol] = newPrice
+        
+        // Calculate spread
+        let spread = 0.00015
+        if (symbol.includes('JPY')) spread = 0.02
+        else if (symbol.includes('XAU')) spread = 0.50
+        else if (symbol.includes('XAG')) spread = 0.03
+        else if (symbol.includes('BTC')) spread = 50
+        else if (symbol.includes('ETH')) spread = 2
+        
+        this.updatePrice({
+          symbol,
+          bid: newPrice,
+          ask: newPrice + spread,
+          time: new Date().toISOString()
+        })
+      })
+    }, 500)
+    
+    console.log('[MetaAPI] Hybrid simulation started for non-live symbols')
   }
 
   /**
@@ -482,12 +522,16 @@ class MetaApiService {
   }
 
   /**
-   * Stop price polling
+   * Stop price polling and simulation
    */
   stopPolling() {
     if (this.pollInterval) {
       clearInterval(this.pollInterval)
       this.pollInterval = null
+    }
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval)
+      this.simulationInterval = null
     }
   }
 
@@ -631,18 +675,19 @@ class MetaApiService {
    * Get service status
    */
   getStatus() {
+    const isHybrid = this.liveSymbols && this.liveSymbols.length > 0 && !this.useSimulation
     return {
       connected: this.isConnected,
       provider: this.useSimulation ? 'simulation' : 'metaapi',
-      mode: this.useSimulation ? 'SIMULATION' : 'LIVE',
+      mode: this.useSimulation ? 'SIMULATION' : (isHybrid ? 'HYBRID' : 'LIVE'),
+      liveSymbols: this.liveSymbols || [],
+      liveSymbolCount: this.liveSymbols?.length || 0,
       symbolCount: this.prices.size,
       totalSymbols: ALL_SYMBOLS.length,
       totalTicks: this.totalTicksReceived,
       uptime: this.connectionStartTime ? Date.now() - this.connectionStartTime : 0,
       lastUpdate: this.lastUpdate,
-      lastError: this.lastError,
-      rateLimitBackoff: this.rateLimitBackoff,
-      consecutiveErrors: this.consecutiveErrors
+      lastError: this.lastError
     }
   }
 }

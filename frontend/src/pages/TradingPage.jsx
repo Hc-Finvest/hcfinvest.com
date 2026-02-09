@@ -1540,8 +1540,8 @@ const TradingPage = () => {
             />
           </div>
 
-          {/* Positions Panel */}
-          <div className={`${isMobile ? 'h-32' : 'h-44'} border-t flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
+          {/* Positions Panel - Expanded height for History tab */}
+          <div className={`${isMobile ? 'h-48' : (activePositionTab === 'History' ? 'h-80' : 'h-44')} border-t flex flex-col shrink-0 overflow-hidden ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
             <div className={`h-10 flex items-center justify-between px-2 sm:px-4 border-b overflow-x-auto ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
               <div className="flex gap-2 sm:gap-6">
                 {[
@@ -1686,7 +1686,7 @@ const TradingPage = () => {
               )}
 
               {activePositionTab === 'History' && (
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Sub-tabs: Trades / Transactions */}
                 <div className={`flex items-center gap-1 px-3 pt-2 border-b ${isDarkMode ? 'border-gray-800 bg-[#0a0a0a]' : 'border-gray-200 bg-gray-50'}`}>
                   <button
@@ -1879,7 +1879,7 @@ const TradingPage = () => {
                 
                 {/* Trades Table */}
                 {historySubTab === 'trades' && (
-                <div className="flex-1 overflow-auto">
+                <div className="flex-1 min-h-0 overflow-auto">
                   <table className="w-full text-sm">
                     <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
                       <tr>
@@ -1982,7 +1982,7 @@ const TradingPage = () => {
 
                 {/* Transactions Table */}
                 {historySubTab === 'transactions' && (
-                <div className="flex-1 overflow-auto">
+                <div className="flex-1 min-h-0 overflow-auto">
                   {/* Transactions Summary */}
                   <div className={`p-3 border-b flex items-center gap-6 ${isDarkMode ? 'border-gray-800 bg-[#0a0a0a]' : 'border-gray-200 bg-gray-50'}`}>
                     <div className="text-xs">
