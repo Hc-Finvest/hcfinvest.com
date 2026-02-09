@@ -166,16 +166,16 @@ class MetaApiService {
     const accountId = METAAPI_ACCOUNT_ID()
 
     if (!token) {
-      console.error('[MetaAPI] METAAPI_TOKEN not configured - starting fallback simulation')
+      console.error('[MetaAPI] ERROR: METAAPI_TOKEN not configured in .env - NO PRICES WILL BE AVAILABLE')
       this.lastError = 'METAAPI_TOKEN not configured'
-      this.startFallbackPriceSimulation()
+      this.isConnected = false
       return
     }
 
     if (!accountId) {
-      console.error('[MetaAPI] METAAPI_ACCOUNT_ID not configured - starting fallback simulation')
+      console.error('[MetaAPI] ERROR: METAAPI_ACCOUNT_ID not configured in .env - NO PRICES WILL BE AVAILABLE')
       this.lastError = 'METAAPI_ACCOUNT_ID not configured'
-      this.startFallbackPriceSimulation()
+      this.isConnected = false
       return
     }
 
@@ -193,11 +193,8 @@ class MetaApiService {
       if (!response.ok) {
         const error = await response.text()
         console.error('[MetaAPI] Connection failed:', response.status, error)
-        this.lastError = `Connection failed: ${response.status}`
-        
-        // Start fallback price simulation
-        console.log('[MetaAPI] Starting fallback price simulation due to connection failure...')
-        this.startFallbackPriceSimulation()
+        this.lastError = `Connection failed: ${response.status} - ${error}`
+        this.isConnected = false
         return
       }
 
@@ -212,98 +209,8 @@ class MetaApiService {
     } catch (error) {
       console.error('[MetaAPI] Connection error:', error.message)
       this.lastError = error.message
-      
-      // Start fallback price simulation if MetaAPI fails
-      console.log('[MetaAPI] Starting fallback price simulation...')
-      this.startFallbackPriceSimulation()
+      this.isConnected = false
     }
-  }
-
-  /**
-   * Start fallback price simulation when MetaAPI is not available
-   */
-  startFallbackPriceSimulation() {
-    this.isConnected = true // Mark as connected so prices flow
-    
-    // Base prices for simulation - use existing prices if available, otherwise use realistic defaults
-    // This preserves the last known prices when switching from MetaAPI to fallback
-    const existingPrices = this.getAllPrices()
-    const defaultPrices = {
-      EURUSD: 1.0420, GBPUSD: 1.2450, USDJPY: 155.80, USDCHF: 0.9050,
-      AUDUSD: 0.6280, NZDUSD: 0.5680, USDCAD: 1.4350, EURGBP: 0.8380,
-      EURJPY: 162.30, GBPJPY: 194.00, XAUUSD: 2865.00, XAGUSD: 32.50,
-      BTCUSD: 97500, ETHUSD: 2750, SOLUSD: 205, BNBUSD: 620,
-      XRPUSD: 2.85, ADAUSD: 0.78, DOGEUSD: 0.26, DOTUSD: 5.20,
-      MATICUSD: 0.38, LTCUSD: 128, AVAXUSD: 25, LINKUSD: 19,
-      US30: 44200, US500: 6050, US100: 21500, UK100: 8550,
-      EURNZD: 1.8350, AUDCAD: 0.9020, AUDCHF: 0.5680, AUDNZD: 1.1050,
-      AUDJPY: 97.80, CADJPY: 108.60, CHFJPY: 172.10, NZDJPY: 88.50,
-      EURAUD: 1.6590, EURCAD: 1.4950, EURCHF: 0.9430, GBPAUD: 1.9820,
-      GBPCAD: 1.7850, GBPCHF: 1.1260, GBPNZD: 2.1920, NZDCAD: 0.8150,
-      NZDCHF: 0.5140, CADCHF: 0.6310, USOIL: 71.50, UKOIL: 75.20,
-      NGAS: 3.45, COPPER: 4.58, XPTUSD: 1015, XPDUSD: 985
-    }
-    
-    // Merge existing prices with defaults (existing takes priority)
-    this.simulatedPrices = {}
-    Object.keys(defaultPrices).forEach(symbol => {
-      const existing = existingPrices[symbol]
-      this.simulatedPrices[symbol] = existing?.bid || defaultPrices[symbol]
-    })
-    
-    // Simulate realistic price movements every 500ms
-    this.pollInterval = setInterval(() => {
-      ALL_SYMBOLS.forEach(symbol => {
-        // Get current price or use default
-        let currentPrice = this.simulatedPrices[symbol] || 1.0
-        
-        // Random walk with momentum - more realistic price movement
-        // Variation: ±0.02% to ±0.05% per tick depending on asset type
-        let variationPercent
-        if (symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL')) {
-          variationPercent = 0.0008 // Crypto: more volatile
-        } else if (symbol.includes('XAU') || symbol.includes('XAG')) {
-          variationPercent = 0.0004 // Metals: medium volatility
-        } else if (symbol.includes('US') || symbol.includes('UK') || symbol.includes('JP')) {
-          variationPercent = 0.0003 // Indices: medium volatility
-        } else {
-          variationPercent = 0.00025 // Forex: lower volatility
-        }
-        
-        const change = (Math.random() - 0.5) * 2 * variationPercent
-        const newPrice = currentPrice * (1 + change)
-        
-        // Store the new price for next iteration (random walk)
-        this.simulatedPrices[symbol] = newPrice
-        
-        // Calculate spread based on asset type
-        let spreadPips
-        if (symbol.includes('JPY')) {
-          spreadPips = 0.02 // 2 pips for JPY pairs
-        } else if (symbol.includes('XAU')) {
-          spreadPips = 0.50 // 50 cents for gold
-        } else if (symbol.includes('BTC')) {
-          spreadPips = 50 // $50 for BTC
-        } else if (symbol.includes('ETH')) {
-          spreadPips = 2 // $2 for ETH
-        } else {
-          spreadPips = 0.00015 // 1.5 pips for major forex
-        }
-        
-        const bid = newPrice
-        const ask = newPrice + spreadPips
-        
-        this.updatePrice({
-          symbol,
-          bid,
-          ask,
-          time: new Date().toISOString()
-        })
-      })
-      this.lastUpdate = Date.now()
-    }, 500) // Update every 500ms for smoother price movement
-    
-    console.log('[MetaAPI] Fallback price simulation started (500ms interval)')
   }
 
   /**
@@ -374,13 +281,10 @@ class MetaApiService {
         this.updatePrice(price)
         this.rateLimitHits = 0 // Reset on success
       } else if (response.status === 429) {
-        // Rate limited - track consecutive hits
+        // Rate limited - log warning
         this.rateLimitHits = (this.rateLimitHits || 0) + 1
-        if (this.rateLimitHits >= 3 && !this.usingFallback) {
-          console.log('[MetaAPI] Rate limited - switching to fallback simulation')
-          this.usingFallback = true
-          this.stopPolling()
-          this.startFallbackPriceSimulation()
+        if (this.rateLimitHits === 1 || this.rateLimitHits % 10 === 0) {
+          console.warn(`[MetaAPI] Rate limited (429) - ${this.rateLimitHits} consecutive hits for ${symbol}`)
         }
       }
     } catch (e) {
