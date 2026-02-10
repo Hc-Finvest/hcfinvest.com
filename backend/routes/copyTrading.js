@@ -827,6 +827,123 @@ router.post('/admin/recalculate-master-stats/:masterId', async (req, res) => {
   }
 })
 
+// ==================== MASTER COMMISSION TRANSFER ====================
+
+// GET /api/copy/master/:userId/pending-commission - Get master's pending commission
+router.get('/master/:userId/pending-commission', async (req, res) => {
+  try {
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+
+    const master = await MasterTrader.findOne({ userId })
+    if (!master) {
+      return res.status(404).json({ success: false, message: 'Master trader not found' })
+    }
+
+    res.json({
+      success: true,
+      pendingCommission: master.pendingCommission || 0,
+      totalCommissionEarned: master.totalCommissionEarned || 0,
+      totalCommissionWithdrawn: master.totalCommissionWithdrawn || 0
+    })
+  } catch (error) {
+    console.error('Error fetching pending commission:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// POST /api/copy/master/:userId/transfer-commission - Transfer pending commission to trading account
+router.post('/master/:userId/transfer-commission', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { amount } = req.body
+
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid amount' })
+    }
+
+    const master = await MasterTrader.findOne({ userId })
+    if (!master) {
+      return res.status(404).json({ success: false, message: 'Master trader not found' })
+    }
+
+    if (master.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: 'Master trader account is not active' })
+    }
+
+    const pendingCommission = master.pendingCommission || 0
+    if (amount > pendingCommission) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient pending commission. Available: $${pendingCommission.toFixed(2)}` 
+      })
+    }
+
+    // Use atomic operations to prevent race conditions and double transfers
+    // Step 1: Deduct from pending commission
+    const updatedMaster = await MasterTrader.findOneAndUpdate(
+      { 
+        _id: master._id, 
+        pendingCommission: { $gte: amount } // Ensure sufficient balance
+      },
+      { 
+        $inc: { 
+          pendingCommission: -amount,
+          totalCommissionWithdrawn: amount 
+        } 
+      },
+      { new: true }
+    )
+
+    if (!updatedMaster) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Transfer failed - insufficient pending commission or concurrent transfer' 
+      })
+    }
+
+    // Step 2: Credit to master's trading account
+    await TradingAccount.findByIdAndUpdate(
+      master.tradingAccountId,
+      { $inc: { balance: amount } },
+      { new: true }
+    )
+
+    // Step 3: Create audit log
+    const Transaction = (await import('../models/Transaction.js')).default
+    await Transaction.create({
+      userId: master.userId,
+      tradingAccountId: master.tradingAccountId,
+      type: 'Commission_Transfer',
+      amount: amount,
+      paymentMethod: 'System',
+      status: 'Completed',
+      adminRemarks: 'Master commission transfer from pending to trading account',
+      processedAt: new Date()
+    })
+
+    console.log(`[CopyTrade] Master ${master.displayName} transferred $${amount.toFixed(2)} from pending commission to trading account`)
+
+    res.json({
+      success: true,
+      message: `Successfully transferred $${amount.toFixed(2)} to your trading account`,
+      previousPending: pendingCommission,
+      newPending: updatedMaster.pendingCommission,
+      amountTransferred: amount
+    })
+
+  } catch (error) {
+    console.error('Error transferring commission:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // POST /api/copy/admin/recalculate-all-master-stats - Recalculate stats for all masters
 router.post('/admin/recalculate-all-master-stats', async (req, res) => {
   try {

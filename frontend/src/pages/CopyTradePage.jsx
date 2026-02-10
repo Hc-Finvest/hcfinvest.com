@@ -45,6 +45,11 @@ const CopyTradePage = () => {
   const [editAccount, setEditAccount] = useState('')
   const [editCopyMode, setEditCopyMode] = useState('FIXED_LOT')
   const [editCopyValue, setEditCopyValue] = useState('0.01')
+  
+  // Commission transfer states
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferAmount, setTransferAmount] = useState('')
+  const [transferring, setTransferring] = useState(false)
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -203,6 +208,43 @@ const CopyTradePage = () => {
       alert('Failed to submit application')
     }
     setApplyingMaster(false)
+  }
+
+  // Transfer pending commission to trading account
+  const handleTransferCommission = async () => {
+    if (!transferAmount || parseFloat(transferAmount) <= 0) {
+      alert('Please enter a valid amount')
+      return
+    }
+
+    const amount = parseFloat(transferAmount)
+    if (amount > (myMasterProfile?.pendingCommission || 0)) {
+      alert('Amount exceeds available pending commission')
+      return
+    }
+
+    setTransferring(true)
+    try {
+      const res = await fetch(`${API_URL}/copy/master/${user._id}/transfer-commission`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        alert(data.message)
+        setShowTransferModal(false)
+        setTransferAmount('')
+        fetchMyMasterProfile() // Refresh to show updated balance
+      } else {
+        alert(data.message || 'Transfer failed')
+      }
+    } catch (error) {
+      console.error('Error transferring commission:', error)
+      alert('Failed to transfer commission')
+    }
+    setTransferring(false)
   }
 
   const handleFollow = async () => {
@@ -458,6 +500,35 @@ const CopyTradePage = () => {
               </div>
               {myMasterProfile.status === 'REJECTED' && myMasterProfile.rejectionReason && (
                 <p className="text-red-400 text-xs mt-2">Reason: {myMasterProfile.rejectionReason}</p>
+              )}
+              
+              {/* Pending Commission Section */}
+              {myMasterProfile.status === 'ACTIVE' && (
+                <div className={`mt-4 pt-4 border-t border-green-500/20 ${isMobile ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
+                  <div className="flex items-center gap-6">
+                    <div>
+                      <p className="text-gray-400 text-xs">Pending Commission</p>
+                      <p className="text-yellow-400 font-bold text-lg">${(myMasterProfile.pendingCommission || 0).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs">Total Earned</p>
+                      <p className="text-green-400 font-semibold">${(myMasterProfile.totalCommissionEarned || 0).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs">Withdrawn</p>
+                      <p className="text-white font-semibold">${(myMasterProfile.totalCommissionWithdrawn || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                  {(myMasterProfile.pendingCommission || 0) > 0 && (
+                    <button
+                      onClick={() => setShowTransferModal(true)}
+                      className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg text-sm transition-colors flex items-center gap-2"
+                    >
+                      <DollarSign size={16} />
+                      Transfer to Wallet
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1042,6 +1113,75 @@ const CopyTradePage = () => {
                 className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Commission Transfer Modal */}
+      {showTransferModal && myMasterProfile && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Transfer Commission</h3>
+              <button onClick={() => { setShowTransferModal(false); setTransferAmount(''); }} className="text-gray-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-dark-700 rounded-lg p-4 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Available Pending Commission</span>
+                <span className="text-yellow-400 font-bold text-xl">${(myMasterProfile.pendingCommission || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Amount to Transfer</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                  <input
+                    type="number"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    placeholder="0.00"
+                    min="0.01"
+                    step="0.01"
+                    max={myMasterProfile.pendingCommission || 0}
+                    className="w-full bg-dark-700 border border-gray-600 rounded-lg pl-8 pr-3 py-2 text-white"
+                  />
+                </div>
+                <button 
+                  onClick={() => setTransferAmount((myMasterProfile.pendingCommission || 0).toString())}
+                  className="text-yellow-400 text-xs mt-1 hover:underline"
+                >
+                  Transfer All
+                </button>
+              </div>
+
+              <div className="bg-dark-700/50 rounded-lg p-3 text-sm">
+                <p className="text-gray-400">
+                  <DollarSign size={14} className="inline mr-1" />
+                  Commission will be transferred to your trading account balance.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowTransferModal(false); setTransferAmount(''); }}
+                className="flex-1 bg-dark-700 text-white py-2 rounded-lg hover:bg-dark-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTransferCommission}
+                disabled={transferring || !transferAmount || parseFloat(transferAmount) <= 0}
+                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {transferring ? 'Transferring...' : 'Transfer'}
               </button>
             </div>
           </div>

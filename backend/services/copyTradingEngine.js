@@ -538,20 +538,20 @@ class CopyTradingEngine {
                 )
                 console.log(`[CopyTrade] Commission deducted atomically: -$${commissionAmount.toFixed(2)} from follower`)
                 
-                // Credit master's trading account immediately using atomic operation
-                await TradingAccount.findByIdAndUpdate(
-                  master.tradingAccountId,
-                  { $inc: { balance: masterCommissionCredited } },
+                // CORRECT FLOW: Commission goes to pendingCommission ONLY, NOT to trading account balance
+                // Master must manually transfer from pendingCommission to wallet for withdrawal
+                // Use atomic update to prevent race conditions
+                await MasterTrader.findByIdAndUpdate(
+                  master._id,
+                  { 
+                    $inc: { 
+                      pendingCommission: masterCommissionCredited,
+                      totalCommissionEarned: masterCommissionCredited 
+                    } 
+                  },
                   { new: true }
                 )
-                console.log(`[CopyTrade] Commission credited to master account: $${masterCommissionCredited.toFixed(2)}`)
-                
-                // Update master's commission stats
-                // IMPORTANT: Update both pendingCommission (for withdrawal tracking) and totalCommissionEarned
-                master.pendingCommission = (master.pendingCommission || 0) + masterCommissionCredited
-                master.totalCommissionEarned = (master.totalCommissionEarned || 0) + masterCommissionCredited
-                await master.save()
-                console.log(`[CopyTrade] Master commission stats updated: pendingCommission=$${master.pendingCommission.toFixed(2)}, totalEarned=$${master.totalCommissionEarned.toFixed(2)}`)
+                console.log(`[CopyTrade] Commission added to PENDING: $${masterCommissionCredited.toFixed(2)} (NOT credited to balance - requires manual transfer)`)
                 
                 // Create commission record for audit trail (idempotent - uses copyTrade._id)
                 const existingCommission = await CopyCommission.findOne({ 

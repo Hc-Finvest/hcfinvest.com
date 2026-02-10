@@ -49,7 +49,12 @@ const WalletPage = () => {
   const [loading, setLoading] = useState(true)
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [showPaymentMethodsView, setShowPaymentMethodsView] = useState(false)
+  const [showBankTransferModal, setShowBankTransferModal] = useState(false)
+  const [showUPIModal, setShowUPIModal] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
+  const [bankDetails, setBankDetails] = useState(null)
+  const [upiDetails, setUpiDetails] = useState(null)
   const [amount, setAmount] = useState('')
   const [transactionRef, setTransactionRef] = useState('')
   const [error, setError] = useState('')
@@ -153,7 +158,27 @@ const WalletPage = () => {
     fetchCurrencies()
     fetchOxapayStatus()
     fetchCryptoWithdrawStatus()
+    fetchBankAndUPIDetails()
   }, [user._id])
+
+  // Fetch bank and UPI details for deposit
+  const fetchBankAndUPIDetails = async () => {
+    try {
+      const res = await fetch(`${API_URL}/payment-methods`)
+      const data = await res.json()
+      const methods = data.paymentMethods || []
+      
+      // Find bank transfer details
+      const bank = methods.find(m => m.type === 'Bank Transfer' && m.isActive)
+      if (bank) setBankDetails(bank)
+      
+      // Find UPI details (including QR code)
+      const upi = methods.find(m => (m.type === 'UPI' || m.type === 'QR Code') && m.isActive)
+      if (upi) setUpiDetails(upi)
+    } catch (error) {
+      console.error('Error fetching payment details:', error)
+    }
+  }
 
   // Check Oxapay deposit availability
   const fetchOxapayStatus = async () => {
@@ -438,6 +463,9 @@ const WalletPage = () => {
       if (res.ok) {
         setSuccess('Deposit request submitted successfully!')
         setShowDepositModal(false)
+        setShowBankTransferModal(false)
+        setShowUPIModal(false)
+        setShowPaymentMethodsView(false)
         setAmount('')
         setLocalAmount('')
         setTransactionRef('')
@@ -644,7 +672,7 @@ const WalletPage = () => {
               <div className={`flex gap-2 ${isMobile ? 'mt-4 flex-wrap' : ''}`}>
                 <button
                   onClick={() => {
-                    setShowDepositModal(true)
+                    setShowPaymentMethodsView(true)
                     setError('')
                   }}
                   className={`flex items-center gap-2 bg-accent-green text-black font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg hover:bg-accent-green/90 transition-colors`}
@@ -1338,6 +1366,381 @@ const WalletPage = () => {
             <p className="text-gray-500 text-xs text-center mt-3">
               Withdrawals require admin approval and may take 1-24 hours to process.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Methods Selection View */}
+      {showPaymentMethodsView && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-3xl border max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className={`font-semibold text-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Payment Methods</h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Choose your preferred payment option</p>
+              </div>
+              <button 
+                onClick={() => setShowPaymentMethodsView(false)}
+                className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className={`${isDarkMode ? 'bg-dark-700/50' : 'bg-gray-50'} rounded-xl p-6`}>
+              <h4 className={`font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Available Payment Methods</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Bank Transfer Card */}
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center`}>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                    <Building size={28} className="text-blue-500" />
+                  </div>
+                  <h5 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Bank Transfer</h5>
+                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Deposit using bank transfer</p>
+                  <button
+                    onClick={() => {
+                      setShowPaymentMethodsView(false)
+                      setShowBankTransferModal(true)
+                      setLocalAmount('')
+                      setTransactionRef('')
+                      setScreenshot(null)
+                      setScreenshotPreview(null)
+                      setError('')
+                    }}
+                    disabled={!bankDetails}
+                    className="w-full bg-blue-500 text-white font-medium py-2.5 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Pay via Bank
+                  </button>
+                  {!bankDetails && <p className="text-gray-500 text-xs mt-2">Not available</p>}
+                </div>
+
+                {/* UPI Payment Card */}
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center`}>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-green-500/10' : 'bg-green-50'}`}>
+                    <QrCode size={28} className="text-green-500" />
+                  </div>
+                  <h5 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>UPI Payment</h5>
+                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Pay instantly using UPI</p>
+                  <button
+                    onClick={() => {
+                      setShowPaymentMethodsView(false)
+                      setShowUPIModal(true)
+                      setLocalAmount('')
+                      setTransactionRef('')
+                      setScreenshot(null)
+                      setScreenshotPreview(null)
+                      setError('')
+                    }}
+                    disabled={!upiDetails}
+                    className="w-full bg-green-500 text-white font-medium py-2.5 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Pay via UPI
+                  </button>
+                  {!upiDetails && <p className="text-gray-500 text-xs mt-2">Not available</p>}
+                </div>
+
+                {/* Crypto Payment Card */}
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center`}>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                    <Bitcoin size={28} className="text-orange-500" />
+                  </div>
+                  <h5 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Crypto Payment</h5>
+                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Deposit using cryptocurrency</p>
+                  <button
+                    onClick={() => {
+                      setShowPaymentMethodsView(false)
+                      setShowOxapayModal(true)
+                      setOxapayAmount('')
+                      setError('')
+                    }}
+                    disabled={!oxapayAvailable}
+                    className="w-full bg-orange-500 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Pay via Crypto
+                  </button>
+                  {!oxapayAvailable && <p className="text-gray-500 text-xs mt-2">Not available</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank Transfer Modal */}
+      {showBankTransferModal && bankDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-md border max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-50'}`}>
+                  <Building size={20} className="text-blue-500" />
+                </div>
+                <div>
+                  <h3 className={`font-semibold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Bank Transfer</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Transfer to our bank account</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowBankTransferModal(false)
+                  setLocalAmount('')
+                  setTransactionRef('')
+                  setScreenshot(null)
+                  setScreenshotPreview(null)
+                  setError('')
+                }}
+                className={`${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {error && <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">{error}</div>}
+
+            {/* Bank Details Card */}
+            <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-4 mb-4`}>
+              <h4 className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Transfer to this account:</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Bank Name</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bankDetails.bankName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Account Holder</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bankDetails.accountHolderName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>Account Number</span>
+                  <span className={`font-medium font-mono ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bankDetails.accountNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>IFSC Code</span>
+                  <span className={`font-medium font-mono ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bankDetails.ifscCode}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Amount Input */}
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Amount (USD)</label>
+              <input
+                type="number"
+                value={localAmount}
+                onChange={(e) => setLocalAmount(e.target.value)}
+                placeholder="Enter amount"
+                className={`w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border`}
+              />
+            </div>
+
+            {/* Transaction Reference */}
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Transaction ID / Reference</label>
+              <input
+                type="text"
+                value={transactionRef}
+                onChange={(e) => setTransactionRef(e.target.value)}
+                placeholder="Enter bank transaction reference"
+                className={`w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border`}
+              />
+            </div>
+
+            {/* Screenshot Upload */}
+            <div className="mb-6">
+              <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Payment Screenshot</label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleScreenshotChange}
+                accept="image/*"
+                className="hidden"
+              />
+              {screenshotPreview ? (
+                <div className="relative">
+                  <img src={screenshotPreview} alt="Screenshot" className={`w-full max-h-40 object-contain rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`} />
+                  <button
+                    onClick={() => { setScreenshot(null); setScreenshotPreview(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full p-4 border-2 border-dashed rounded-lg transition-colors flex flex-col items-center gap-2 ${isDarkMode ? 'border-gray-700 hover:border-blue-500' : 'border-gray-300 hover:border-blue-500'}`}
+                >
+                  <Upload size={24} className={isDarkMode ? 'text-gray-500' : 'text-gray-400'} />
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Upload payment screenshot</span>
+                </button>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowBankTransferModal(false)
+                  setShowPaymentMethodsView(true)
+                }}
+                className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}
+              >
+                Back
+              </button>
+              <button
+                onClick={async () => {
+                  if (!localAmount || parseFloat(localAmount) <= 0) {
+                    setError('Please enter a valid amount')
+                    return
+                  }
+                  setSelectedPaymentMethod(bankDetails)
+                  await handleDeposit()
+                  if (!error) {
+                    setShowBankTransferModal(false)
+                  }
+                }}
+                disabled={uploadingScreenshot || !localAmount}
+                className="flex-1 bg-blue-500 text-white font-medium py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {uploadingScreenshot ? <><RefreshCw size={16} className="animate-spin" /> Submitting...</> : 'Submit Deposit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPI Payment Modal */}
+      {showUPIModal && upiDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-md border max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-green-500/20' : 'bg-green-50'}`}>
+                  <QrCode size={20} className="text-green-500" />
+                </div>
+                <div>
+                  <h3 className={`font-semibold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>UPI Payment</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Pay using UPI</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowUPIModal(false)
+                  setLocalAmount('')
+                  setTransactionRef('')
+                  setScreenshot(null)
+                  setScreenshotPreview(null)
+                  setError('')
+                }}
+                className={`${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {error && <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">{error}</div>}
+
+            {/* UPI Details Card */}
+            <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-4 mb-4`}>
+              {upiDetails.upiId && (
+                <div className="text-center mb-4">
+                  <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>UPI ID</p>
+                  <p className={`font-mono font-medium text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{upiDetails.upiId}</p>
+                </div>
+              )}
+              {upiDetails.qrCodeImage && (
+                <div className="text-center">
+                  <p className={`text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Scan QR Code</p>
+                  <img src={upiDetails.qrCodeImage} alt="UPI QR Code" className="mx-auto max-w-48 rounded-lg" />
+                </div>
+              )}
+            </div>
+
+            {/* Amount Input */}
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Amount (USD)</label>
+              <input
+                type="number"
+                value={localAmount}
+                onChange={(e) => setLocalAmount(e.target.value)}
+                placeholder="Enter amount"
+                className={`w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border`}
+              />
+            </div>
+
+            {/* UPI Transaction ID */}
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>UPI Transaction ID</label>
+              <input
+                type="text"
+                value={transactionRef}
+                onChange={(e) => setTransactionRef(e.target.value)}
+                placeholder="Enter UPI transaction ID"
+                className={`w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} border`}
+              />
+            </div>
+
+            {/* Screenshot Upload */}
+            <div className="mb-6">
+              <label className={`block text-sm mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Payment Screenshot (Optional)</label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleScreenshotChange}
+                accept="image/*"
+                className="hidden"
+              />
+              {screenshotPreview ? (
+                <div className="relative">
+                  <img src={screenshotPreview} alt="Screenshot" className={`w-full max-h-40 object-contain rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`} />
+                  <button
+                    onClick={() => { setScreenshot(null); setScreenshotPreview(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full p-4 border-2 border-dashed rounded-lg transition-colors flex flex-col items-center gap-2 ${isDarkMode ? 'border-gray-700 hover:border-green-500' : 'border-gray-300 hover:border-green-500'}`}
+                >
+                  <Upload size={24} className={isDarkMode ? 'text-gray-500' : 'text-gray-400'} />
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Upload payment screenshot</span>
+                </button>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowUPIModal(false)
+                  setShowPaymentMethodsView(true)
+                }}
+                className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}
+              >
+                Back
+              </button>
+              <button
+                onClick={async () => {
+                  if (!localAmount || parseFloat(localAmount) <= 0) {
+                    setError('Please enter a valid amount')
+                    return
+                  }
+                  setSelectedPaymentMethod(upiDetails)
+                  await handleDeposit()
+                  if (!error) {
+                    setShowUPIModal(false)
+                  }
+                }}
+                disabled={uploadingScreenshot || !localAmount}
+                className="flex-1 bg-green-500 text-white font-medium py-3 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {uploadingScreenshot ? <><RefreshCw size={16} className="animate-spin" /> Submitting...</> : 'Submit Deposit'}
+              </button>
+            </div>
           </div>
         </div>
       )}
