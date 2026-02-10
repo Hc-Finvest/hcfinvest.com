@@ -43,7 +43,9 @@ const OrderBook = () => {
   const [openTrades, setOpenTrades] = useState([])
   const [closedTrades, setClosedTrades] = useState([])
   const [pendingOrders, setPendingOrders] = useState([])
-  const [livePrices, setLivePrices] = useState({})
+  const [transactions, setTransactions] = useState([])
+  const [livePrices, setLivePrices] = useState([])
+  const [historyType, setHistoryType] = useState('all') // all, trades, transactions
   const [historyFilter, setHistoryFilter] = useState('month') // all, today, week, month, year, custom - default to month to show recent trades
   const [currentPage, setCurrentPage] = useState(1)
   const [customStartDate, setCustomStartDate] = useState('')
@@ -81,6 +83,12 @@ const OrderBook = () => {
     }
   }, [accounts, selectedAccount])
 
+  useEffect(() => {
+    if (user._id) {
+      fetchTransactions()
+    }
+  }, [user._id])
+
   // Fetch live prices periodically
   useEffect(() => {
     const fetchPrices = async () => {
@@ -114,6 +122,16 @@ const OrderBook = () => {
       setAccounts(data.accounts || [])
     } catch (error) {
       console.error('Error fetching accounts:', error)
+    }
+  }
+
+  const fetchTransactions = async () => {
+    try {
+      const res = await fetch(`${API_URL}/wallet/transactions/${user._id}`)
+      const data = await res.json()
+      setTransactions(data.transactions || [])
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
     }
   }
 
@@ -192,7 +210,9 @@ const OrderBook = () => {
 
   const getFilteredHistory = () => {
     const now = new Date()
-    return closedTrades.filter(trade => {
+    
+    // Filter trades
+    const filteredTrades = closedTrades.filter(trade => {
       if (historyFilter === 'all') return true
       const tradeDate = new Date(trade.closedAt)
       if (historyFilter === 'today') {
@@ -218,6 +238,52 @@ const OrderBook = () => {
         return tradeDate >= startDate && tradeDate <= endDate
       }
       return true
+    }).map(t => ({ ...t, historyType: 'trade' }))
+
+    // Filter transactions
+    const filteredTransactions = transactions.filter(tx => {
+      if (historyFilter === 'all') return true
+      const txDate = new Date(tx.createdAt)
+      if (historyFilter === 'today') {
+        return txDate.toDateString() === now.toDateString()
+      }
+      if (historyFilter === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        return txDate >= weekAgo
+      }
+      if (historyFilter === 'month') {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        return txDate >= monthAgo
+      }
+      if (historyFilter === 'year') {
+        const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+        return txDate >= yearAgo
+      }
+      if (historyFilter === 'custom' && customStartDate) {
+        const startDate = new Date(customStartDate)
+        startDate.setHours(0, 0, 0, 0)
+        const endDate = customEndDate ? new Date(customEndDate) : new Date(customStartDate)
+        endDate.setHours(23, 59, 59, 999)
+        return txDate >= startDate && txDate <= endDate
+      }
+      return true
+    }).map(tx => ({ ...tx, historyType: 'transaction' }))
+
+    // Combine based on historyType filter
+    let combined = []
+    if (historyType === 'all') {
+      combined = [...filteredTrades, ...filteredTransactions]
+    } else if (historyType === 'trades') {
+      combined = filteredTrades
+    } else {
+      combined = filteredTransactions
+    }
+
+    // Sort by date descending
+    return combined.sort((a, b) => {
+      const dateA = new Date(a.closedAt || a.createdAt)
+      const dateB = new Date(b.closedAt || b.createdAt)
+      return dateB - dateA
     })
   }
 
@@ -455,7 +521,7 @@ const OrderBook = () => {
                   activeTab === 'history' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <History size={16} /> History ({closedTrades.length})
+                <History size={16} /> History ({closedTrades.length + transactions.length})
               </button>
               <button
                 onClick={() => setActiveTab('pending')}
@@ -555,8 +621,30 @@ const OrderBook = () => {
                 {/* History Tab */}
                 {activeTab === 'history' && (
                   <>
-                    {/* Date Filter Buttons */}
+                    {/* Type Filter + Date Filter Buttons */}
                     <div className="flex flex-wrap items-center gap-2 p-3 border-b border-gray-800">
+                      {/* History Type Filter */}
+                      <div className="flex items-center gap-1 mr-4 pr-4 border-r border-gray-700">
+                        {[
+                          { key: 'all', label: 'All' },
+                          { key: 'trades', label: 'Trades' },
+                          { key: 'transactions', label: 'Transactions' }
+                        ].map(type => (
+                          <button
+                            key={type.key}
+                            onClick={() => { setHistoryType(type.key); setCurrentPage(1) }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              historyType === type.key 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-dark-700 text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            {type.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Date Filters */}
                       {[
                         { key: 'all', label: 'All' },
                         { key: 'today', label: 'Today' },
@@ -604,14 +692,14 @@ const OrderBook = () => {
                       </div>
                       
                       <span className="ml-auto text-gray-500 text-xs">
-                        {getFilteredHistory().length} trades | P&L: <span className={getHistoryTotalPnl() >= 0 ? 'text-green-500' : 'text-red-500'}>${getHistoryTotalPnl().toFixed(2)}</span>
+                        {getFilteredHistory().length} items | P&L: <span className={getHistoryTotalPnl() >= 0 ? 'text-green-500' : 'text-red-500'}>${getHistoryTotalPnl().toFixed(2)}</span>
                       </span>
                     </div>
 
                     {getFilteredHistory().length === 0 ? (
                       <div className="text-center py-12">
                         <History size={48} className="text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-500">No trade history for this period</p>
+                        <p className="text-gray-500">No history for this period</p>
                       </div>
                     ) : (
                       <>
@@ -619,32 +707,67 @@ const OrderBook = () => {
                           <thead>
                             <tr className="border-b border-gray-700">
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Date</th>
-                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Account</th>
-                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Symbol</th>
-                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Side</th>
-                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Qty</th>
-                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Open</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Type</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Details</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Side/Method</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Qty/Amount</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Open/Status</th>
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Close</th>
-                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">P&L</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">P&L/Amount</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {getPaginatedHistory().map((trade) => (
-                              <tr key={trade._id} className="border-b border-gray-800 hover:bg-dark-700/50">
-                                <td className="py-3 px-4 text-gray-400 text-xs">{formatDate(trade.closedAt)}</td>
-                                <td className="py-3 px-4 text-gray-400 text-sm">{trade.accountName}</td>
-                                <td className="py-3 px-4 text-white font-medium">{trade.symbol}</td>
+                            {getPaginatedHistory().map((item) => (
+                              <tr key={item._id} className="border-b border-gray-800 hover:bg-dark-700/50">
+                                <td className="py-3 px-4 text-gray-400 text-xs">{formatDate(item.closedAt || item.createdAt)}</td>
                                 <td className="py-3 px-4">
-                                  <span className={`flex items-center gap-1 ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                                    {trade.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                    {trade.side}
-                                  </span>
+                                  {item.historyType === 'trade' ? (
+                                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">Trade</span>
+                                  ) : (
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                      item.type === 'Deposit' ? 'bg-green-500/20 text-green-400' :
+                                      item.type === 'Withdrawal' ? 'bg-red-500/20 text-red-400' :
+                                      'bg-blue-500/20 text-blue-400'
+                                    }`}>{item.type}</span>
+                                  )}
                                 </td>
-                                <td className="py-3 px-4 text-white">{trade.quantity}</td>
-                                <td className="py-3 px-4 text-gray-400">{trade.openPrice?.toFixed(5)}</td>
-                                <td className="py-3 px-4 text-gray-400">{trade.closePrice?.toFixed(5)}</td>
-                                <td className={`py-3 px-4 font-medium ${(trade.realizedPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {(trade.realizedPnl || 0) >= 0 ? '+' : ''}${(trade.realizedPnl || 0).toFixed(2)}
+                                <td className="py-3 px-4 text-white font-medium">
+                                  {item.historyType === 'trade' ? item.symbol : (item.paymentMethod || 'Wallet')}
+                                </td>
+                                <td className="py-3 px-4">
+                                  {item.historyType === 'trade' ? (
+                                    <span className={`flex items-center gap-1 ${item.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
+                                      {item.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                      {item.side}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">{item.paymentMethod || '-'}</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-white">
+                                  {item.historyType === 'trade' ? item.quantity : `$${item.amount?.toFixed(2)}`}
+                                </td>
+                                <td className="py-3 px-4 text-gray-400">
+                                  {item.historyType === 'trade' ? item.openPrice?.toFixed(5) : (
+                                    <span className={`px-2 py-0.5 rounded text-xs ${
+                                      item.status === 'Approved' || item.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
+                                      item.status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
+                                      'bg-yellow-500/20 text-yellow-400'
+                                    }`}>{item.status}</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-gray-400">
+                                  {item.historyType === 'trade' ? item.closePrice?.toFixed(5) : '-'}
+                                </td>
+                                <td className={`py-3 px-4 font-medium ${
+                                  item.historyType === 'trade' 
+                                    ? ((item.realizedPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500')
+                                    : (item.type === 'Deposit' || item.type === 'Transfer_From_Account' ? 'text-green-500' : 'text-red-500')
+                                }`}>
+                                  {item.historyType === 'trade' 
+                                    ? `${(item.realizedPnl || 0) >= 0 ? '+' : ''}$${(item.realizedPnl || 0).toFixed(2)}`
+                                    : `${item.type === 'Deposit' || item.type === 'Transfer_From_Account' ? '+' : '-'}$${item.amount?.toFixed(2)}`
+                                  }
                                 </td>
                               </tr>
                             ))}

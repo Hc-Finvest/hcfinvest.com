@@ -37,7 +37,9 @@ const AdminFundManagement = () => {
       const data = await res.json()
       if (data.transactions) {
         let filtered = data.transactions
-        if (filterType !== 'all') {
+        if (filterType === 'pending') {
+          filtered = data.transactions.filter(t => t.status?.toLowerCase() === 'pending')
+        } else if (filterType !== 'all') {
           filtered = data.transactions.filter(t => t.type?.toLowerCase() === filterType)
         }
         setTransactions(filtered)
@@ -197,6 +199,7 @@ const AdminFundManagement = () => {
               className="bg-dark-700 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-600"
             >
               <option value="all">All Types</option>
+              <option value="pending">Pending</option>
               <option value="deposit">Deposits</option>
               <option value="withdrawal">Withdrawals</option>
             </select>
