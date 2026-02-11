@@ -1073,14 +1073,14 @@ const WalletPage = () => {
                   <button
                     key={method._id}
                     onClick={() => setSelectedPaymentMethod(method)}
-                    className={`p-4 rounded-lg border transition-colors flex flex-col items-center gap-2 ${
+                    className={`p-4 rounded-lg border transition-colors flex flex-col items-center justify-center gap-2 h-full min-h-[80px] ${
                       selectedPaymentMethod?._id === method._id
                         ? 'border-accent-green bg-accent-green/10'
                         : 'border-gray-700 bg-dark-700 hover:border-gray-600'
                     }`}
                   >
                     {getPaymentIcon(method.type)}
-                    <span className="text-white text-sm">{method.type}</span>
+                    <span className="text-white text-sm text-center">{method.type}</span>
                   </button>
                 ))}
               </div>
@@ -1392,12 +1392,12 @@ const WalletPage = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Bank Transfer Card */}
-                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center`}>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center h-full`}>
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
                     <Building size={28} className="text-blue-500" />
                   </div>
                   <h5 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Bank Transfer</h5>
-                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Deposit using bank transfer</p>
+                  <p className={`text-sm mb-4 flex-grow ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Deposit using bank transfer</p>
                   <button
                     onClick={() => {
                       setShowPaymentMethodsView(false)
@@ -1417,12 +1417,12 @@ const WalletPage = () => {
                 </div>
 
                 {/* UPI Payment Card */}
-                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center`}>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center h-full`}>
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-green-500/10' : 'bg-green-50'}`}>
                     <QrCode size={28} className="text-green-500" />
                   </div>
                   <h5 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>UPI Payment</h5>
-                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Pay instantly using UPI</p>
+                  <p className={`text-sm mb-4 flex-grow ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Pay instantly using UPI</p>
                   <button
                     onClick={() => {
                       setShowPaymentMethodsView(false)
@@ -1442,12 +1442,12 @@ const WalletPage = () => {
                 </div>
 
                 {/* Crypto Payment Card */}
-                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center`}>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 border flex flex-col items-center text-center h-full`}>
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
                     <Bitcoin size={28} className="text-orange-500" />
                   </div>
                   <h5 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Crypto Payment</h5>
-                  <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Deposit using cryptocurrency</p>
+                  <p className={`text-sm mb-4 flex-grow ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Deposit using cryptocurrency</p>
                   <button
                     onClick={() => {
                       setShowPaymentMethodsView(false)
