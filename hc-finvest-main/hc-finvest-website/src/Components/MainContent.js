@@ -24,6 +24,7 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import RegPopupBox from "./Utilities/RegPopupBox";
 import ScrollToTopButton from "./Utilities/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
+import ReviewSection from "./Utilities/ReviewSection";
 
 const MainContent = () => {
   const features = [
@@ -553,6 +554,13 @@ const MainContent = () => {
         </Grid>
 
         {/*  */}
+
+
+                    {/* Review Section Start */}
+
+                        <ReviewSection/>
+                    {/* Review Section End */}
+
 
         {/*  */}
         <Grid
