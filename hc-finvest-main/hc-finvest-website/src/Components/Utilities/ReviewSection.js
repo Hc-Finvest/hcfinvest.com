@@ -18,9 +18,8 @@ import axios from "axios";
 
 const ReviewSection = () => {
   const [reviews, setReviews] = useState([]);
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
   const scrollRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -28,13 +27,12 @@ const ReviewSection = () => {
     email: "",
     description: "",
     rating: 0,
+    image: null,
   });
 
-  const [errors, setErrors] = useState({});
-
-  // ==============================
-  // Fetch Reviews from Backend
-  // ==============================
+  // ==========================
+  // FETCH REVIEWS
+  // ==========================
   useEffect(() => {
     fetchReviews();
   }, []);
@@ -43,121 +41,96 @@ const ReviewSection = () => {
     try {
       setLoading(true);
       const res = await axios.get("https://hcfinvest.onrender.com/api/reviews");
-      setReviews(res.data.data);
-    } catch (err) {
-      setError("Failed to load reviews");
+
+      if (Array.isArray(res.data)) {
+        setReviews(res.data);
+      } else {
+        setReviews([]);
+      }
+    } catch (error) {
+      console.log("Fetch Error:", error);
+      setReviews([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // ==============================
-  // Form Handlers
-  // ==============================
-  const handleOpen = () => setOpen(true);
+  // ==========================
+  // SUBMIT REVIEW WITH IMAGE
+  // ==========================
+const handleSubmit = async () => {
+  try {
 
-  const handleClose = () => {
+    if (!formData.name || !formData.email || !formData.description || !formData.rating) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("name", formData.name);
+    formDataToSend.append("email", formData.email);
+    formDataToSend.append("description", formData.description);
+    formDataToSend.append("rating", formData.rating);
+
+    if (formData.image) {
+      formDataToSend.append("image", formData.image);
+    }
+
+    // IMPORTANT: Do NOT manually set headers
+    await axios.post(
+      "https://hcfinvest.onrender.com/api/reviews",
+      formDataToSend
+    );
+
+    fetchReviews();
     setOpen(false);
-    setFormData({ name: "", email: "", description: "", rating: 0 });
-    setErrors({});
-  };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  } catch (error) {
+    console.log("Submit Error:", error.response?.data);
+  }
+};
 
-  const validate = () => {
-    let tempErrors = {};
-
-    if (!formData.name.trim()) tempErrors.name = "Name is required";
-
-    if (!formData.email.trim()) {
-      tempErrors.email = "Email is required";
-    }
-
-    if (!formData.description.trim())
-      tempErrors.description = "Description is required";
-
-    if (!formData.rating)
-      tempErrors.rating = "Rating is required";
-
-    setErrors(tempErrors);
-    return Object.keys(tempErrors).length === 0;
-  };
-
-  // ==============================
-  // Submit Review
-  // ==============================
-  const handleSubmit = async () => {
-    if (!validate()) return;
-
-    try {
-      await axios.post("https://hcfinvest.onrender.com/api/reviews", formData);
-      fetchReviews(); // refresh list
-      handleClose();
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  // ==============================
-  // Smooth Horizontal Wheel Scroll
-  // ==============================
-  const handleWheel = (e) => {
-    if (scrollRef.current) {
-      e.preventDefault();
-      scrollRef.current.scrollLeft += e.deltaY;
-    }
-  };
-
+  // ==========================
+  // SMOOTH HORIZONTAL SCROLL
+  // ==========================
+const handleWheel = (e) => {
+  if (scrollRef.current) {
+    scrollRef.current.scrollBy({
+      left: e.deltaY,
+      behavior: "smooth",
+    });
+  }
+};
   return (
-    <Box sx={{ bgcolor: "#fff", py: 8 , border:'0px solid red' }}>
-      <Box sx={{ maxWidth: "1300px", mx: "auto", px: 3, border:'0px solid green' }}>
+    <Box sx={{ bgcolor: "#fff", py: 8 }}>
+      <Box sx={{ maxWidth: "1300px", mx: "auto", px: 3 }}>
 
-        {/* Header */}
-        <Box textAlign="center" mb={6}>
-            <Typography
+        {/* HEADER */}
+           <Typography
               variant="h2"
               sx={{ fontSize: "39px", fontWeight: "bold" }}
             >
               <span style={{ color: "#ff8c00" }}>Customer</span> Reviews
             </Typography>
-        </Box>
 
-        {/* Add Review Button */}
+        {/* ADD BUTTON */}
         <Box display="flex" justifyContent="flex-end" mb={5}>
           <Button
             variant="contained"
             size="large"
-            onClick={handleOpen}
-            sx={{
-              borderRadius: 3,
-              px: 4,
-              textTransform: "none",
-              fontWeight: 600,
-              backgroundColor:'#ff8c00 !important'
-            }}
+            sx={{backgroundColor:'#ff8c00 !important'}}
+            onClick={() => setOpen(true)}
           >
             + Add Review
           </Button>
         </Box>
 
-        {/* Loading */}
-        {loading && (
+        {/* LOADING */}
+        {loading ? (
           <Box textAlign="center">
             <CircularProgress />
           </Box>
-        )}
-
-        {/* Error */}
-        {error && (
-          <Typography color="error" textAlign="center">
-            {error}
-          </Typography>
-        )}
-
-        {/* Horizontal Scroll Reviews */}
-        {!loading && (
+        ) : (
           <Box
             ref={scrollRef}
             onWheel={handleWheel}
@@ -169,143 +142,164 @@ const ReviewSection = () => {
               flexWrap: "nowrap",
               scrollBehavior: "smooth",
               WebkitOverflowScrolling: "touch",
-
-              // Hide scrollbar
+              scrollSnapType: "x mandatory",
               "&::-webkit-scrollbar": { display: "none" },
               scrollbarWidth: "none",
               msOverflowStyle: "none",
-              border:'0px solid red',
               padding:2
             }}
           >
-            {reviews.map((review) => (
-              <Card
-                key={review._id}
-                sx={{
-                  width: 280,
-                  height: 420,
-                  flexShrink: 0,
-                  borderRadius: 4,
-                  boxShadow: 3,
-                  transition: "0.3s ease",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  "&:hover": {
-                    transform: "translateY(-8px)",
-                    boxShadow: 8,
-                  },
-                }}
-              >
-                <CardContent>
-                  <Box
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center"
-                    mb={2}
-                  >
-                    <Avatar
-                      src={review.image}
-                      alt={review.name}
-                      sx={{ width: 80, height: 80, mb: 2 }}
-                    />
-                    <Typography fontWeight={600}>
-                      {review.name}
-                    </Typography>
-                    <Rating
-                      value={review.rating}
-                      readOnly
-                      size="small"
-                      sx={{ mt: 1 }}
-                    />
-                  </Box>
+            {Array.isArray(reviews) && reviews.length === 0 && (
+              <Typography width="100%" textAlign="center">
+                No reviews yet. Be the first to add one.
+              </Typography>
+            )}
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 6,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {review.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            ))}
+            {Array.isArray(reviews) &&
+              reviews.map((review) => (
+                <Card
+                  key={review._id}
+                  sx={{
+                    width: 280,
+                    height: 420,
+                    flexShrink: 0,
+                    borderRadius: 4,
+                    boxShadow: 3,
+                    scrollSnapAlign: "start",
+                    transition: "0.3s ease",
+                    "&:hover": {
+                      transform: "translateY(-8px)",
+                      boxShadow: 8,
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Box
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      mb={2}
+                    >
+                      <Avatar
+                        src={
+                          review.image
+                            ? `https://hcfinvest.onrender.com${review.image}`
+                            : ""
+                        }
+                        sx={{ width: 80, height: 80, mb: 2 }}
+                      />
+                      <Typography fontWeight={600}>
+                        {review.name}
+                      </Typography>
+                      <Rating
+                        value={review.rating}
+                        readOnly
+                        size="small"
+                      />
+                    </Box>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 6,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {review.description}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
           </Box>
         )}
 
-        {/* Dialog */}
-        <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-          <DialogTitle fontWeight={600}>
-            Share Your Experience
-          </DialogTitle>
+        {/* DIALOG */}
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Add Review</DialogTitle>
 
           <DialogContent>
+
             <TextField
-              label="Full Name"
-              name="name"
+              label="Name"
               fullWidth
               margin="normal"
               value={formData.name}
-              onChange={handleChange}
-              error={Boolean(errors.name)}
-              helperText={errors.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
             />
 
             <TextField
-              label="Email Address"
-              name="email"
+              label="Email"
               fullWidth
               margin="normal"
               value={formData.email}
-              onChange={handleChange}
-              error={Boolean(errors.email)}
-              helperText={errors.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
             />
 
             <TextField
-              label="Your Review"
-              name="description"
+              label="Description"
               multiline
               rows={4}
               fullWidth
               margin="normal"
               value={formData.description}
-              onChange={handleChange}
-              error={Boolean(errors.description)}
-              helperText={errors.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
             />
 
-            <Box mt={3}>
-              <Typography fontWeight={500} mb={1}>
-                Your Rating
-              </Typography>
+            <Box mt={2}>
+              <Typography>Your Rating</Typography>
               <Rating
                 value={formData.rating}
-                onChange={(e, newValue) =>
-                  setFormData({ ...formData, rating: newValue })
+                onChange={(e, value) =>
+                  setFormData({ ...formData, rating: value })
                 }
-                size="large"
               />
-              {errors.rating && (
-                <Typography variant="caption" color="error">
-                  {errors.rating}
-                </Typography>
-              )}
             </Box>
+
+            {/* Upload Button */}
+            <Button
+              variant="outlined"
+              component="label"
+              sx={{ mt: 3 }}
+              fullWidth
+            >
+              Upload Profile Picture
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    image: e.target.files[0],
+                  })
+                }
+              />
+            </Button>
+
           </DialogContent>
 
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button variant="contained" sx={{backgroundColor:'#ff8c00 !important'}} onClick={handleSubmit}>
-              Submit Review
+          <DialogActions>
+            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSubmit}>
+              Submit
             </Button>
           </DialogActions>
         </Dialog>
+
       </Box>
     </Box>
   );
