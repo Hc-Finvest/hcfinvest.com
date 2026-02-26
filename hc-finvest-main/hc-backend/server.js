@@ -9,6 +9,7 @@ import swapRoutes from "./Routes/SwapRoutes.js";
 import spreadRoutes from "./Routes/SpreadRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import reviewRoutes from "./Routes/ReviewRoutes.js";
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/swaps", swapRoutes);
 app.use("/api/spreads", spreadRoutes);
 app.use("/api/swaps", swapRoutes);
+app.use("/api/reviews",reviewRoutes);
 
 // // ✅ Default route
 // app.get("/", (req, res) => {

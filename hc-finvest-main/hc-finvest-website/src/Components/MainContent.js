@@ -24,6 +24,7 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import RegPopupBox from "./Utilities/RegPopupBox";
 import ScrollToTopButton from "./Utilities/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
+import ReviewSection from "./Utilities/ReviewSection";
 
 const MainContent = () => {
   const features = [
@@ -67,7 +68,7 @@ const MainContent = () => {
         <section class="showcase">
           <div class="carousel-item active">
             <video
-              src="/video/Hero_video.mp4"
+              src="/video/ROBINHOOD_FUTURES_R8_HERO_ANIM_03.mp4"
               autoPlay
               muted
               loop
@@ -553,6 +554,13 @@ const MainContent = () => {
         </Grid>
 
         {/*  */}
+
+
+                    {/* Review Section Start */}
+
+                        <ReviewSection/>
+                    {/* Review Section End */}
+
 
         {/*  */}
         <Grid
