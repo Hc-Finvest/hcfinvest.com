@@ -68,7 +68,7 @@ const MainContent = () => {
         <section class="showcase">
           <div class="carousel-item active">
             <video
-              src="/video/Hero_video.mp4"
+              src="/video/ROBINHOOD_FUTURES_R8_HERO_ANIM_03.mp4"
               autoPlay
               muted
               loop
