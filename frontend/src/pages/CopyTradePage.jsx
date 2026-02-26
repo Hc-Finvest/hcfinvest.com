@@ -650,14 +650,14 @@ const CopyTradePage = () => {
                 <div className="space-y-4">
                   {mySubscriptions.map(sub => (
                     <div key={sub._id} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-5 border`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-accent-green/20 rounded-full flex items-center justify-center">
+                      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} bg-accent-green/20 rounded-full flex items-center justify-center`}>
                             <span className="text-accent-green font-bold">{sub.masterId?.displayName?.charAt(0)}</span>
                           </div>
                           <div>
-                            <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{sub.masterId?.displayName}</h3>
-                            <p className="text-gray-500 text-sm">
+                            <h3 className={`font-semibold ${isMobile ? 'text-sm' : ''} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{sub.masterId?.displayName}</h3>
+                            <p className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>
                               {sub.copyMode === 'FIXED_LOT' && `Fixed: ${sub.copyValue} lots`}
                               {sub.copyMode === 'BALANCE_BASED' && 'Balance Based'}
                               {sub.copyMode === 'EQUITY_BASED' && 'Equity Based'}
@@ -665,7 +665,7 @@ const CopyTradePage = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className={`flex items-center ${isMobile ? 'justify-between' : 'gap-2'}`}>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             sub.status === 'ACTIVE' ? 'bg-green-500/20 text-green-500' : 
                             sub.status === 'PAUSED' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500'
@@ -695,7 +695,7 @@ const CopyTradePage = () => {
                           </button>
                         </div>
                       </div>
-                      <div className={`grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-5 gap-3'} mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                         <div>
                           <p className="text-gray-500 text-xs">Total Trades</p>
                           <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{sub.stats?.totalCopiedTrades || 0}</p>
@@ -739,8 +739,8 @@ const CopyTradePage = () => {
                   <p className="text-gray-500">No copy trades yet</p>
                 </div>
               ) : (
-                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
-                  <table className="w-full">
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden overflow-x-auto`}>
+                  <table className="w-full min-w-[600px]">
                     <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
                       <tr>
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Master</th>
@@ -821,7 +821,7 @@ const CopyTradePage = () => {
                           <p className="text-gray-500 text-xs mt-2">Account: {follower.followerAccountId?.accountId}</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-700">
+                      <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4 gap-4'} mt-4 pt-4 border-t border-gray-700`}>
                         <div>
                           <p className="text-gray-500 text-xs">Copied Trades</p>
                           <p className="text-white font-semibold">{follower.stats?.totalCopiedTrades || 0}</p>
@@ -850,8 +850,8 @@ const CopyTradePage = () => {
 
       {/* Follow Modal */}
       {showFollowModal && selectedMaster && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-dark-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`bg-dark-800 rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto`}>
             <h2 className="text-xl font-semibold text-white mb-4">Follow {selectedMaster.displayName}</h2>
             
             <div className="space-y-4">
@@ -940,8 +940,8 @@ const CopyTradePage = () => {
 
       {/* Master Application Modal */}
       {showMasterModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-dark-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`bg-dark-800 rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
                 <Crown size={20} className="text-yellow-500" />

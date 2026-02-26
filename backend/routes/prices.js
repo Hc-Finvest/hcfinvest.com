@@ -40,6 +40,66 @@ router.get('/categories', async (req, res) => {
   }
 })
 
+// GET /api/prices/history - Get historical OHLC candles
+// NOTE: This must be defined BEFORE /:symbol route to avoid matching 'history' as a symbol
+router.get('/history', async (req, res) => {
+  try {
+    const { symbol, resolution, from, to, limit } = req.query
+    
+    if (!symbol) {
+      return res.status(400).json({ success: false, message: 'symbol is required' })
+    }
+    
+    // Check if symbol is supported
+    if (!metaApiService.isSymbolSupported(symbol)) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `Symbol ${symbol} is not supported` 
+      })
+    }
+    
+    // Map resolution to timeframe (support various formats)
+    const resolutionMap = {
+      '1': '1m', '1m': '1m', '1min': '1m',
+      '5': '5m', '5m': '5m', '5min': '5m',
+      '15': '15m', '15m': '15m', '15min': '15m',
+      '30': '30m', '30m': '30m', '30min': '30m',
+      '60': '1h', '1h': '1h', '1H': '1h', '1hour': '1h',
+      '240': '4h', '4h': '4h', '4H': '4h',
+      'D': '1d', '1d': '1d', '1D': '1d', 'day': '1d',
+      'W': '1w', '1w': '1w', '1W': '1w', 'week': '1w',
+      'M': '1M', '1M': '1M', 'month': '1M'
+    }
+    const timeframe = resolutionMap[resolution] || '1m'
+    
+    // Parse timestamps (expect seconds)
+    const startTime = from ? parseInt(from) : undefined
+    const endTime = to ? parseInt(to) : undefined
+    const candleLimit = limit ? parseInt(limit) : 500
+    
+    // Fetch candles from MetaAPI service
+    const candles = await metaApiService.getHistoricalCandles(
+      symbol, 
+      timeframe, 
+      startTime, 
+      endTime, 
+      candleLimit
+    )
+    
+    res.json({
+      success: true,
+      symbol,
+      timeframe,
+      candles,
+      count: candles.length,
+      provider: metaApiService.useSimulation ? 'simulation' : 'metaapi'
+    })
+  } catch (error) {
+    console.error('Error fetching historical candles:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // GET /api/prices/:symbol - Get single symbol price
 router.get('/:symbol', async (req, res) => {
   try {

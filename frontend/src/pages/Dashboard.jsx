@@ -43,6 +43,7 @@ const Dashboard = () => {
   const [challengeModeEnabled, setChallengeModeEnabled] = useState(false)
   const [marketNews, setMarketNews] = useState([])
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0)
+  const [banners, setBanners] = useState([])
   const tradingViewRef = useRef(null)
   const economicCalendarRef = useRef(null)
   const forexHeatmapRef = useRef(null)
@@ -100,11 +101,25 @@ const Dashboard = () => {
   useEffect(() => {
     checkAuthStatus()
     fetchChallengeStatus()
+    fetchBanners()
     if (user._id) {
       fetchWalletBalance()
       fetchUserAccounts()
     }
   }, [user._id])
+
+  // Fetch active banners
+  const fetchBanners = async () => {
+    try {
+      const res = await fetch(`${API_URL}/banners/active`)
+      const data = await res.json()
+      if (data.success) {
+        setBanners(data.banners || [])
+      }
+    } catch (error) {
+      console.error('Error fetching banners:', error)
+    }
+  }
   
   // Fetch trades after accounts are loaded
   useEffect(() => {
@@ -504,11 +519,47 @@ const Dashboard = () => {
         {/* Simple Header */}
         <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           <h1 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Dashboard</h1>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Welcome back!</p>
+          <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+            Welcome back, <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.firstName || user.name || user.email?.split('@')[0] || 'Trader'}</span>!
+          </p>
         </header>
 
         {/* Dashboard Content */}
         <div className="p-6">
+          {/* Admin-Managed Banners */}
+          {banners.length > 0 && (
+            <div className="mb-6 space-y-4">
+              {banners.filter(b => b.position === 'top').map(banner => (
+                <div 
+                  key={banner._id} 
+                  className={`bg-gradient-to-r ${banner.backgroundColor} rounded-xl p-5 border border-white/10`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {banner.imageUrl && (
+                        <img src={banner.imageUrl} alt="" className="w-12 h-12 object-cover rounded-lg" />
+                      )}
+                      <div>
+                        <h3 className={`font-semibold ${banner.textColor || 'text-white'}`}>{banner.title}</h3>
+                        {banner.description && (
+                          <p className="text-gray-300 text-sm">{banner.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    {banner.linkUrl && (
+                      <a 
+                        href={banner.linkUrl}
+                        className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        {banner.linkText || 'Learn More'}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Top Stats Boxes */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             {/* Wallet Box */}

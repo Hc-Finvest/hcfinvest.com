@@ -26,6 +26,7 @@ import adminManagementRoutes from './routes/adminManagement.js'
 import uploadRoutes from './routes/upload.js'
 import emailRoutes from './routes/email.js'
 import oxapayRoutes from './routes/oxapay.js'
+import bannerRoutes from './routes/banner.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import metaApiService from './services/metaApiService.js'
@@ -197,6 +198,7 @@ app.use('/api/admin-mgmt', adminManagementRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/email', emailRoutes)
 app.use('/api/oxapay', oxapayRoutes)
+app.use('/api/banners', bannerRoutes)
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
