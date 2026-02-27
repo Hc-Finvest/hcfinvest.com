@@ -29,6 +29,7 @@ import oxapayRoutes from './routes/oxapay.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import metaApiService from './services/metaApiService.js'
+import xauusdRoutes from "./routes/XAUUSDRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -197,6 +198,7 @@ app.use('/api/admin-mgmt', adminManagementRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/email', emailRoutes)
 app.use('/api/oxapay', oxapayRoutes)
+app.use("/api/xauusd", xauusdRoutes)
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
