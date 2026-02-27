@@ -710,7 +710,7 @@ const Account = () => {
                   </button>
                 </div>
               ) : (
-                <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'}`}>
+                <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'}`}>
                   {challengeAccounts.map((account) => (
                     <div key={account._id} className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
                       {/* Card Header */}
@@ -804,7 +804,7 @@ const Account = () => {
               </button>
             </div>
           ) : (
-            <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'}`}>
+            <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'}`}>
               {userAccounts.filter(acc => {
                 if (activeTab === 'Real') return !acc.accountTypeId?.isDemo && !acc.isDemo && acc.status === 'Active'
                 if (activeTab === 'Demo') return (acc.accountTypeId?.isDemo || acc.isDemo) && acc.status === 'Active'

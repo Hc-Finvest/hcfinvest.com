@@ -6,6 +6,7 @@ import metaApiService from '../services/metaApi'
 import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 import { useTheme } from '../context/ThemeContext'
+import TradingChart from '../components/TradingChart'
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -1529,14 +1530,14 @@ const TradingPage = () => {
             </button>
           </div>
 
-          {/* Chart - Always visible TradingView Advanced Chart with Side Toolbar */}
-          <div className={`flex-1 min-h-0 relative ${isDarkMode ? 'bg-[#0d0d0d]' : 'bg-white'}`}>
-            <iframe
+          {/* Chart - Lightweight Charts with real-time updates */}
+          <div className={`flex-1 min-h-0 relative ${isDarkMode ? 'bg-[#1a1a2e]' : 'bg-white'}`}>
+            <TradingChart
               key={`${selectedInstrument.symbol}-${isDarkMode}`}
-              src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${getSymbolForTradingView(selectedInstrument.symbol)}&interval=5&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=1&saveimage=1&toolbarbg=${isDarkMode ? '0d0d0d' : 'ffffff'}&studies=[]&theme=${isDarkMode ? 'dark' : 'light'}&style=1&timezone=Etc%2FUTC&withdateranges=1&showpopupbutton=1&studies_overrides={}&overrides={}&enabled_features=["left_toolbar","header_widget"]&disabled_features=[]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart&hide_side_toolbar=0`}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              allowFullScreen
-              title="TradingView Chart"
+              symbol={selectedInstrument.symbol}
+              isDarkMode={isDarkMode}
+              height={isMobile ? 300 : 400}
+              showToolbar={true}
             />
           </div>
 

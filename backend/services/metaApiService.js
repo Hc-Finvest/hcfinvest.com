@@ -690,6 +690,150 @@ class MetaApiService {
       lastError: this.lastError
     }
   }
+
+  /**
+   * Fetch historical OHLC candles from MetaAPI
+   * @param {string} symbol - Trading symbol (e.g., 'XAUUSD')
+   * @param {string} timeframe - Timeframe: '1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1mn'
+   * @param {number} startTime - Start timestamp in seconds
+   * @param {number} endTime - End timestamp in seconds (optional, defaults to now)
+   * @param {number} limit - Max number of candles (default 500, max 1000)
+   * @returns {Promise<Array>} Array of candle objects { time, open, high, low, close, volume }
+   */
+  async getHistoricalCandles(symbol, timeframe = '1m', startTime, endTime, limit = 500) {
+    const accountId = METAAPI_ACCOUNT_ID()
+    const token = METAAPI_TOKEN()
+    
+    // Map timeframe to MetaAPI format
+    const timeframeMap = {
+      '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+      '1h': '1h', '4h': '4h', '1d': '1d', '1w': '1w', '1M': '1mn'
+    }
+    const metaTimeframe = timeframeMap[timeframe] || '1m'
+    
+    // If no credentials or in simulation mode, generate simulated candles
+    if (!accountId || !token || this.useSimulation) {
+      return this.generateSimulatedCandles(symbol, timeframe, startTime, endTime, limit)
+    }
+    
+    try {
+      // Build URL with query params
+      let url = `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/historical-market-data/symbols/${symbol}/timeframes/${metaTimeframe}/candles`
+      const params = new URLSearchParams()
+      if (startTime) params.append('startTime', new Date(startTime * 1000).toISOString())
+      if (limit) params.append('limit', Math.min(limit, 1000))
+      
+      if (params.toString()) url += `?${params.toString()}`
+      
+      const response = await fetch(url, { headers: this.getHeaders() })
+      
+      if (!response.ok) {
+        console.warn(`[MetaAPI] Historical candles failed for ${symbol}: ${response.status}`)
+        // Fallback to simulated candles
+        return this.generateSimulatedCandles(symbol, timeframe, startTime, endTime, limit)
+      }
+      
+      const data = await response.json()
+      
+      // Transform MetaAPI candle format to lightweight-charts format
+      // MetaAPI returns: { time, open, high, low, close, tickVolume, spread, volume }
+      const candles = (data || []).map(c => ({
+        time: Math.floor(new Date(c.time).getTime() / 1000),
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.tickVolume || c.volume || 0
+      }))
+      
+      // Sort by time ascending
+      candles.sort((a, b) => a.time - b.time)
+      
+      return candles
+    } catch (error) {
+      console.error(`[MetaAPI] Historical candles error for ${symbol}:`, error.message)
+      return this.generateSimulatedCandles(symbol, timeframe, startTime, endTime, limit)
+    }
+  }
+
+  /**
+   * Generate simulated historical candles for demo/fallback
+   * Creates realistic-looking price action based on current price
+   */
+  generateSimulatedCandles(symbol, timeframe = '1m', startTime, endTime, limit = 500) {
+    const now = Math.floor(Date.now() / 1000)
+    const end = endTime || now
+    
+    // Timeframe to seconds
+    const tfSeconds = {
+      '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
+      '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800, '1M': 2592000
+    }
+    const interval = tfSeconds[timeframe] || 60
+    
+    // Get current price as base
+    const currentPrice = this.prices.get(symbol)
+    let basePrice = currentPrice?.bid || this.getDefaultPrice(symbol)
+    
+    // Calculate start time if not provided
+    const start = startTime || (end - (limit * interval))
+    
+    const candles = []
+    let price = basePrice * (1 - 0.02) // Start 2% below current for realistic history
+    
+    // Volatility based on symbol type
+    let volatility = 0.0005 // 0.05% for forex
+    if (symbol.includes('XAU')) volatility = 0.001
+    else if (symbol.includes('XAG')) volatility = 0.0015
+    else if (symbol.includes('BTC')) volatility = 0.003
+    else if (symbol.includes('ETH')) volatility = 0.004
+    else if (symbol.includes('US30') || symbol.includes('US500') || symbol.includes('US100')) volatility = 0.0008
+    
+    for (let t = start; t < end; t += interval) {
+      // Random walk with slight upward bias toward current price
+      const drift = (basePrice - price) / basePrice * 0.01 // Mean reversion
+      const change = (Math.random() - 0.48 + drift) * volatility
+      
+      const open = price
+      const close = price * (1 + change)
+      const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.5)
+      const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.5)
+      
+      candles.push({
+        time: t,
+        open: this.roundToDecimals(open, symbol),
+        high: this.roundToDecimals(high, symbol),
+        low: this.roundToDecimals(low, symbol),
+        close: this.roundToDecimals(close, symbol),
+        volume: Math.floor(Math.random() * 1000) + 100
+      })
+      
+      price = close
+    }
+    
+    return candles
+  }
+
+  /**
+   * Get default price for a symbol (used in simulation)
+   */
+  getDefaultPrice(symbol) {
+    const defaults = {
+      EURUSD: 1.0320, GBPUSD: 1.2380, USDJPY: 151.80, USDCHF: 0.9120,
+      AUDUSD: 0.6280, NZDUSD: 0.5680, USDCAD: 1.4320,
+      XAUUSD: 2950, XAGUSD: 32.50, BTCUSD: 97500, ETHUSD: 2720,
+      US30: 44350, US500: 6080, US100: 21650
+    }
+    return defaults[symbol] || 1.0
+  }
+
+  /**
+   * Round price to appropriate decimals for symbol
+   */
+  roundToDecimals(price, symbol) {
+    const decimals = getDecimals(symbol)
+    return roundPrice(price, decimals)
+  }
 }
 
 // Singleton instance

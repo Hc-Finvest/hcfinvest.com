@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Palette,
   Mail,
-  Bitcoin
+  Bitcoin,
+  Image
 } from 'lucide-react'
 
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -45,6 +46,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
     { name: 'Prop Firm Challenges', icon: Trophy, path: '/admin/prop-firm' },
     { name: 'Account Types', icon: CreditCard, path: '/admin/account-types' },
     { name: 'Theme Settings', icon: Palette, path: '/admin/theme' },
+    { name: 'Banner Management', icon: Image, path: '/admin/banners' },
     { name: 'Email Management', icon: Mail, path: '/admin/email' },
     { name: 'Oxapay Gateway', icon: Bitcoin, path: '/admin/oxapay' },
     { name: 'Admin Management', icon: Shield, path: '/admin/admin-management' },
@@ -96,11 +98,20 @@ const AdminLayout = ({ children, title, subtitle }) => {
       >
         {/* Logo */}
         <div className="p-4 flex items-center justify-between border-b border-gray-800">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <img 
+              src="/hcfinvest_orange_logo.png" 
+              alt="hcfinvest" 
+              className="w-8 h-8 object-contain flex-shrink-0"
+              onError={(e) => {
+                e.target.style.display = 'none'
+                e.target.nextSibling.style.display = 'flex'
+              }}
+            />
+            <div className="w-8 h-8 bg-orange-500 rounded items-center justify-center flex-shrink-0 hidden">
               <span className="text-white font-bold text-sm">HCF</span>
             </div>
-            {sidebarExpanded && <span className="text-white font-semibold">hcfinvest Admin</span>}
+            {sidebarExpanded && <span className="text-white font-semibold whitespace-nowrap truncate">hcfinvest Admin</span>}
           </div>
           <button 
             onClick={() => setSidebarExpanded(!sidebarExpanded)}

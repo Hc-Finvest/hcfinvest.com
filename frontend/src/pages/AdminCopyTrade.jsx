@@ -378,11 +378,11 @@ const AdminCopyTrade = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-gray-400 text-sm mb-1 block">Commission (%)</label>
-                <input type="number" value={approveForm.approvedCommissionPercentage} onChange={(e) => setApproveForm(prev => ({ ...prev, approvedCommissionPercentage: parseFloat(e.target.value) || 0 }))} className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white" />
+                <input type="number" value={approveForm.approvedCommissionPercentage === 0 ? '' : approveForm.approvedCommissionPercentage} onChange={(e) => setApproveForm(prev => ({ ...prev, approvedCommissionPercentage: e.target.value === '' ? 0 : parseFloat(e.target.value) }))} className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="0" />
               </div>
               <div>
                 <label className="text-gray-400 text-sm mb-1 block">Admin Share (%)</label>
-                <input type="number" value={approveForm.adminSharePercentage} onChange={(e) => setApproveForm(prev => ({ ...prev, adminSharePercentage: parseFloat(e.target.value) || 0 }))} className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white" />
+                <input type="number" value={approveForm.adminSharePercentage === 0 ? '' : approveForm.adminSharePercentage} onChange={(e) => setApproveForm(prev => ({ ...prev, adminSharePercentage: e.target.value === '' ? 0 : parseFloat(e.target.value) }))} className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="0" />
               </div>
             </div>
             <div className="flex gap-3 mt-6">
