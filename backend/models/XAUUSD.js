@@ -1,3 +1,6 @@
+
+// XAUUSD.js (Modal)
+
 import mongoose from "mongoose";
 
 const xauusdSchema = new mongoose.Schema(

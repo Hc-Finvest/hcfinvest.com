@@ -7,6 +7,9 @@ import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 import { useTheme } from '../context/ThemeContext'
 import TradingChart from '../components/TradingChart'
+import Advance_Trading_View_Chart from '../components/Advance_Trading_View_Chart'
+import All_Tick_Chart from '../components/All_Tick_Chart.jsx'
+import WebSocketTest from '../components/WebSocketTest'
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -1532,13 +1535,22 @@ const TradingPage = () => {
 
           {/* Chart - Lightweight Charts with real-time updates */}
           <div className={`flex-1 min-h-0 relative ${isDarkMode ? 'bg-[#1a1a2e]' : 'bg-white'}`}>
-            <TradingChart
+            {/* <TradingChart
               key={`${selectedInstrument.symbol}-${isDarkMode}`}
               symbol={selectedInstrument.symbol}
               isDarkMode={isDarkMode}
               height={isMobile ? 300 : 400}
               showToolbar={true}
-            />
+            /> */}
+
+            <Advance_Trading_View_Chart />
+            {/* <All_Tick_Chart /> */}
+            {/* <All_Tick_Chart /> */}
+            
+            {/* WebSocket Test Component */}
+            {/* <div className="mt-4">
+              <WebSocketTest />
+            </div> */}
           </div>
 
           {/* Positions Panel - Expanded height for History tab */}
