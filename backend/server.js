@@ -31,6 +31,13 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import metaApiService from './services/metaApiService.js'
 import xauusdRoutes from "./routes/XAUUSDRoutes.js";
+// import btcusdRoutes from "./routes/BTCUSDRoutes.js";
+import binanceRoutes from "./routes/binance.js";
+import marketRoutes from "./routes/market.js";
+// import initLiveSocket from "./services/live.js";
+// import historyRoute from "./routes/history.js";
+// import initLiveSocket from "./services/live.js";
+
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -39,6 +46,7 @@ dotenv.config()
 
 const app = express()
 const httpServer = createServer(app)
+// initLiveSocket(httpServer);
 
 // Socket.IO for real-time updates
 const io = new Server(httpServer, {
@@ -199,8 +207,15 @@ app.use('/api/admin-mgmt', adminManagementRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/email', emailRoutes)
 app.use('/api/oxapay', oxapayRoutes)
-app.use("/api/xauusd", xauusdRoutes)
+// app.use("/api/xauusd", xauusdRoutes)
+// app.use("/api/btcusd", btcusdRoutes)
 app.use('/api/banners', bannerRoutes)
+app.use("/api/binance", binanceRoutes);
+
+// Historical API route
+// app.use("/api/history", historyRoute);
+
+app.use("/api/market", marketRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
@@ -220,7 +235,7 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5001
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
