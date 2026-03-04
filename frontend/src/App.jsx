@@ -41,6 +41,7 @@ import BrandedSignup from './pages/BrandedSignup'
 import AdminEmailManagement from './pages/AdminEmailManagement'
 import AdminOxapay from './pages/AdminOxapay'
 import AdminBannerManagement from './pages/AdminBannerManagement'
+import Trial from './pages/Trial'
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Signup />} />
         <Route path="/user/signup" element={<Signup />} />
+        <Route path="/user/trial" element={<Trial />} />
         <Route path="/user/login" element={<Login />} />
         <Route path="/user/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
