@@ -7,6 +7,9 @@ import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 import { useTheme } from '../context/ThemeContext'
 import TradingChart from '../components/TradingChart'
+import Advance_Trading_View_Chart from '../components/Advance_Trading_View_Chart'
+import All_Tick_Chart from '../components/All_Tick_Chart.jsx'
+import WebSocketTest from '../components/WebSocketTest.jsx'
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -73,32 +76,32 @@ const TradingPage = () => {
     // ============ COMMODITIES / METALS ============
     { symbol: 'XAUUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: true },
     { symbol: 'XAGUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'XPTUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'XPDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    // { symbol: 'XPTUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    // { symbol: 'XPDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     { symbol: 'USOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     { symbol: 'UKOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     { symbol: 'NGAS', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'COPPER', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    // { symbol: 'COPPER', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     // ============ CRYPTO ============
     { symbol: 'BTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: true },
     { symbol: 'ETHUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'BNBUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'SOLUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'XRPUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'ADAUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'XRPUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'ADAUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'DOGEUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'DOTUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'MATICUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'DOTUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'MATICUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     { symbol: 'LTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'AVAXUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'LINKUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'UNIUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'ATOMUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'XLMUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'TRXUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'ETCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'NEARUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'ALGOUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'AVAXUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'LINKUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'UNIUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'ATOMUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'XLMUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'TRXUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'ETCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'NEARUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    // { symbol: 'ALGOUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     // ============ INDICES (Working on AllTick) ============
     { symbol: 'UK100', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
     { symbol: 'HK50', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
@@ -732,6 +735,33 @@ const TradingPage = () => {
     setGlobalNotification('✅ Kill Switch deactivated. Trading is now enabled.')
     setTimeout(() => setGlobalNotification(''), 3000)
   }
+
+  // Handle live price updates from AllTick chart
+  const handleAllTickPriceUpdate = useCallback((priceData) => {
+    if (priceData && priceData.symbol === selectedInstrument.symbol) {
+      // Update live prices with AllTick data
+      setLivePrices(prev => ({
+        ...prev,
+        [priceData.symbol]: {
+          bid: priceData.bid,
+          ask: priceData.ask,
+          price: priceData.price,
+          timestamp: priceData.timestamp
+        }
+      }));
+      
+      // Update selected instrument with live prices
+      setSelectedInstrument(prev => ({
+        ...prev,
+        bid: priceData.bid,
+        ask: priceData.ask,
+        spread: Math.abs(priceData.ask - priceData.bid)
+      }));
+      
+      // Force re-render for P/L calculations
+      setPriceUpdateTick(prev => prev + 1);
+    }
+  }, [selectedInstrument.symbol]);
 
   // Execute Market Order (BUY or SELL) - Optimized for instant feedback
   const executeMarketOrder = async (side) => {
@@ -1532,13 +1562,32 @@ const TradingPage = () => {
 
           {/* Chart - Lightweight Charts with real-time updates */}
           <div className={`flex-1 min-h-0 relative ${isDarkMode ? 'bg-[#1a1a2e]' : 'bg-white'}`}>
-            <TradingChart
+            {/* <TradingChart
               key={`${selectedInstrument.symbol}-${isDarkMode}`}
               symbol={selectedInstrument.symbol}
               isDarkMode={isDarkMode}
               height={isMobile ? 300 : 400}
               showToolbar={true}
-            />
+            /> */}
+
+            {/* <Advance_Trading_View_Chart /> */}
+            {/* <All_Tick_Chart /> */}
+            <All_Tick_Chart symbol={selectedInstrument.symbol} onPriceUpdate={handleAllTickPriceUpdate} />
+            {/* <Advance_Trading_View_Chart/> */}
+            {/* Live Price Status Indicator */}
+            <div className="flex items-center justify-between px-2 py-1 text-xs">
+              <div className="flex items-center gaps-2">
+                <div className={`w-2 h-2 rounded-full ${livePrices[selectedInstrument.symbol] ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
+                  {livePrices[selectedInstrument.symbol] ? 'AllTick Live' : 'Waiting...'}
+                </span>
+              </div>
+              {livePrices[selectedInstrument.symbol] && (
+                <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
+                  Last: {new Date(livePrices[selectedInstrument.symbol].timestamp).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Positions Panel - Expanded height for History tab */}
@@ -2172,8 +2221,12 @@ const TradingPage = () => {
                     <button 
                       onClick={() => executeMarketOrder('SELL')}
                       disabled={isExecutingTrade}
-                      className="flex-1 rounded py-3 text-center transition-colors bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded py-3 text-center transition-colors bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed relative"
                     >
+                      {/* Live indicator dot */}
+                      {livePrices[selectedInstrument.symbol] && (
+                        <div className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Live price from AllTick"></div>
+                      )}
                       <div className="text-white text-[10px] font-medium">SELL</div>
                       <div className="text-white font-mono text-lg font-bold">
                         {(() => {
@@ -2189,8 +2242,12 @@ const TradingPage = () => {
                     <button 
                       onClick={() => executeMarketOrder('BUY')}
                       disabled={isExecutingTrade}
-                      className="flex-1 rounded py-3 text-center transition-colors bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded py-3 text-center transition-colors bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed relative"
                     >
+                      {/* Live indicator dot */}
+                      {livePrices[selectedInstrument.symbol] && (
+                        <div className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Live price from AllTick"></div>
+                      )}
                       <div className="text-white text-[10px] font-medium">BUY</div>
                       <div className="text-white font-mono text-lg font-bold">
                         {(() => {

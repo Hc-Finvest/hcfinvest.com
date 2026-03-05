@@ -30,13 +30,10 @@ import bannerRoutes from './routes/banner.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import metaApiService from './services/metaApiService.js'
-import xauusdRoutes from "./routes/XAUUSDRoutes.js";
-// import btcusdRoutes from "./routes/BTCUSDRoutes.js";
 import binanceRoutes from "./routes/binance.js";
 import marketRoutes from "./routes/market.js";
-// import initLiveSocket from "./services/live.js";
-// import historyRoute from "./routes/history.js";
-// import initLiveSocket from "./services/live.js";
+
+import xauusd_Routes from "./routes/xauusd_Routes.js";
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -207,7 +204,7 @@ app.use('/api/admin-mgmt', adminManagementRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/email', emailRoutes)
 app.use('/api/oxapay', oxapayRoutes)
-// app.use("/api/xauusd", xauusdRoutes)
+app.use("/api/xauusd", xauusd_Routes)
 // app.use("/api/btcusd", btcusdRoutes)
 app.use('/api/banners', bannerRoutes)
 app.use("/api/binance", binanceRoutes);
