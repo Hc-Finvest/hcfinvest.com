@@ -81,172 +81,172 @@
 
 
 
-/* 
+ 
 // datafeed.js
 
-import MetaApi, { SynchronizationListener } from "metaapi.cloud-sdk";
-// datafeed for BTCUSD
-const token = import.meta.env.VITE_TOKEN;
-const accountId = import.meta.env.VITE_ACCOUNT_ID;
-const SYMBOL = "BTCUSD";
-const BACKEND = "http://localhost:1819/api";
+// import MetaApi, { SynchronizationListener } from "metaapi.cloud-sdk";
+// // datafeed for BTCUSD
+// const token = import.meta.env.VITE_TOKEN;
+// const accountId = import.meta.env.VITE_ACCOUNT_ID;
+// const SYMBOL = "BTCUSD";
+// const BACKEND = "http://localhost:1819/api";
 
-let api, account, connection, listener;
+// let api, account, connection, listener;
 
-// Convert resolution
-const convertResolution = (res) => {
-  const map = {
-    "1": "1m",
-    "5": "5m",
-    "15": "15m",
-    "30": "30m",
-    "60": "1h",
-    "D": "1d",
-  };
-  return map[res] || "1m";
-};
+// // Convert resolution
+// const convertResolution = (res) => {
+//   const map = {
+//     "1": "1m",
+//     "5": "5m",
+//     "15": "15m",
+//     "30": "30m",
+//     "60": "1h",
+//     "D": "1d",
+//   };
+//   return map[res] || "1m";
+// };
 
-async function init() {
-  if (!api) {
-    api = new MetaApi(token);
-    account = await api.metatraderAccountApi.getAccount(accountId);
-    connection = account.getStreamingConnection();
-    await connection.connect();
-    await connection.waitSynchronized();
-  }
-}
+// async function init() {
+//   if (!api) {
+//     api = new MetaApi(token);
+//     account = await api.metatraderAccountApi.getAccount(accountId);
+//     connection = account.getStreamingConnection();
+//     await connection.connect();
+//     await connection.waitSynchronized();
+//   }
+// }
 
-export default {
+// export default {
 
-  onReady: (cb) => {
-    setTimeout(() => {
-      cb({
-        supported_resolutions: ["1", "5", "15", "30", "60", "D"],
-      });
-    }, 0);
-  },
+//   onReady: (cb) => {
+//     setTimeout(() => {
+//       cb({
+//         supported_resolutions: ["1", "5", "15", "30", "60", "D"],
+//       });
+//     }, 0);
+//   },
 
-  resolveSymbol: (symbolName, onResolve) => {
-    setTimeout(() => {
-      onResolve({
-        name: SYMBOL,
-        ticker: SYMBOL,
-        full_name: SYMBOL,
-        description: "BTCUSD",
-        type: "crypto",
-        session: "24x7",
-        timezone: "Etc/UTC",
-        exchange: "MetaAPI",
-        listed_exchange: "MetaAPI",
-        format: "price",
-        minmov: 1,
-        pricescale: 1,
-        has_intraday: true,
-        visible_plots_set: "ohlc",
-        supported_resolutions: ["1", "5", "15", "30", "60", "D"],
-      });
-    }, 0);
-  },
+//   resolveSymbol: (symbolName, onResolve) => {
+//     setTimeout(() => {
+//       onResolve({
+//         name: SYMBOL,
+//         ticker: SYMBOL,
+//         full_name: SYMBOL,
+//         description: "BTCUSD",
+//         type: "crypto",
+//         session: "24x7",
+//         timezone: "Etc/UTC",
+//         exchange: "MetaAPI",
+//         listed_exchange: "MetaAPI",
+//         format: "price",
+//         minmov: 1,
+//         pricescale: 1,
+//         has_intraday: true,
+//         visible_plots_set: "ohlc",
+//         supported_resolutions: ["1", "5", "15", "30", "60", "D"],
+//       });
+//     }, 0);
+//   },
 
-  // 🔥 HISTORY FROM MONGO
-  getBars: async (
-    symbolInfo,
-    resolution,
-    periodParams,
-    onHistoryCallback,
-    onErrorCallback
-  ) => {
-    try {
-      const timeframe = convertResolution(resolution);
+//   // 🔥 HISTORY FROM MONGO
+//   getBars: async (
+//     symbolInfo,
+//     resolution,
+//     periodParams,
+//     onHistoryCallback,
+//     onErrorCallback
+//   ) => {
+//     try {
+//       const timeframe = convertResolution(resolution);
 
-      const from = new Date(periodParams.from * 1000);
-      const to = new Date(periodParams.to * 1000);
+//       const from = new Date(periodParams.from * 1000);
+//       const to = new Date(periodParams.to * 1000);
 
-      const response = await fetch(
-        `${BACKEND}/btc?timeframe=${timeframe}&from=${from.toISOString()}&to=${to.toISOString()}`
-      );
+//       const response = await fetch(
+//         `${BACKEND}/btc?timeframe=${timeframe}&from=${from.toISOString()}&to=${to.toISOString()}`
+//       );
 
-      const result = await response.json();
+//       const result = await response.json();
 
-      if (!result.success || !result.data.length) {
-        onHistoryCallback([], { noData: true });
-        return;
-      }
+//       if (!result.success || !result.data.length) {
+//         onHistoryCallback([], { noData: true });
+//         return;
+//       }
 
-      const bars = result.data.map((c) => ({
-        time: new Date(c.time).getTime(),
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      }));
+//       const bars = result.data.map((c) => ({
+//         time: new Date(c.time).getTime(),
+//         open: c.open,
+//         high: c.high,
+//         low: c.low,
+//         close: c.close,
+//       }));
 
-      bars.sort((a, b) => a.time - b.time);
+//       bars.sort((a, b) => a.time - b.time);
 
-      onHistoryCallback(bars, { noData: false });
+//       onHistoryCallback(bars, { noData: false });
 
-    } catch (err) {
-      onErrorCallback(err);
-    }
-  },
+//     } catch (err) {
+//       onErrorCallback(err);
+//     }
+//   },
 
-  // 🔥 LIVE FROM METAAPI + SAVE TO DB
-  subscribeBars: async (
-    symbolInfo,
-    resolution,
-    onRealtimeCallback
-  ) => {
-    await init();
+//   // 🔥 LIVE FROM METAAPI + SAVE TO DB
+//   subscribeBars: async (
+//     symbolInfo,
+//     resolution,
+//     onRealtimeCallback
+//   ) => {
+//     await init();
 
-    const timeframe = convertResolution(resolution);
+//     const timeframe = convertResolution(resolution);
 
-    await connection.subscribeToMarketData(SYMBOL, [
-      { type: "candles", timeframe },
-    ]);
+//     await connection.subscribeToMarketData(SYMBOL, [
+//       { type: "candles", timeframe },
+//     ]);
 
-    listener = new (class extends SynchronizationListener {
-      async onCandlesUpdated(_, candles) {
-        if (!candles?.length) return;
+//     listener = new (class extends SynchronizationListener {
+//       async onCandlesUpdated(_, candles) {
+//         if (!candles?.length) return;
 
-        const c = candles[candles.length - 1];
+//         const c = candles[candles.length - 1];
 
-        if (c.symbol !== SYMBOL) return;
+//         if (c.symbol !== SYMBOL) return;
 
-        const bar = {
-          time: new Date(c.time).getTime(),
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-        };
+//         const bar = {
+//           time: new Date(c.time).getTime(),
+//           open: c.open,
+//           high: c.high,
+//           low: c.low,
+//           close: c.close,
+//         };
 
-        // 🔥 Update chart instantly
-        onRealtimeCallback(bar);
+//         // 🔥 Update chart instantly
+//         onRealtimeCallback(bar);
 
-        // 🔥 Save to Mongo
-        await fetch(`${BACKEND}/btc/save`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            symbol: SYMBOL,
-            timeframe,
-            time: c.time,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-          }),
-        });
+//         // 🔥 Save to Mongo
+//         await fetch(`${BACKEND}/btc/save`, {
+//           method: "POST",
+//           headers: { "Content-Type": "application/json" },
+//           body: JSON.stringify({
+//             symbol: SYMBOL,
+//             timeframe,
+//             time: c.time,
+//             open: c.open,
+//             high: c.high,
+//             low: c.low,
+//             close: c.close,
+//           }),
+//         });
 
-        console.log("💾 Live candle stored");
-      }
-    })();
+//         console.log("💾 Live candle stored");
+//       }
+//     })();
 
-    connection.addSynchronizationListener(listener);
-  },
+//     connection.addSynchronizationListener(listener);
+//   },
 
-  unsubscribeBars: () => {},
-}; */
+//   unsubscribeBars: () => {},
+// }; 
 
 
 
@@ -256,11 +256,15 @@ const token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIzODJhYTU4YjcwNTU0
 const accountId = "b668b9b8-594e-4789-a87d-1586040d084d";
 const region = "london";
 
-const SYMBOL = "XAUUSD";
+const SYMBOL = "XAUUSD.i";
 // const BACKEND = "http://localhost:5001/api/xauusd";
 const BACKEND = "https://api.hcfinvest.com/api/xauusd";
 
 let api, account, connection, listener;
+
+// Create a simple event emitter for live prices
+const priceEventTarget = new EventTarget();
+export const getMetaApiPriceEvents = () => priceEventTarget;
 
 // Convert TradingView resolution → MetaAPI timeframe
 const convertResolution = (res) => {
@@ -401,6 +405,17 @@ export default {
 
         // 🔥 Update TradingView instantly
         onRealtimeCallback(bar);
+
+        // 🔥 Emit price event for TradingPage Buy/Sell buttons
+        const priceEvent = new CustomEvent('priceUpdate', {
+          detail: {
+            symbol: 'XAUUSD',
+            bid: c.close,  // Use close price as bid for simplicity
+            ask: c.close + 0.5,  // Add small spread for ask
+            time: c.time
+          }
+        });
+        priceEventTarget.dispatchEvent(priceEvent);
 
         // 🔥 Save to Mongo
         await fetch(`${BACKEND}/save`, {

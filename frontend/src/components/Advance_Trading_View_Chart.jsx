@@ -39,6 +39,8 @@
 //   );
 // }
 
+import { useEffect, useRef } from "react";
+import Datafeed from "../services/datafeed.js";
 
 const Advance_Trading_View_Chart = () => {
   const containerRef = useRef(null);

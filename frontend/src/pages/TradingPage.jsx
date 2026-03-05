@@ -10,6 +10,7 @@ import TradingChart from '../components/TradingChart'
 import Advance_Trading_View_Chart from '../components/Advance_Trading_View_Chart'
 import All_Tick_Chart from '../components/All_Tick_Chart.jsx'
 import WebSocketTest from '../components/WebSocketTest.jsx'
+import { getMetaApiPriceEvents } from '../services/datafeed'
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -125,6 +126,7 @@ const TradingPage = () => {
   })
   const [livePrices, setLivePrices] = useState({}) // Store live prices separately
   const [priceUpdateTick, setPriceUpdateTick] = useState(0) // Force re-render on price updates
+  const [metaApiPrices, setMetaApiPrices] = useState({}) // Store MetaAPI chart prices
   const [adminSpreads, setAdminSpreads] = useState({}) // Store admin-set spreads
   
   // Modal states for iOS-style popups
@@ -735,6 +737,63 @@ const TradingPage = () => {
     setGlobalNotification('✅ Kill Switch deactivated. Trading is now enabled.')
     setTimeout(() => setGlobalNotification(''), 3000)
   }
+
+  // Listen to MetaAPI price events from TradingView chart
+  useEffect(() => {
+    const priceEventTarget = getMetaApiPriceEvents()
+    
+    const handleMetaApiPriceUpdate = (event) => {
+      const { symbol, bid, ask, time } = event.detail
+      
+      // Update MetaAPI prices state
+      setMetaApiPrices(prev => ({
+        ...prev,
+        [symbol]: { bid, ask, time }
+      }))
+      
+      // If this is the selected instrument, update it immediately
+      if (selectedInstrument?.symbol === symbol || selectedInstrument?.symbol === 'XAUUSD') {
+        setSelectedInstrument(prev => ({
+          ...prev,
+          bid: bid,
+          ask: ask,
+          spread: Math.abs(ask - bid)
+        }))
+        
+        // Also update the instruments list
+        setInstruments(prev => prev.map(inst => {
+          if (inst.symbol === 'XAUUSD') {
+            return {
+              ...inst,
+              bid: bid,
+              ask: ask,
+              spread: Math.abs(ask - bid)
+            }
+          }
+          return inst
+        }))
+        
+        // Update open tabs if XAUUSD is in them
+        setOpenTabs(prev => prev.map(tab => {
+          if (tab.symbol === 'XAUUSD') {
+            return {
+              ...tab,
+              bid: bid,
+              ask: ask,
+              spread: Math.abs(ask - bid)
+            }
+          }
+          return tab
+        }))
+      }
+    }
+    
+    priceEventTarget.addEventListener('priceUpdate', handleMetaApiPriceUpdate)
+    
+    return () => {
+      priceEventTarget.removeEventListener('priceUpdate', handleMetaApiPriceUpdate)
+    }
+  }, [selectedInstrument?.symbol])
 
   // Handle live price updates from AllTick chart
   const handleAllTickPriceUpdate = useCallback((priceData) => {
@@ -1572,8 +1631,8 @@ const TradingPage = () => {
 
             {/* <Advance_Trading_View_Chart /> */}
             {/* <All_Tick_Chart /> */}
-            <All_Tick_Chart symbol={selectedInstrument.symbol} onPriceUpdate={handleAllTickPriceUpdate} />
-            {/* <Advance_Trading_View_Chart/> */}
+            {/* <All_Tick_Chart symbol={selectedInstrument.symbol} onPriceUpdate={handleAllTickPriceUpdate} /> */}
+            <Advance_Trading_View_Chart/>
             {/* Live Price Status Indicator */}
             <div className="flex items-center justify-between px-2 py-1 text-xs">
               <div className="flex items-center gaps-2">
@@ -2230,7 +2289,13 @@ const TradingPage = () => {
                       <div className="text-white text-[10px] font-medium">SELL</div>
                       <div className="text-white font-mono text-lg font-bold">
                         {(() => {
-                          const price = getDisplayPrice(selectedInstrument.symbol, 'SELL', selectedInstrument.bid, selectedInstrument.ask)
+                          // Use MetaAPI prices for XAUUSD when available, otherwise use current logic
+                          let price;
+                          if (selectedInstrument.symbol === 'XAUUSD' && metaApiPrices['XAUUSD']) {
+                            price = metaApiPrices['XAUUSD'].bid; // Use bid for SELL
+                          } else {
+                            price = getDisplayPrice(selectedInstrument.symbol, 'SELL', selectedInstrument.bid, selectedInstrument.ask);
+                          }
                           return selectedInstrument.symbol?.includes('JPY') 
                             ? price?.toFixed(3)
                             : ['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(selectedInstrument.symbol)
@@ -2251,7 +2316,13 @@ const TradingPage = () => {
                       <div className="text-white text-[10px] font-medium">BUY</div>
                       <div className="text-white font-mono text-lg font-bold">
                         {(() => {
-                          const price = getDisplayPrice(selectedInstrument.symbol, 'BUY', selectedInstrument.bid, selectedInstrument.ask)
+                          // Use MetaAPI prices for XAUUSD when available, otherwise use current logic
+                          let price;
+                          if (selectedInstrument.symbol === 'XAUUSD' && metaApiPrices['XAUUSD']) {
+                            price = metaApiPrices['XAUUSD'].ask; // Use ask for BUY
+                          } else {
+                            price = getDisplayPrice(selectedInstrument.symbol, 'BUY', selectedInstrument.bid, selectedInstrument.ask);
+                          }
                           return selectedInstrument.symbol?.includes('JPY') 
                             ? price?.toFixed(3)
                             : ['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(selectedInstrument.symbol)
