@@ -257,7 +257,8 @@ const accountId = "b668b9b8-594e-4789-a87d-1586040d084d";
 const region = "london";
 
 const SYMBOL = "XAUUSD";
-const BACKEND = "http://localhost:5001/api/xauusd";
+// const BACKEND = "http://localhost:5001/api/xauusd";
+const BACKEND = "https://api.hcfinvest.com/api/xauusd";
 
 let api, account, connection, listener;
 

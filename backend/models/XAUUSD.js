@@ -1,6 +1,5 @@
-
-// XAUUSD.js (Modal)
-const mongoose = require("mongoose");
+// XAUUSD.js (Model)
+import mongoose from "mongoose";
 
 const xauusdSchema = new mongoose.Schema(
   {
@@ -23,4 +22,6 @@ xauusdSchema.index(
   { unique: true }
 );
 
-module.exports = mongoose.model("XAUUSD", xauusdSchema);
+const XAUUSD = mongoose.model("XAUUSD", xauusdSchema);
+
+export default XAUUSD;
