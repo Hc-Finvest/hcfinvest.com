@@ -24,10 +24,9 @@ export const getCandles = async (req, res) => {
 
     const candles = await XAUUSD.find(query)
       .sort({ time: 1 })
-      .limit(1000)
-      .lean();
+      .lean();   // ✅ removed limit(1000)
 
-    console.log(`📊 Returning ${candles.length} candles from DB`);
+    // console.log(`📊 Returning ${candles.length} candles from DB`);
 
     res.json({
       success: true,
@@ -75,10 +74,30 @@ export const saveCandle = async (req, res) => {
 };
 
 
+router.get("/latest", async (req, res) => {
+  try {
+
+    const candle = await XAUUSD
+      .find({ symbol: "XAUUSD.i", timeframe: "1m" })
+      .sort({ time: -1 })
+      .limit(1)
+      .lean();
+
+    res.json(candle);
+
+  } catch (error) {
+    console.log("❌ Error fetching latest candle:", error.message);
+    res.status(500).json({ success: false });
+  }
+});
+
+
 /* ===============================
    ROUTES
 ================================ */
+
 router.get("/", getCandles);
+router.get("/all", getCandles); // added earlier
 router.post("/save", saveCandle);
 
 export default router;

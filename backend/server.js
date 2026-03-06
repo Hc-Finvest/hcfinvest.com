@@ -34,6 +34,7 @@ import binanceRoutes from "./routes/binance.js";
 import marketRoutes from "./routes/market.js";
 
 import xauusd_Routes from "./routes/xauusd_Routes.js";
+import streamer from "./services/xauusdStreamer.cjs";
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -233,6 +234,14 @@ app.get('/api/health', (req, res) => {
 })
 
 const PORT = process.env.PORT || 5001
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+// httpServer.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`)
+// })
+
+httpServer.listen(PORT, async () => {
+
+  console.log("Server running on port 5001");
+
+  await streamer.startXAUUSDStreamer();
+
+});
