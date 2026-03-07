@@ -27,6 +27,7 @@ import uploadRoutes from './routes/upload.js'
 import emailRoutes from './routes/email.js'
 import oxapayRoutes from './routes/oxapay.js'
 import bannerRoutes from './routes/banner.js'
+import carouselRoutes from './routes/carousel.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import metaApiService from './services/metaApiService.js'
@@ -207,6 +208,7 @@ app.use('/api/oxapay', oxapayRoutes)
 app.use("/api/xauusd", xauusd_Routes)
 // app.use("/api/btcusd", btcusdRoutes)
 app.use('/api/banners', bannerRoutes)
+app.use('/api/carousel', carouselRoutes)
 app.use("/api/binance", binanceRoutes);
 
 // Historical API route

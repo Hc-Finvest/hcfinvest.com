@@ -22,15 +22,140 @@ import {
   ChevronLeft,
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  Menu,
+  X
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+
+// ============================================
+// IMAGE CAROUSEL COMPONENT
+// Fetches carousel images from API (admin-managed)
+// Falls back to default images if API fails
+// ============================================
+const ImageCarousel = () => {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [carouselImages, setCarouselImages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { isDarkMode } = useTheme()
+  
+  // No default images - only show admin-managed carousel images
+  const defaultImages = []
+
+  // Fetch carousel images from API
+  useEffect(() => {
+    const fetchCarouselImages = async () => {
+      try {
+        const res = await fetch(`${API_URL}/carousel`)
+        const data = await res.json()
+        if (data.success && data.carousels && data.carousels.length > 0) {
+          setCarouselImages(data.carousels)
+        }
+      } catch (error) {
+        console.error('Error fetching carousel images:', error)
+      }
+      setLoading(false)
+    }
+    fetchCarouselImages()
+  }, [])
+
+  // Use API images or fallback to defaults
+  // Handle both relative and absolute image URLs
+  // Remove /api from API_URL for static file paths
+  const images = carouselImages.length > 0 
+    ? carouselImages.map(c => ({ 
+        url: c.imageUrl.startsWith('http') ? c.imageUrl : `${API_URL.replace('/api', '')}${c.imageUrl}`, 
+        title: c.title, 
+        link: c.linkUrl 
+      }))
+    : defaultImages.map(url => ({ url, title: '', link: '' }))
+
+  // Auto-slide every 5 seconds
+  useEffect(() => {
+    if (images.length === 0) return
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [images.length])
+
+  const goToPrevious = () => {
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)
+  }
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % images.length)
+  }
+
+  // Don't render if loading or no images
+  if (loading || images.length === 0) return null
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl">
+      {/* Carousel Container */}
+      <div 
+        className="flex transition-transform duration-500 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      >
+        {images.map((image, index) => (
+          <div key={index} className="min-w-full">
+            {image.link ? (
+              <a href={image.link} target="_blank" rel="noopener noreferrer">
+                <img 
+                  src={image.url} 
+                  alt={image.title || `Slide ${index + 1}`}
+                  className="w-full h-40 sm:h-56 md:h-64 lg:h-72 object-cover rounded-xl"
+                />
+              </a>
+            ) : (
+              <img 
+                src={image.url} 
+                alt={image.title || `Slide ${index + 1}`}
+                className="w-full h-40 sm:h-56 md:h-64 lg:h-72 object-cover rounded-xl"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Navigation Arrows */}
+      <button 
+        onClick={goToPrevious}
+        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+      >
+        <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
+      </button>
+      <button 
+        onClick={goToNext}
+        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+      >
+        <ChevronRight size={20} className="sm:w-6 sm:h-6" />
+      </button>
+
+      {/* Dots Indicator */}
+      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-colors ${
+              currentIndex === index 
+                ? 'bg-white' 
+                : 'bg-white/50 hover:bg-white/75'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const Dashboard = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()
   const [activeMenu, setActiveMenu] = useState('Dashboard')
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [news, setNews] = useState([])
   const [newsLoading, setNewsLoading] = useState(true)
   const [economicEvents, setEconomicEvents] = useState([])
@@ -379,15 +504,23 @@ const Dashboard = () => {
 
   return (
     <div className={`h-screen flex transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Collapsible Sidebar - Fixed */}
       <aside 
-        className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out`}
+        className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out hidden lg:flex`}
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
       >
         {/* Logo */}
         <div className="p-4 flex items-center justify-center shrink-0">
-          <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 object-contain" />
+          <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain" />
         </div>
 
         {/* Menu */}
@@ -440,8 +573,69 @@ const Dashboard = () => {
         </div>
       </aside>
 
+      {/* Mobile Sidebar */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 w-64 ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col h-screen transition-transform duration-300 ease-in-out lg:hidden ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        {/* Mobile Sidebar Header */}
+        <div className="p-4 flex items-center justify-between shrink-0">
+          <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain" />
+          <button 
+            onClick={() => setMobileSidebarOpen(false)}
+            className={`p-2 rounded-lg ${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <nav className="flex-1 px-3 overflow-y-auto">
+          {menuItems.map((item) => (
+            <button
+              key={item.name}
+              onClick={() => { navigate(item.path); setMobileSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg mb-1 transition-colors ${
+                activeMenu === item.name 
+                  ? 'bg-accent-green text-black' 
+                  : isDarkMode 
+                    ? 'text-gray-400 hover:text-white hover:bg-dark-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <item.icon size={20} className="flex-shrink-0" />
+              <span className="text-sm font-medium">{item.name}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Mobile Theme Toggle & Logout */}
+        <div className={`p-3 border-t shrink-0 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <button 
+            onClick={toggleDarkMode}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg mb-1 transition-colors ${
+              isDarkMode 
+                ? 'text-yellow-400 hover:text-yellow-300 hover:bg-dark-700'
+                : 'text-blue-600 hover:text-blue-700 hover:bg-gray-100'
+            }`}
+          >
+            {isDarkMode ? <Sun size={20} className="flex-shrink-0" /> : <Moon size={20} className="flex-shrink-0" />}
+            <span className="text-sm font-medium">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
+          
+          <button 
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-3 px-3 py-3 transition-colors rounded-lg ${
+              isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            <LogOut size={20} className="flex-shrink-0" />
+            <span className="text-sm font-medium">Log Out</span>
+          </button>
+        </div>
+      </aside>
+
       {/* Main Content - Scrollable */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto w-full">
         {/* Market News Slider - Top Banner */}
         {marketNews.length > 0 && (
           <div className={`relative border-b ${isDarkMode ? 'bg-gradient-to-r from-dark-800 via-dark-900 to-dark-800 border-gray-800' : 'bg-gradient-to-r from-gray-100 via-white to-gray-100 border-gray-200'}`}>
@@ -517,15 +711,43 @@ const Dashboard = () => {
         )}
 
         {/* Simple Header */}
-        <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-          <h1 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Dashboard</h1>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-            Welcome back, <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.firstName || user.name || user.email?.split('@')[0] || 'Trader'}</span>!
-          </p>
-        </header>
+        <header className={`flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+  <div className="flex items-center gap-3">
+    
+    {/* Mobile Menu Button */}
+    <button 
+      onClick={() => setMobileSidebarOpen(true)}
+      className={`p-2 rounded-lg lg:hidden transition-colors ${
+        isDarkMode 
+          ? 'text-gray-400 hover:text-white hover:bg-gray-800' 
+          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+      }`}
+    >
+      <Menu size={24} />
+    </button>
+
+    <h1 className={`text-xl sm:text-2xl font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+      Dashboard
+    </h1>
+
+  </div>
+
+  <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} hidden sm:block`}>
+    Welcome back,{" "}
+    <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+      {user.firstName || user.name || user.email?.split('@')[0] || 'Trader'}
+    </span>
+    !
+  </p>
+</header>
+
+        {/* Image Carousel */}
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <ImageCarousel />
+        </div>
 
         {/* Dashboard Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Admin-Managed Banners */}
           {banners.length > 0 && (
             <div className="mb-6 space-y-4">
@@ -561,7 +783,7 @@ const Dashboard = () => {
           )}
 
           {/* Top Stats Boxes */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Wallet Box */}
             <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-3">
@@ -604,12 +826,12 @@ const Dashboard = () => {
                 <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
                   <Activity size={20} className="text-purple-500" />
                 </div>
-                <span className={`text-xs font-medium ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <span className={`text-xs font-medium ${totalPnl >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
                   {totalPnl >= 0 ? '+' : ''}{totalPnl !== 0 ? ((totalPnl / (walletBalance || 1)) * 100).toFixed(1) + '%' : '0%'}
                 </span>
               </div>
               <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total PnL</p>
-              <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
                 {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
               </p>
             </div>
@@ -652,7 +874,7 @@ const Dashboard = () => {
           </div>
 
           {/* Market News & Economic Calendar - TradingView Widgets */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Market News - TradingView Timeline Widget */}
             <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="flex items-center gap-3 mb-4">

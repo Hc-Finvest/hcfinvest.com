@@ -41,6 +41,7 @@ import BrandedSignup from './pages/BrandedSignup'
 import AdminEmailManagement from './pages/AdminEmailManagement'
 import AdminOxapay from './pages/AdminOxapay'
 import AdminBannerManagement from './pages/AdminBannerManagement'
+import AdminCarouselManagement from './pages/AdminCarouselManagement'
 import Trial from './pages/Trial'
 
 function App() {
@@ -88,6 +89,7 @@ function App() {
         <Route path="/admin/email" element={<AdminEmailManagement />} />
         <Route path="/admin/oxapay" element={<AdminOxapay />} />
         <Route path="/admin/banners" element={<AdminBannerManagement />} />
+        <Route path="/admin/carousel" element={<AdminCarouselManagement />} />
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />

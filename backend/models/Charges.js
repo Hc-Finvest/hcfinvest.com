@@ -207,6 +207,30 @@ chargesSchema.statics.getChargesForTrade = async function(userId, symbol, segmen
       result.swapType = charge.swapType
     }
   }
+
+  // add these line of  code to make changes in speard 
+
+    // Fallback to AccountType defaults if no specific charges found
+  if (accountTypeId) {
+    const AccountType = mongoose.model('AccountType')
+    const accountType = await AccountType.findById(accountTypeId)
+    if (accountType) {
+      if (result.spreadValue === 0 && accountType.minSpread > 0) {
+        result.spreadValue = accountType.minSpread
+        result.spreadType = 'FIXED'
+      }
+      if (result.commissionValue === 0 && accountType.commission > 0) {
+        result.commissionValue = accountType.commission
+        result.commissionType = 'PER_LOT'
+      }
+      if (accountType.minSpread > 0 || accountType.commission > 0) {
+        console.log(`Using AccountType defaults: spread=${result.spreadValue}, commission=${result.commissionValue}`)
+      }
+    }
+  }
+  
+
+
   
   console.log(`Final charges: spread=${result.spreadValue}, commission=${result.commissionValue}, swapLong=${result.swapLong}, swapShort=${result.swapShort}`)
   

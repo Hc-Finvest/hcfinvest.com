@@ -178,99 +178,132 @@ const AdminAccountTypes = () => {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <RefreshCw size={24} className="text-gray-500 animate-spin" />
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw size={28} className="text-gray-500 animate-spin" />
+            </div>
+          ) : accountTypes.length === 0 ? (
+            <div className="bg-dark-800 rounded-xl p-12 border border-gray-800 text-center">
+              <CreditCard size={56} className="text-gray-600 mx-auto mb-4" />
+              <h3 className="text-white font-medium text-lg mb-2">No Account Types</h3>
+              <p className="text-gray-500">Create your first account type to get started</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {accountTypes.map((type) => (
-                <div key={type._id} className={`bg-dark-800 rounded-lg p-4 border ${type.isActive ? 'border-gray-700' : 'border-red-500/30 opacity-60'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-white font-medium text-sm">{type.name}</h3>
-                      {type.isDemo && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/20 text-yellow-500">DEMO</span>
-                      )}
+                <div 
+                  key={type._id} 
+                  className={`bg-dark-800 rounded-xl p-5 border ${type.isActive ? 'border-gray-700' : 'border-red-500/30 opacity-60'}`}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${type.isDemo ? 'bg-yellow-500/20' : 'bg-blue-500/20'}`}>
+                        <CreditCard size={20} className={type.isDemo ? 'text-yellow-500' : 'text-blue-500'} />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold text-base">{type.name}</h3>
+                        {type.isDemo && (
+                          <span className="text-yellow-500 text-xs">Demo Account</span>
+                        )}
+                      </div>
                     </div>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${type.isActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${type.isActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
                       {type.isActive ? 'Active' : 'Disabled'}
                     </span>
                   </div>
-                  <p className="text-gray-500 text-xs mb-3 line-clamp-1">{type.description || 'No description'}</p>
-                  <div className="space-y-1.5 mb-3 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Min Deposit</span>
-                      <span className="text-white">${type.minDeposit}</span>
+
+                  {/* Description */}
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2 min-h-[40px]">
+                    {type.description || 'No description provided'}
+                  </p>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    <div className="bg-dark-700 rounded-lg p-3">
+                      <p className="text-gray-500 text-xs mb-1">Min Deposit</p>
+                      <p className="text-white font-semibold">${type.minDeposit?.toLocaleString()}</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Leverage</span>
-                      <span className="text-white">{type.leverage}</span>
+                    <div className="bg-dark-700 rounded-lg p-3">
+                      <p className="text-gray-500 text-xs mb-1">Leverage</p>
+                      <p className="text-white font-semibold">{type.leverage}</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Exposure</span>
-                      <span className="text-white">${type.exposureLimit || 0}</span>
+                    <div className="bg-dark-700 rounded-lg p-3">
+                      <p className="text-gray-500 text-xs mb-1">Min Spread</p>
+                      <p className="text-white font-semibold">{type.minSpread || 0} pips</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Min Spread</span>
-                      <span className="text-white">{type.minSpread || 0} pips</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Commission</span>
-                      <span className="text-white">{type.commission > 0 ? `$${type.commission}` : 'NO COMM'}</span>
+                    <div className="bg-dark-700 rounded-lg p-3">
+                      <p className="text-gray-500 text-xs mb-1">Commission</p>
+                      <p className="text-white font-semibold">{type.commission > 0 ? `$${type.commission}` : 'None'}</p>
                     </div>
                     {type.isDemo && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Demo Bal</span>
-                        <span className="text-yellow-500">${type.demoBalance || 10000}</span>
+                      <div className="bg-yellow-500/10 rounded-lg p-3 col-span-2">
+                        <p className="text-yellow-500/70 text-xs mb-1">Demo Balance</p>
+                        <p className="text-yellow-500 font-semibold">${(type.demoBalance || 10000).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {!type.isDemo && (
+                      <div className="bg-dark-700 rounded-lg p-3 col-span-2">
+                        <p className="text-gray-500 text-xs mb-1">Exposure Limit</p>
+                        <p className="text-white font-semibold">${(type.exposureLimit || 0).toLocaleString()}</p>
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-1.5">
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
                     <button
                       onClick={() => openEditModal(type)}
-                      className="flex-1 flex items-center justify-center gap-1 bg-dark-700 text-white py-1.5 rounded text-xs hover:bg-dark-600 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 bg-dark-700 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-dark-600 transition-colors"
                     >
-                      <Edit size={12} /> Edit
+                      <Edit size={14} /> Edit
                     </button>
                     <button
                       onClick={() => handleToggleActive(type)}
-                      className={`flex-1 py-1.5 rounded transition-colors text-xs ${type.isActive ? 'bg-orange-500/20 text-orange-500 hover:bg-orange-500/30' : 'bg-green-500/20 text-green-500 hover:bg-green-500/30'}`}
+                      className={`flex-1 py-2.5 rounded-lg transition-colors text-sm font-medium ${type.isActive ? 'bg-orange-500/20 text-orange-500 hover:bg-orange-500/30' : 'bg-green-500/20 text-green-500 hover:bg-green-500/30'}`}
                     >
                       {type.isActive ? 'Disable' : 'Enable'}
                     </button>
                     <button
                       onClick={() => handleDelete(type._id)}
-                      className="px-2 py-1.5 bg-red-500/20 text-red-500 rounded hover:bg-red-500/30 transition-colors"
+                      className="px-3 py-2.5 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
               ))}
-              {accountTypes.length === 0 && (
-                <div className="col-span-3 bg-dark-800 rounded-xl p-8 border border-gray-800 text-center">
-                  <CreditCard size={48} className="text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500">No account types created yet</p>
-                </div>
-              )}
             </div>
           )}
         </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-dark-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-white font-semibold text-lg">
-                {editingType ? 'Edit Account Type' : 'Create Account Type'}
-              </h3>
-              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-white">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-700 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                  <CreditCard size={20} className="text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-base sm:text-lg">
+                    {editingType ? 'Edit Account Type' : 'Create Account Type'}
+                  </h3>
+                  <p className="text-gray-500 text-xs sm:text-sm">Configure account settings</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowModal(false); resetForm(); }} 
+                className="text-gray-400 hover:text-white p-2 hover:bg-dark-700 rounded-lg transition-colors"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Modal Body - Scrollable */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
+              {/* Account Name */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">Account Name *</label>
                 <input
@@ -278,10 +311,11 @@ const AdminAccountTypes = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Standard, Premium, VIP"
-                  className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                  className="w-full bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
                 />
               </div>
 
+              {/* Description */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">Description</label>
                 <textarea
@@ -289,11 +323,12 @@ const AdminAccountTypes = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Account type description"
                   rows={2}
-                  className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                  className="w-full bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors resize-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Min Deposit & Leverage */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">Min Deposit ($) *</label>
                   <input
@@ -301,26 +336,27 @@ const AdminAccountTypes = () => {
                     value={formData.minDeposit}
                     onChange={(e) => setFormData({ ...formData, minDeposit: e.target.value })}
                     placeholder="100"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
                   />
                 </div>
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">Leverage *</label>
                   <div className="flex items-center gap-2">
-                    <span className="text-white">1:</span>
+                    <span className="text-white text-sm sm:text-base">1:</span>
                     <input
                       type="number"
                       min="1"
                       value={formData.leverage.replace('1:', '')}
                       onChange={(e) => setFormData({ ...formData, leverage: `1:${e.target.value}` })}
                       placeholder="100"
-                      className="flex-1 bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                      className="flex-1 bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
                     />
                   </div>
-                  <p className="text-gray-500 text-xs mt-1">Enter any leverage value (e.g., 100, 500, 1000, 2000)</p>
+                  <p className="text-gray-500 text-xs mt-1.5">e.g., 100, 500, 1000, 2000</p>
                 </div>
               </div>
 
+              {/* Exposure Limit */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">Exposure Limit ($)</label>
                 <input
@@ -328,12 +364,12 @@ const AdminAccountTypes = () => {
                   value={formData.exposureLimit}
                   onChange={(e) => setFormData({ ...formData, exposureLimit: e.target.value })}
                   placeholder="0 for unlimited"
-                  className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                  className="w-full bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
                 />
               </div>
 
               {/* Min Spread and Commission */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">Min Spread (pips)</label>
                   <input
@@ -342,7 +378,7 @@ const AdminAccountTypes = () => {
                     value={formData.minSpread}
                     onChange={(e) => setFormData({ ...formData, minSpread: e.target.value })}
                     placeholder="0"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
                   />
                 </div>
                 <div>
@@ -353,22 +389,22 @@ const AdminAccountTypes = () => {
                     value={formData.commission}
                     onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
                     placeholder="0"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
                   />
                 </div>
               </div>
 
               {/* Demo Account Toggle */}
-              <div className="bg-dark-700 rounded-lg p-4 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-white font-medium">Demo Account</label>
-                    <p className="text-gray-500 text-xs mt-1">Enable this for practice/demo accounts with virtual funds</p>
+              <div className="bg-dark-700 rounded-xl p-4 border border-gray-700">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <label className="text-white font-medium text-sm sm:text-base">Demo Account</label>
+                    <p className="text-gray-500 text-xs mt-1">Enable for practice accounts with virtual funds</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, isDemo: !formData.isDemo })}
-                    className={`w-12 h-6 rounded-full transition-colors ${formData.isDemo ? 'bg-yellow-500' : 'bg-gray-600'}`}
+                    className={`w-12 h-6 rounded-full transition-colors shrink-0 ${formData.isDemo ? 'bg-yellow-500' : 'bg-gray-600'}`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full transition-transform ${formData.isDemo ? 'translate-x-6' : 'translate-x-0.5'}`} />
                   </button>
@@ -382,26 +418,32 @@ const AdminAccountTypes = () => {
                       value={formData.demoBalance}
                       onChange={(e) => setFormData({ ...formData, demoBalance: e.target.value })}
                       placeholder="10000"
-                      className="w-full bg-dark-600 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500"
+                      className="w-full bg-dark-600 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition-colors"
                     />
-                    <p className="text-gray-500 text-xs mt-1">Virtual balance users will receive when opening this account type</p>
+                    <p className="text-gray-500 text-xs mt-1.5">Virtual balance for this account type</p>
                   </div>
                 )}
               </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-500 text-sm">
+                  {error}
+                </div>
+              )}
             </div>
 
-            {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
-
-            <div className="flex gap-3 mt-6">
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-4 sm:p-6 border-t border-gray-700 shrink-0">
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
-                className="flex-1 bg-dark-700 text-white py-3 rounded-lg hover:bg-dark-600 transition-colors"
+                className="flex-1 bg-dark-700 text-white py-2.5 sm:py-3 rounded-lg hover:bg-dark-600 transition-colors text-sm sm:text-base font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex-1 bg-red-500 text-white font-medium py-3 rounded-lg hover:bg-red-600 transition-colors"
+                className="flex-1 bg-red-500 text-white font-medium py-2.5 sm:py-3 rounded-lg hover:bg-red-600 transition-colors text-sm sm:text-base"
               >
                 {editingType ? 'Update' : 'Create'}
               </button>

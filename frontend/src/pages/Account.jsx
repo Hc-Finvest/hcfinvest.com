@@ -710,7 +710,7 @@ const Account = () => {
                   </button>
                 </div>
               ) : (
-                <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'}`}>
+                <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 lg:grid-cols-3 gap-4'}`}>
                   {challengeAccounts.map((account) => (
                     <div key={account._id} className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
                       {/* Card Header */}
@@ -804,7 +804,7 @@ const Account = () => {
               </button>
             </div>
           ) : (
-            <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'}`}>
+            <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 lg:grid-cols-3 gap-4'}`}>
               {userAccounts.filter(acc => {
                 if (activeTab === 'Real') return !acc.accountTypeId?.isDemo && !acc.isDemo && acc.status === 'Active'
                 if (activeTab === 'Demo') return (acc.accountTypeId?.isDemo || acc.isDemo) && acc.status === 'Active'
@@ -885,27 +885,27 @@ const Account = () => {
 
                   {/* Card Body - Balance & Details */}
                   <div className={`${isMobile ? 'p-3' : 'p-4'}`}>
-                    <div className="text-center mb-3">
+                    <div className="text-center mb-4">
                       <p className={`font-bold ${isMobile ? 'text-2xl' : 'text-3xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${account.balance.toLocaleString()}</p>
-                      <p className="text-gray-500 text-sm mt-1">Balance</p>
+                      <p className="text-gray-500 text-sm mt-2">Balance</p>
                     </div>
                     
                     {/* Account Details Grid */}
-                    <div className={`grid grid-cols-2 gap-2 mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                    <div className={`grid grid-cols-2 gap-3 mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-center">
-                        <p className="text-gray-500 text-xs">Leverage</p>
+                        <p className="text-gray-500 text-xs mb-1">Leverage</p>
                         <p className={`font-medium text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{account.leverage || '1:100'}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-gray-500 text-xs">Credit</p>
+                        <p className="text-gray-500 text-xs mb-1">Credit</p>
                         <p className={`font-medium text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${(account.credit || 0).toLocaleString()}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-gray-500 text-xs">Min Deposit</p>
+                        <p className="text-gray-500 text-xs mb-1">Min Deposit</p>
                         <p className={`font-medium text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${account.accountTypeId?.minDeposit?.toLocaleString() || '0'}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-gray-500 text-xs">Equity</p>
+                        <p className="text-gray-500 text-xs mb-1">Equity</p>
                         <p className={`font-medium text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${((account.balance || 0) + (account.credit || 0)).toLocaleString()}</p>
                       </div>
                     </div>
@@ -1003,12 +1003,12 @@ const Account = () => {
               </div>
             </div>
 
-            {/* Account Type Selection - 2 Column Grid Like Screenshot */}
+            {/* Account Type Selection - Horizontal Scroll */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-4">
                 {createAccountTab === 'demo' ? 'Select Demo Account Type' : 'Select Live Account Type'}
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-1">
+              <div className="flex gap-4 overflow-x-auto pb-3">
                 {accountTypes.filter(t => createAccountTab === 'demo' ? t.isDemo : !t.isDemo).length === 0 ? (
                   <p className="text-gray-500 text-sm text-center py-8 col-span-2">
                     No {createAccountTab === 'demo' ? 'demo' : 'live'} account types available
@@ -1030,7 +1030,7 @@ const Account = () => {
                       <button
                         key={type._id}
                         onClick={() => setSelectedType(type)}
-                        className={`relative bg-dark-700 rounded-xl p-5 text-left transition-all duration-200 border ${
+                        className={`relative bg-dark-700 rounded-xl p-5 text-left transition-all duration-200 border min-w-[280px] flex-shrink-0 ${
                           isSelected
                             ? 'border-white ring-1 ring-white'
                             : 'border-gray-700 hover:border-gray-600'

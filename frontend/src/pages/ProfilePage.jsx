@@ -11,7 +11,7 @@ import { useTheme } from '../context/ThemeContext'
 const ProfilePage = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()
-  const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+  const [currentUser, setCurrentUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -58,16 +58,67 @@ const ProfilePage = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Fetch fresh user data from API
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+      
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      
+      // API returns { user: {...} }
+      const userData = data.user || data
+      if (userData._id || userData.id) {
+        // Update localStorage with fresh data
+        localStorage.setItem('user', JSON.stringify(userData))
+        setCurrentUser(userData)
+        // Update profile state
+        setProfile({
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          address: userData.address || '',
+          city: userData.city || '',
+          country: userData.country || '',
+          dateOfBirth: userData.dateOfBirth || '',
+          bankDetails: userData.bankDetails || {
+            bankName: '',
+            accountNumber: '',
+            accountHolderName: '',
+            ifscCode: '',
+            branchName: ''
+          },
+          upiId: userData.upiId || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    }
+  }
+
   useEffect(() => {
+    fetchUserData()
     fetchChallengeStatus()
     fetchKycStatus()
     fetchUserBankAccounts()
+    
+    // Poll for KYC status updates every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchUserData()
+      fetchKycStatus()
+    }, 30000)
+    
+    return () => clearInterval(pollInterval)
   }, [])
 
   // Fetch user's bank accounts
   const fetchUserBankAccounts = async () => {
     try {
-      const res = await fetch(`${API_URL}/payment-methods/user-banks/${storedUser._id}`)
+      const res = await fetch(`${API_URL}/payment-methods/user-banks/${currentUser._id}`)
       const data = await res.json()
       setUserBankAccounts(data.accounts || [])
     } catch (error) {
@@ -95,7 +146,7 @@ const ProfilePage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           type: bankFormType,
           ...bankForm
         })
@@ -160,7 +211,7 @@ const ProfilePage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword
         })
@@ -182,7 +233,7 @@ const ProfilePage = () => {
   // Fetch Login History
   const fetchLoginHistory = async () => {
     try {
-      const res = await fetch(`${API_URL}/auth/login-history/${storedUser._id}`)
+      const res = await fetch(`${API_URL}/auth/login-history/${currentUser._id}`)
       const data = await res.json()
       if (data.success) {
         setLoginHistory(data.history || [])
@@ -195,7 +246,7 @@ const ProfilePage = () => {
   // Fetch KYC status
   const fetchKycStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/kyc/status/${storedUser._id}`)
+      const res = await fetch(`${API_URL}/kyc/status/${currentUser._id}`)
       const data = await res.json()
       if (data.success && data.hasKYC) {
         setKycStatus(data.kyc)
@@ -234,7 +285,7 @@ const ProfilePage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           ...kycForm
         })
       })
@@ -274,22 +325,22 @@ const ProfilePage = () => {
   }
   
   const [profile, setProfile] = useState({
-    firstName: storedUser.firstName || '',
-    lastName: storedUser.lastName || '',
-    email: storedUser.email || '',
-    phone: storedUser.phone || '',
-    address: storedUser.address || '',
-    city: storedUser.city || '',
-    country: storedUser.country || '',
-    dateOfBirth: storedUser.dateOfBirth || '',
-    bankDetails: storedUser.bankDetails || {
+    firstName: currentUser.firstName || '',
+    lastName: currentUser.lastName || '',
+    email: currentUser.email || '',
+    phone: currentUser.phone || '',
+    address: currentUser.address || '',
+    city: currentUser.city || '',
+    country: currentUser.country || '',
+    dateOfBirth: currentUser.dateOfBirth || '',
+    bankDetails: currentUser.bankDetails || {
       bankName: '',
       accountNumber: '',
       accountHolderName: '',
       ifscCode: '',
       branchName: ''
     },
-    upiId: storedUser.upiId || ''
+    upiId: currentUser.upiId || ''
   })
 
   const menuItems = [
@@ -311,7 +362,7 @@ const ProfilePage = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           ...profile
         })
       })
@@ -448,12 +499,12 @@ const ProfilePage = () => {
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{profile.email}</p>
                   <div className={`flex ${isMobile ? 'justify-center flex-wrap' : ''} items-center gap-2 mt-2`}>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      storedUser.kycApproved ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'
+                      currentUser.kycApproved ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'
                     }`}>
-                      {storedUser.kycApproved ? 'Verified' : 'Pending'}
+                      {currentUser.kycApproved ? 'Verified' : 'Pending'}
                     </span>
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-500">
-                      Since {new Date(storedUser.createdAt).toLocaleDateString()}
+                      Since {new Date(currentUser.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
