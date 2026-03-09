@@ -12,12 +12,16 @@ const router = express.Router()
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../uploads')
 const screenshotsDir = path.join(uploadsDir, 'screenshots')
+const carouselDir = path.join(uploadsDir, 'carousel')
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true })
 }
 if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true })
+}
+if (!fs.existsSync(carouselDir)) {
+  fs.mkdirSync(carouselDir, { recursive: true })
 }
 
 // Configure multer for file uploads
@@ -46,6 +50,47 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+})
+
+// Configure multer for carousel uploads
+const carouselStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, carouselDir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    const ext = path.extname(file.originalname)
+    cb(null, `carousel-${uniqueSuffix}${ext}`)
+  }
+})
+
+const carouselUpload = multer({
+  storage: carouselStorage,
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit for carousel images
+  }
+})
+
+// POST /api/upload/carousel - Upload carousel image
+router.post('/carousel', carouselUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' })
+    }
+
+    const fileUrl = `/uploads/carousel/${req.file.filename}`
+    
+    res.json({
+      success: true,
+      message: 'Carousel image uploaded successfully',
+      url: fileUrl,
+      filename: req.file.filename
+    })
+  } catch (error) {
+    console.error('Error uploading carousel image:', error)
+    res.status(500).json({ success: false, message: error.message })
   }
 })
 

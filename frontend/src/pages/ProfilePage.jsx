@@ -8,10 +8,15 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
+// Animation styles
+const fadeInUp = "animate-[fadeInUp_0.5s_ease-out_forwards]"
+const fadeIn = "animate-[fadeIn_0.3s_ease-out_forwards]"
+const scaleIn = "animate-[scaleIn_0.3s_ease-out_forwards]"
+
 const ProfilePage = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()
-  const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+  const [currentUser, setCurrentUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -58,16 +63,63 @@ const ProfilePage = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Fetch fresh user data from API
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+      
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      
+      // API returns { user: {...} }
+      const userData = data.user || data
+      if (userData._id || userData.id) {
+        // Update localStorage with fresh data
+        localStorage.setItem('user', JSON.stringify(userData))
+        setCurrentUser(userData)
+        // Update profile state
+        setProfile({
+          fullName: userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          city: userData.city || '',
+          bankDetails: userData.bankDetails || {
+            bankName: '',
+            accountNumber: '',
+            accountHolderName: '',
+            ifscCode: '',
+            branchName: ''
+          },
+          upiId: userData.upiId || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    }
+  }
+
   useEffect(() => {
+    fetchUserData()
     fetchChallengeStatus()
     fetchKycStatus()
     fetchUserBankAccounts()
+    
+    // Poll for KYC status updates every 10 seconds for faster auto-refresh
+    const pollInterval = setInterval(() => {
+      fetchUserData()
+      fetchKycStatus()
+    }, 10000)
+    
+    return () => clearInterval(pollInterval)
   }, [])
 
   // Fetch user's bank accounts
   const fetchUserBankAccounts = async () => {
     try {
-      const res = await fetch(`${API_URL}/payment-methods/user-banks/${storedUser._id}`)
+      const res = await fetch(`${API_URL}/payment-methods/user-banks/${currentUser._id}`)
       const data = await res.json()
       setUserBankAccounts(data.accounts || [])
     } catch (error) {
@@ -95,7 +147,7 @@ const ProfilePage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           type: bankFormType,
           ...bankForm
         })
@@ -160,7 +212,7 @@ const ProfilePage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword
         })
@@ -182,7 +234,7 @@ const ProfilePage = () => {
   // Fetch Login History
   const fetchLoginHistory = async () => {
     try {
-      const res = await fetch(`${API_URL}/auth/login-history/${storedUser._id}`)
+      const res = await fetch(`${API_URL}/auth/login-history/${currentUser._id}`)
       const data = await res.json()
       if (data.success) {
         setLoginHistory(data.history || [])
@@ -195,10 +247,19 @@ const ProfilePage = () => {
   // Fetch KYC status
   const fetchKycStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/kyc/status/${storedUser._id}`)
+      const res = await fetch(`${API_URL}/kyc/status/${currentUser._id}`)
       const data = await res.json()
       if (data.success && data.hasKYC) {
         setKycStatus(data.kyc)
+        // Update localStorage when KYC is approved
+        if (data.kyc.status === 'Approved') {
+          const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+          if (!storedUser.kycApproved) {
+            storedUser.kycApproved = true
+            localStorage.setItem('user', JSON.stringify(storedUser))
+            setCurrentUser(storedUser)
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching KYC status:', error)
@@ -234,7 +295,7 @@ const ProfilePage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           ...kycForm
         })
       })
@@ -274,22 +335,18 @@ const ProfilePage = () => {
   }
   
   const [profile, setProfile] = useState({
-    firstName: storedUser.firstName || '',
-    lastName: storedUser.lastName || '',
-    email: storedUser.email || '',
-    phone: storedUser.phone || '',
-    address: storedUser.address || '',
-    city: storedUser.city || '',
-    country: storedUser.country || '',
-    dateOfBirth: storedUser.dateOfBirth || '',
-    bankDetails: storedUser.bankDetails || {
+    fullName: currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || '',
+    email: currentUser.email || '',
+    phone: currentUser.phone || '',
+    city: currentUser.city || '',
+    bankDetails: currentUser.bankDetails || {
       bankName: '',
       accountNumber: '',
       accountHolderName: '',
       ifscCode: '',
       branchName: ''
     },
-    upiId: storedUser.upiId || ''
+    upiId: currentUser.upiId || ''
   })
 
   const menuItems = [
@@ -311,7 +368,7 @@ const ProfilePage = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: storedUser._id,
+          userId: currentUser._id,
           ...profile
         })
       })
@@ -340,16 +397,16 @@ const ProfilePage = () => {
     <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
       {/* Mobile Header */}
       {isMobile && (
-        <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
-          <button onClick={() => navigate('/mobile')} className={`p-2 -ml-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+        <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-3 backdrop-blur-lg ${isDarkMode ? 'bg-dark-800/95 border-b border-gray-800' : 'bg-white/95 border-b border-gray-200'} transition-all duration-300`}>
+          <button onClick={() => navigate('/dashboard')} className={`p-2 -ml-2 rounded-xl transition-all duration-200 active:scale-95 ${isDarkMode ? 'hover:bg-dark-700 active:bg-dark-600' : 'hover:bg-gray-100 active:bg-gray-200'}`}>
             <ArrowLeft size={22} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
           </button>
           <h1 className={`font-semibold text-lg flex-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Profile</h1>
-          <button onClick={toggleDarkMode} className={`p-2 rounded-lg ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
+          <button onClick={toggleDarkMode} className={`p-2 rounded-xl transition-all duration-200 active:scale-95 ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button onClick={() => navigate('/mobile')} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
-            <Home size={20} className="text-gray-400" />
+          <button onClick={() => navigate('/dashboard')} className={`p-2 rounded-xl transition-all duration-200 active:scale-95 ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+            <Home size={20} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
           </button>
         </header>
       )}
@@ -426,155 +483,128 @@ const ProfilePage = () => {
           </header>
         )}
 
-        <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
-          <div className={`${isMobile ? '' : 'max-w-3xl'}`}>
+        <div className={`${isMobile ? 'p-4 pb-8' : 'p-6'}`}>
+          <div className={`${isMobile ? '' : 'max-w-3xl'} space-y-4 sm:space-y-6`}>
             {/* Profile Header */}
-            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-6'} border mb-4`}>
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`} style={{animationDelay: '0.1s'}}>
               <div className={`flex ${isMobile ? 'flex-col' : ''} items-center gap-4`}>
-                <div className="relative">
-                  <div className={`${isMobile ? 'w-16 h-16' : 'w-24 h-24'} bg-accent-green/20 rounded-full flex items-center justify-center`}>
-                    <span className={`text-accent-green font-bold ${isMobile ? 'text-xl' : 'text-3xl'}`}>
-                      {profile.firstName?.charAt(0)}{profile.lastName?.charAt(0)}
+                <div className="relative group">
+                  <div className={`${isMobile ? 'w-20 h-20' : 'w-24 h-24'} bg-gradient-to-br from-accent-green/30 to-accent-green/10 rounded-full flex items-center justify-center ring-4 ring-accent-green/20 transition-all duration-300 group-hover:ring-accent-green/40 group-hover:scale-105`}>
+                    <span className={`text-accent-green font-bold ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
+                      {profile.fullName?.split(' ').map(n => n.charAt(0)).slice(0, 2).join('')}
                     </span>
                   </div>
                   {editing && (
-                    <button className="absolute bottom-0 right-0 w-6 h-6 bg-accent-green rounded-full flex items-center justify-center">
-                      <Camera size={12} className="text-black" />
+                    <button className="absolute bottom-0 right-0 w-7 h-7 bg-accent-green rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95">
+                      <Camera size={14} className="text-black" />
                     </button>
                   )}
                 </div>
-                <div className={isMobile ? 'text-center' : ''}>
-                  <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.firstName} {profile.lastName}</h2>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{profile.email}</p>
-                  <div className={`flex ${isMobile ? 'justify-center flex-wrap' : ''} items-center gap-2 mt-2`}>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      storedUser.kycApproved ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'
+                <div className={`${isMobile ? 'text-center' : ''} flex-1`}>
+                  <h2 className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.fullName}</h2>
+                  <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{profile.email}</p>
+                  <div className={`flex ${isMobile ? 'justify-center flex-wrap' : ''} items-center gap-2 mt-3`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                      currentUser.kycApproved ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'
                     }`}>
-                      {storedUser.kycApproved ? 'Verified' : 'Pending'}
+                      {currentUser.kycApproved ? '✓ Verified' : '⏳ Pending'}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-500">
-                      Since {new Date(storedUser.createdAt).toLocaleDateString()}
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-500">
+                      Since {new Date(currentUser.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
+                {/* Mobile Edit Button */}
+                {isMobile && (
+                  <div className="w-full mt-2">
+                    {!editing ? (
+                      <button
+                        onClick={() => setEditing(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-accent-green text-black px-4 py-3 rounded-xl font-medium transition-all duration-200 active:scale-98 hover:bg-accent-green/90"
+                      >
+                        <Edit2 size={16} />
+                        Edit Profile
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditing(false)}
+                          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 active:scale-98 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        >
+                          <X size={16} />
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSave}
+                          disabled={loading}
+                          className="flex-1 flex items-center justify-center gap-2 bg-accent-green text-black px-4 py-3 rounded-xl font-medium transition-all duration-200 active:scale-98 hover:bg-accent-green/90 disabled:opacity-50"
+                        >
+                          <Save size={16} />
+                          {loading ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Profile Details */}
-            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-6'} border`}>
-              <h3 className={`font-semibold ${isMobile ? 'mb-4 text-sm' : 'mb-6'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Personal Information</h3>
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`}>
+              <h3 className={`font-semibold ${isMobile ? 'mb-4 text-base' : 'mb-6'} flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <User size={18} className="text-accent-green" /> Personal Information
+              </h3>
               
               <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-6'}`}>
-                <div>
-                  <label className={`text-sm mb-2 block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>First Name</label>
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Full Name</label>
                   {editing ? (
                     <input
                       type="text"
-                      value={profile.firstName}
-                      onChange={(e) => setProfile({...profile, firstName: e.target.value})}
-                      className={`w-full rounded-lg px-4 py-2 border ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
+                      value={profile.fullName}
+                      onChange={(e) => setProfile({...profile, fullName: e.target.value})}
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   ) : (
-                    <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{profile.firstName || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.fullName || '-'}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className={`text-sm mb-2 block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Last Name</label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={profile.lastName}
-                      onChange={(e) => setProfile({...profile, lastName: e.target.value})}
-                      className={`w-full rounded-lg px-4 py-2 border ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
-                    />
-                  ) : (
-                    <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{profile.lastName || '-'}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className={`text-sm mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <Mail size={14} /> Email
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <Mail size={14} className="text-blue-400" /> Email
                   </label>
-                  <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{profile.email}</p>
+                  <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.email}</p>
                 </div>
 
-                <div>
-                  <label className={`text-sm mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <Phone size={14} /> Phone
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <Phone size={14} className="text-green-400" /> Phone
                   </label>
                   {editing ? (
                     <input
                       type="text"
                       value={profile.phone}
                       onChange={(e) => setProfile({...profile, phone: e.target.value})}
-                      className={`w-full rounded-lg px-4 py-2 border ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   ) : (
-                    <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{profile.phone || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.phone || '-'}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className={`text-sm mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <Calendar size={14} /> Date of Birth
-                  </label>
-                  {editing ? (
-                    <input
-                      type="date"
-                      value={profile.dateOfBirth}
-                      onChange={(e) => setProfile({...profile, dateOfBirth: e.target.value})}
-                      className={`w-full rounded-lg px-4 py-2 border ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
-                    />
-                  ) : (
-                    <p className="text-white">{profile.dateOfBirth || '-'}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 flex items-center gap-2">
-                    <MapPin size={14} /> Country
-                  </label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={profile.country}
-                      onChange={(e) => setProfile({...profile, country: e.target.value})}
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
-                    />
-                  ) : (
-                    <p className="text-white">{profile.country || '-'}</p>
-                  )}
-                </div>
-
-                <div className="col-span-2">
-                  <label className="text-gray-400 text-sm mb-2 flex items-center gap-2">
-                    <MapPin size={14} /> Address
-                  </label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={profile.address}
-                      onChange={(e) => setProfile({...profile, address: e.target.value})}
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
-                    />
-                  ) : (
-                    <p className="text-white">{profile.address || '-'}</p>
-                  )}
-                </div>
               </div>
             </div>
 
             {/* Bank Details Section */}
-            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-6 border mt-6`}>
-              <h3 className={`font-semibold mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                <Building2 size={18} /> Bank Details (For Withdrawals)
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`}>
+              <h3 className={`font-semibold ${isMobile ? 'mb-4 text-base' : 'mb-6'} flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <Building2 size={18} className="text-blue-400" /> Bank Details (For Withdrawals)
               </h3>
               
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">Bank Name</label>
+              <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-6'}`}>
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Bank Name</label>
                   {editing ? (
                     <input
                       type="text"
@@ -584,15 +614,15 @@ const ProfilePage = () => {
                         bankDetails: {...profile.bankDetails, bankName: e.target.value}
                       })}
                       placeholder="e.g., HDFC Bank"
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                     />
                   ) : (
-                    <p className="text-white">{profile.bankDetails?.bankName || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.bankDetails?.bankName || '-'}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">Account Holder Name</label>
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Account Holder Name</label>
                   {editing ? (
                     <input
                       type="text"
@@ -602,15 +632,15 @@ const ProfilePage = () => {
                         bankDetails: {...profile.bankDetails, accountHolderName: e.target.value}
                       })}
                       placeholder="Name as per bank account"
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                     />
                   ) : (
-                    <p className="text-white">{profile.bankDetails?.accountHolderName || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.bankDetails?.accountHolderName || '-'}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">Account Number</label>
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Account Number</label>
                   {editing ? (
                     <input
                       type="text"
@@ -620,15 +650,15 @@ const ProfilePage = () => {
                         bankDetails: {...profile.bankDetails, accountNumber: e.target.value}
                       })}
                       placeholder="Enter account number"
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                     />
                   ) : (
-                    <p className="text-white">{profile.bankDetails?.accountNumber || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.bankDetails?.accountNumber || '-'}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">IFSC Code</label>
+                <div className="space-y-1.5">
+                  <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>IFSC Code</label>
                   {editing ? (
                     <input
                       type="text"
@@ -638,15 +668,15 @@ const ProfilePage = () => {
                         bankDetails: {...profile.bankDetails, ifscCode: e.target.value.toUpperCase()}
                       })}
                       placeholder="e.g., HDFC0001234"
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white uppercase"
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none uppercase ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                     />
                   ) : (
-                    <p className="text-white">{profile.bankDetails?.ifscCode || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.bankDetails?.ifscCode || '-'}</p>
                   )}
                 </div>
 
-                <div className="col-span-2">
-                  <label className="text-gray-400 text-sm mb-2 block">Branch Name</label>
+                <div className={`${isMobile ? '' : 'col-span-2'} space-y-1.5`}>
+                  <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Branch Name</label>
                   {editing ? (
                     <input
                       type="text"
@@ -656,39 +686,39 @@ const ProfilePage = () => {
                         bankDetails: {...profile.bankDetails, branchName: e.target.value}
                       })}
                       placeholder="e.g., Mumbai Main Branch"
-                      className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                      className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                     />
                   ) : (
-                    <p className="text-white">{profile.bankDetails?.branchName || '-'}</p>
+                    <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.bankDetails?.branchName || '-'}</p>
                   )}
                 </div>
               </div>
             </div>
 
             {/* UPI Section */}
-            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800 mt-6">
-              <h3 className="text-white font-semibold mb-6 flex items-center gap-2">
-                <Smartphone size={18} /> UPI Details
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`}>
+              <h3 className={`font-semibold ${isMobile ? 'mb-4 text-base' : 'mb-6'} flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <Smartphone size={18} className="text-purple-400" /> UPI Details
               </h3>
               
-              <div>
-                <label className="text-gray-400 text-sm mb-2 block">UPI ID</label>
+              <div className="space-y-1.5">
+                <label className={`text-sm font-medium block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>UPI ID</label>
                 {editing ? (
                   <input
                     type="text"
                     value={profile.upiId || ''}
                     onChange={(e) => setProfile({...profile, upiId: e.target.value})}
                     placeholder="e.g., yourname@upi"
-                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                    className={`w-full rounded-xl px-4 py-3 border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                   />
                 ) : (
-                  <p className="text-white">{profile.upiId || '-'}</p>
+                  <p className={`py-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.upiId || '-'}</p>
                 )}
               </div>
 
               {!editing && (!profile.bankDetails?.accountNumber && !profile.upiId) && (
-                <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <p className="text-yellow-500 text-sm">
+                <div className={`mt-4 p-4 rounded-xl border ${isDarkMode ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-yellow-50 border-yellow-200'}`}>
+                  <p className={`text-sm ${isDarkMode ? 'text-yellow-500' : 'text-yellow-700'}`}>
                     ⚠️ Please add your bank details or UPI ID to receive withdrawals. Click "Edit Profile" to add.
                   </p>
                 </div>
@@ -696,44 +726,47 @@ const ProfilePage = () => {
             </div>
 
             {/* Withdrawal Accounts Section */}
-            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800 mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <CreditCard size={18} /> Withdrawal Accounts
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`}>
+              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'} mb-4`}>
+                <h3 className={`font-semibold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <CreditCard size={18} className="text-orange-400" /> Withdrawal Accounts
                 </h3>
                 <button
                   onClick={() => setShowBankForm(true)}
-                  className="px-3 py-1.5 bg-green-500/20 text-green-500 rounded-lg text-sm hover:bg-green-500/30"
+                  className={`${isMobile ? 'w-full' : ''} px-4 py-2 bg-green-500/20 text-green-500 rounded-xl text-sm font-medium hover:bg-green-500/30 transition-all duration-200 active:scale-98`}
                 >
                   + Add Account
                 </button>
               </div>
 
-              <p className="text-gray-500 text-sm mb-4">
+              <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                 Add bank accounts or UPI IDs for withdrawals. Accounts require admin approval before use.
               </p>
 
               {userBankAccounts.length === 0 ? (
-                <div className="p-4 bg-dark-700 rounded-lg text-center">
-                  <p className="text-gray-500">No withdrawal accounts added yet</p>
+                <div className={`p-6 rounded-xl text-center ${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}`}>
+                  <CreditCard size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+                  <p className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>No withdrawal accounts added yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {userBankAccounts.map((acc) => (
-                    <div key={acc._id} className="p-4 bg-dark-700 rounded-lg border border-gray-700">
-                      <div className="flex items-start justify-between">
+                    <div key={acc._id} className={`p-4 rounded-xl border transition-all duration-200 hover:scale-[1.01] ${isDarkMode ? 'bg-dark-700 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-start justify-between'}`}>
                         <div className="flex items-center gap-3">
-                          {acc.type === 'Bank Transfer' ? (
-                            <Building2 size={20} className="text-blue-500" />
-                          ) : (
-                            <Smartphone size={20} className="text-purple-500" />
-                          )}
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${acc.type === 'Bank Transfer' ? 'bg-blue-500/20' : 'bg-purple-500/20'}`}>
+                            {acc.type === 'Bank Transfer' ? (
+                              <Building2 size={20} className="text-blue-500" />
+                            ) : (
+                              <Smartphone size={20} className="text-purple-500" />
+                            )}
+                          </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-medium">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {acc.type === 'Bank Transfer' ? acc.bankName : 'UPI'}
                               </span>
-                              <span className={`px-2 py-0.5 rounded text-xs ${
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                 acc.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-500' :
                                 acc.status === 'Approved' ? 'bg-green-500/20 text-green-500' :
                                 'bg-red-500/20 text-red-500'
@@ -742,11 +775,11 @@ const ProfilePage = () => {
                               </span>
                             </div>
                             {acc.type === 'Bank Transfer' ? (
-                              <p className="text-gray-500 text-sm">
+                              <p className={`text-sm mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                                 A/C: {acc.accountNumber} | IFSC: {acc.ifscCode}
                               </p>
                             ) : (
-                              <p className="text-purple-400 text-sm font-mono">{acc.upiId}</p>
+                              <p className="text-purple-400 text-sm font-mono mt-0.5">{acc.upiId}</p>
                             )}
                             {acc.rejectionReason && (
                               <p className="text-red-400 text-xs mt-1">Reason: {acc.rejectionReason}</p>
@@ -756,7 +789,7 @@ const ProfilePage = () => {
                         {acc.status !== 'Approved' && (
                           <button
                             onClick={() => handleDeleteBankAccount(acc._id)}
-                            className="text-gray-500 hover:text-red-500"
+                            className={`${isMobile ? 'self-end' : ''} p-2 rounded-lg transition-all duration-200 ${isDarkMode ? 'text-gray-500 hover:text-red-500 hover:bg-red-500/10' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}
                           >
                             <X size={16} />
                           </button>
@@ -770,11 +803,11 @@ const ProfilePage = () => {
 
             {/* Bank Account Form Modal */}
             {showBankForm && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-dark-800 rounded-xl w-full max-w-md border border-gray-700">
-                  <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                    <h3 className="text-white font-semibold">Add Withdrawal Account</h3>
-                    <button onClick={() => setShowBankForm(false)} className="text-gray-400 hover:text-white">
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl w-full max-w-md border shadow-2xl animate-[scaleIn_0.2s_ease-out]`}>
+                  <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Add Withdrawal Account</h3>
+                    <button onClick={() => setShowBankForm(false)} className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}>
                       <X size={20} />
                     </button>
                   </div>
@@ -896,9 +929,9 @@ const ProfilePage = () => {
             )}
 
             {/* KYC Verification Section */}
-            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800 mt-6">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <FileCheck size={18} /> KYC Verification
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`}>
+              <h3 className={`font-semibold ${isMobile ? 'mb-4 text-base' : 'mb-4'} flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <FileCheck size={18} className="text-cyan-400" /> KYC Verification
               </h3>
               
               {/* KYC Status Display */}
@@ -1101,31 +1134,31 @@ const ProfilePage = () => {
             </div>
 
             {/* Security Section */}
-            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800 mt-6">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Shield size={18} /> Security
+            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border transition-all duration-300 hover:shadow-lg ${isDarkMode ? 'hover:shadow-black/20' : 'hover:shadow-gray-200'}`}>
+              <h3 className={`font-semibold ${isMobile ? 'mb-4 text-base' : 'mb-4'} flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <Shield size={18} className="text-red-400" /> Security
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-3 border-b border-gray-700">
+              <div className="space-y-2">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} p-4 rounded-xl transition-all duration-200 ${isDarkMode ? 'bg-dark-700/50 hover:bg-dark-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
                   <div>
-                    <p className="text-white">Password</p>
-                    <p className="text-gray-500 text-sm">Last changed: Never</p>
+                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Password</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Last changed: Never</p>
                   </div>
-                  <button onClick={() => setShowPasswordModal(true)} className="text-accent-green hover:underline text-sm">Change Password</button>
+                  <button onClick={() => setShowPasswordModal(true)} className={`${isMobile ? 'w-full' : ''} px-4 py-2 bg-accent-green/10 text-accent-green rounded-xl text-sm font-medium hover:bg-accent-green/20 transition-all duration-200 active:scale-98`}>Change Password</button>
                 </div>
-                <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} p-4 rounded-xl transition-all duration-200 ${isDarkMode ? 'bg-dark-700/50 hover:bg-dark-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
                   <div>
-                    <p className="text-white">Two-Factor Authentication</p>
-                    <p className="text-gray-500 text-sm">Add an extra layer of security</p>
+                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Two-Factor Authentication</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Add an extra layer of security</p>
                   </div>
-                  <button onClick={() => alert('Two-Factor Authentication coming soon!')} className="text-accent-green hover:underline text-sm">Enable</button>
+                  <button onClick={() => alert('Two-Factor Authentication coming soon!')} className={`${isMobile ? 'w-full' : ''} px-4 py-2 bg-blue-500/10 text-blue-500 rounded-xl text-sm font-medium hover:bg-blue-500/20 transition-all duration-200 active:scale-98`}>Enable</button>
                 </div>
-                <div className="flex items-center justify-between py-3">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} p-4 rounded-xl transition-all duration-200 ${isDarkMode ? 'bg-dark-700/50 hover:bg-dark-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
                   <div>
-                    <p className="text-white">Login History</p>
-                    <p className="text-gray-500 text-sm">View recent login activity</p>
+                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Login History</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>View recent login activity</p>
                   </div>
-                  <button onClick={() => { fetchLoginHistory(); setShowLoginHistoryModal(true) }} className="text-accent-green hover:underline text-sm">View</button>
+                  <button onClick={() => { fetchLoginHistory(); setShowLoginHistoryModal(true) }} className={`${isMobile ? 'w-full' : ''} px-4 py-2 bg-purple-500/10 text-purple-500 rounded-xl text-sm font-medium hover:bg-purple-500/20 transition-all duration-200 active:scale-98`}>View</button>
                 </div>
               </div>
             </div>
@@ -1135,61 +1168,61 @@ const ProfilePage = () => {
 
       {/* Change Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-dark-800 rounded-2xl w-full max-w-md border border-gray-700 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-white font-semibold">Change Password</h3>
-              <button onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordMessage({ type: '', text: '' }) }} className="p-2 hover:bg-dark-700 rounded-lg">
-                <X size={18} className="text-gray-400" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl w-full max-w-md border shadow-2xl overflow-hidden animate-[scaleIn_0.2s_ease-out]`}>
+            <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Change Password</h3>
+              <button onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordMessage({ type: '', text: '' }) }} className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+                <X size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
               </button>
             </div>
             <div className="p-4 space-y-4">
               {passwordMessage.text && (
-                <div className={`p-3 rounded-lg text-sm ${passwordMessage.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                <div className={`p-3 rounded-xl text-sm ${passwordMessage.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
                   {passwordMessage.text}
                 </div>
               )}
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">Current Password</label>
+              <div className="space-y-1.5">
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Password</label>
                 <input
                   type="password"
                   value={passwordForm.currentPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white"
+                  className={`w-full px-4 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                   placeholder="Enter current password"
                 />
               </div>
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">New Password</label>
+              <div className="space-y-1.5">
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>New Password</label>
                 <input
                   type="password"
                   value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white"
+                  className={`w-full px-4 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                   placeholder="Enter new password (min 6 characters)"
                 />
               </div>
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">Confirm New Password</label>
+              <div className="space-y-1.5">
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Confirm New Password</label>
                 <input
                   type="password"
                   value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white"
+                  className={`w-full px-4 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green outline-none ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'}`}
                   placeholder="Confirm new password"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordMessage({ type: '', text: '' }) }}
-                  className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600"
+                  className={`flex-1 py-3 rounded-xl font-medium transition-all duration-200 active:scale-98 ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleChangePassword}
                   disabled={passwordLoading}
-                  className="flex-1 py-3 bg-accent-green text-black font-medium rounded-lg hover:bg-accent-green/90 disabled:opacity-50"
+                  className="flex-1 py-3 bg-accent-green text-black font-medium rounded-xl hover:bg-accent-green/90 disabled:opacity-50 transition-all duration-200 active:scale-98"
                 >
                   {passwordLoading ? 'Changing...' : 'Change Password'}
                 </button>
@@ -1201,17 +1234,17 @@ const ProfilePage = () => {
 
       {/* Login History Modal */}
       {showLoginHistoryModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-dark-800 rounded-2xl w-full max-w-md border border-gray-700 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-white font-semibold">Login History</h3>
-              <button onClick={() => setShowLoginHistoryModal(false)} className="p-2 hover:bg-dark-700 rounded-lg">
-                <X size={18} className="text-gray-400" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl w-full max-w-md border shadow-2xl overflow-hidden animate-[scaleIn_0.2s_ease-out]`}>
+            <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Login History</h3>
+              <button onClick={() => setShowLoginHistoryModal(false)} className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+                <X size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
               </button>
             </div>
             <div className="p-4 max-h-96 overflow-y-auto">
               {loginHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className={`text-center py-8 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                   <Clock size={48} className="mx-auto mb-3 opacity-50" />
                   <p>Login history tracking coming soon</p>
                   <p className="text-sm mt-1">Your login activity will be displayed here</p>
@@ -1219,21 +1252,21 @@ const ProfilePage = () => {
               ) : (
                 <div className="space-y-3">
                   {loginHistory.map((item, index) => (
-                    <div key={index} className="p-3 bg-dark-700 rounded-lg">
+                    <div key={index} className={`p-3 rounded-xl ${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}`}>
                       <div className="flex items-center justify-between">
-                        <span className="text-white text-sm">{item.device || 'Unknown Device'}</span>
-                        <span className="text-gray-500 text-xs">{new Date(item.timestamp).toLocaleString()}</span>
+                        <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.device || 'Unknown Device'}</span>
+                        <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>{new Date(item.timestamp).toLocaleString()}</span>
                       </div>
-                      <p className="text-gray-400 text-xs mt-1">{item.ip || 'Unknown IP'} • {item.location || 'Unknown Location'}</p>
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.ip || 'Unknown IP'} • {item.location || 'Unknown Location'}</p>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-gray-700">
+            <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <button
                 onClick={() => setShowLoginHistoryModal(false)}
-                className="w-full py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600"
+                className={`w-full py-3 rounded-xl font-medium transition-all duration-200 active:scale-98 ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
               >
                 Close
               </button>

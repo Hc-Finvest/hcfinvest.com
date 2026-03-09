@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema({
   emailVerifiedAt: {
     type: Date
   },
+  kycApproved: {
+    type: Boolean,
+    default: false
+  },
   
   // IB (Introducing Broker) fields
   isIB: {

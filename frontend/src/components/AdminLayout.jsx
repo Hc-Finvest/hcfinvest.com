@@ -23,7 +23,8 @@ import {
   Palette,
   Mail,
   Bitcoin,
-  Image
+  Image,
+  Images
 } from 'lucide-react'
 
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -47,6 +48,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
     { name: 'Account Types', icon: CreditCard, path: '/admin/account-types' },
     { name: 'Theme Settings', icon: Palette, path: '/admin/theme' },
     { name: 'Banner Management', icon: Image, path: '/admin/banners' },
+    { name: 'Carousel Management', icon: Images, path: '/admin/carousel' },
     { name: 'Email Management', icon: Mail, path: '/admin/email' },
     { name: 'Oxapay Gateway', icon: Bitcoin, path: '/admin/oxapay' },
     { name: 'Admin Management', icon: Shield, path: '/admin/admin-management' },
