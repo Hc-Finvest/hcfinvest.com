@@ -6,7 +6,7 @@ const token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIzODJhYTU4YjcwNTU0
 const accountId = "b668b9b8-594e-4789-a87d-1586040d084d";
 
 const SYMBOL = "XAUUSD.i";
-const BACKEND = "http://localhost:5001/api/xauusd";
+const BACKEND = "https://api.hcfinvest.com/api/xauusd";
 
 let api, account, connection, listener;
 
