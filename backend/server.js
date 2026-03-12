@@ -36,6 +36,7 @@ import marketRoutes from "./routes/market.js";
 
 import xauusd_Routes from "./routes/xauusd_Routes.js";
 import streamer from "./services/xauusdStreamer.cjs";
+import competitionRoutes from "./routes/competitionRoutes.js";
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -216,6 +217,7 @@ app.use("/api/binance", binanceRoutes);
 // app.use("/api/history", historyRoute);
 
 app.use("/api/market", marketRoutes);
+app.use("/api/competitions", competitionRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))

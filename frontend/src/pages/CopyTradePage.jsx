@@ -7,11 +7,11 @@ import {
   ArrowLeft, Home, Sun, Moon
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import Sidebar from '../components/Sidebar'
 
 const CopyTradePage = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState('discover')
   const [masters, setMasters] = useState([])
   const [mySubscriptions, setMySubscriptions] = useState([])
@@ -52,18 +52,6 @@ const CopyTradePage = () => {
   const [transferring, setTransferring] = useState(false)
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-
-  const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { name: 'Account', icon: User, path: '/account' },
-    { name: 'Wallet', icon: Wallet, path: '/wallet' },
-    { name: 'Orders', icon: FileText, path: '/orders' },
-    { name: 'IB', icon: Users, path: '/ib' },
-    { name: 'Copytrade', icon: Copy, path: '/copytrade' },
-    { name: 'Profile', icon: UserCircle, path: '/profile' },
-    { name: 'Support', icon: HelpCircle, path: '/support' },
-    { name: 'Instructions', icon: FileText, path: '/instructions' },
-  ]
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -374,9 +362,9 @@ const CopyTradePage = () => {
     m.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  return (
+  /* return (
     <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
-      {/* Mobile Header */}
+      {/* Mobile Header .*}
       {isMobile && (
         <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
           <button onClick={() => navigate('/mobile')} className={`p-2 -ml-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
@@ -392,44 +380,12 @@ const CopyTradePage = () => {
         </header>
       )}
 
-      {/* Sidebar - Hidden on Mobile */}
+      {/* Sidebar - Hidden on Mobile .*}
       {!isMobile && (
-        <aside 
-          className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300`}
-          onMouseEnter={() => setSidebarExpanded(true)}
-          onMouseLeave={() => setSidebarExpanded(false)}
-        >
-          <div className="p-4 flex items-center justify-center">
-            <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 object-contain" />
-          </div>
-          <nav className="flex-1 px-2">
-            {menuItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
-                  item.name === 'Copytrade' ? 'bg-accent-green text-black' : isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <item.icon size={18} className="flex-shrink-0" />
-                {sidebarExpanded && <span className="text-sm font-medium">{item.name}</span>}
-              </button>
-            ))}
-          </nav>
-          <div className={`p-2 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-            <button onClick={toggleDarkMode} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-              {sidebarExpanded && <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
-            </button>
-            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
-              <LogOut size={18} />
-              {sidebarExpanded && <span className="text-sm">Log Out</span>}
-            </button>
-          </div>
-        </aside>
+        <Sidebar activeMenu="Copytrade" />
       )}
 
-      {/* Main Content */}
+      {/* Main Content .*}
       <main className={`flex-1 overflow-auto ${isMobile ? 'pt-14' : ''}`}>
         {!isMobile && (
           <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
@@ -438,7 +394,7 @@ const CopyTradePage = () => {
         )}
 
         <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
-          {/* Become a Master Banner */}
+          {/* Become a Master Banner .*}
           {!myMasterProfile && (
             <div className={`bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl ${isMobile ? 'p-4' : 'p-5'} border border-yellow-500/30 mb-4`}>
               <div className={`${isMobile ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
@@ -462,7 +418,7 @@ const CopyTradePage = () => {
             </div>
           )}
 
-          {/* Master Status Banner */}
+          {/* Master Status Banner .*}
           {myMasterProfile && (
             <div className={`rounded-xl ${isMobile ? 'p-4' : 'p-5'} border mb-4 ${
               myMasterProfile.status === 'ACTIVE' ? 'bg-green-500/10 border-green-500/30' :
@@ -502,7 +458,7 @@ const CopyTradePage = () => {
                 <p className="text-red-400 text-xs mt-2">Reason: {myMasterProfile.rejectionReason}</p>
               )}
               
-              {/* Pending Commission Section */}
+              {/* Pending Commission Section .*}
               {myMasterProfile.status === 'ACTIVE' && (
                 <div className={`mt-4 pt-4 border-t border-green-500/20 ${isMobile ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
                   <div className="flex items-center gap-6">
@@ -533,7 +489,7 @@ const CopyTradePage = () => {
             </div>
           )}
 
-          {/* Tabs - Scrollable on mobile */}
+          {/* Tabs - Scrollable on mobile .*}
           <div className={`flex ${isMobile ? 'gap-2 overflow-x-auto pb-2' : 'gap-4'} mb-4`}>
             {['discover', 'subscriptions', 'trades', ...(myMasterProfile?.status === 'ACTIVE' ? ['my-followers'] : [])].map(tab => (
               <button
@@ -550,7 +506,7 @@ const CopyTradePage = () => {
             ))}
           </div>
 
-          {/* Discover Masters */}
+          {/* Discover Masters .*}
           {activeTab === 'discover' && (
             <div>
               <div className={`flex ${isMobile ? 'gap-2' : 'gap-4'} mb-4`}>
@@ -635,7 +591,7 @@ const CopyTradePage = () => {
             </div>
           )}
 
-          {/* My Subscriptions */}
+          {/* My Subscriptions .*}
           {activeTab === 'subscriptions' && (
             <div>
               {mySubscriptions.length === 0 ? (
@@ -730,7 +686,7 @@ const CopyTradePage = () => {
             </div>
           )}
 
-          {/* Copy Trades History */}
+          {/* Copy Trades History .*}
           {activeTab === 'trades' && (
             <div>
               {myCopyTrades.length === 0 ? (
@@ -782,7 +738,7 @@ const CopyTradePage = () => {
             </div>
           )}
 
-          {/* My Followers (for Master Traders) */}
+          {/* My Followers (for Master Traders) .*}
           {activeTab === 'my-followers' && myMasterProfile?.status === 'ACTIVE' && (
             <div>
               {myFollowers.length === 0 ? (
@@ -848,7 +804,7 @@ const CopyTradePage = () => {
         </div>
       </main>
 
-      {/* Follow Modal */}
+      {/* Follow Modal .*}
       {showFollowModal && selectedMaster && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className={`bg-dark-800 rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto`}>
@@ -938,7 +894,7 @@ const CopyTradePage = () => {
         </div>
       )}
 
-      {/* Master Application Modal */}
+      {/* Master Application Modal .*}
       {showMasterModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className={`bg-dark-800 rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto`}>
@@ -1032,7 +988,7 @@ const CopyTradePage = () => {
         </div>
       )}
 
-      {/* Edit Subscription Modal */}
+      {/* Edit Subscription Modal .*}
       {showEditModal && editingSubscription && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
@@ -1119,7 +1075,7 @@ const CopyTradePage = () => {
         </div>
       )}
 
-      {/* Commission Transfer Modal */}
+      {/* Commission Transfer Modal .*}
       {showTransferModal && myMasterProfile && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
@@ -1188,7 +1144,247 @@ const CopyTradePage = () => {
         </div>
       )}
     </div>
-  )
+  ) */
+
+    return (
+  <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
+
+    {/* Sidebar */}
+    {!isMobile && <Sidebar activeMenu="Copytrade" />}
+
+    {/* Main Content */}
+    <div className="flex-1 flex flex-col">
+
+      {/* Top Header */}
+      <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-4 sm:px-6 text-white">
+        <h1 className="text-lg font-semibold">Copy Trading</h1>
+      </div>
+
+      {/* Page Content */}
+      <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
+
+        {/* Become Master Banner */}
+        {!myMasterProfile && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm">
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Crown size={22} className="text-yellow-500" />
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  Become a Master Trader
+                </h3>
+
+                <p className="text-gray-500 text-sm">
+                  Share your trades and earn commission
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowMasterModal(true)}
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-600 flex items-center gap-2"
+            >
+              <Crown size={16} />
+              Apply Now
+            </button>
+
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2">
+
+          {[
+            "discover",
+            "subscriptions",
+            "trades",
+            ...(myMasterProfile?.status === "ACTIVE" ? ["my-followers"] : [])
+          ].map(tab => (
+
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                activeTab === tab
+                  ? "bg-blue-500 text-white"
+                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {tab === "discover"
+                ? "Discover"
+                : tab === "subscriptions"
+                ? "Subscriptions"
+                : tab === "trades"
+                ? "Trades"
+                : "Followers"}
+            </button>
+
+          ))}
+
+        </div>
+
+        {/* Discover Masters */}
+        {activeTab === "discover" && (
+
+          <div className="space-y-4">
+
+            {/* Search */}
+            <div className="relative max-w-md">
+
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+
+              <input
+                type="text"
+                placeholder="Search masters..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 bg-white text-gray-900"
+              />
+
+            </div>
+
+            {/* Masters Grid */}
+
+            {loading ? (
+              <div className="text-center py-12 text-gray-500">
+                Loading masters...
+              </div>
+            ) : filteredMasters.length === 0 ? (
+
+              <div className="text-center py-12">
+
+                <Copy size={48} className="mx-auto text-gray-400 mb-3" />
+
+                <p className="text-gray-500">
+                  No master traders available
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                {filteredMasters.map(master => {
+
+                  const isFollowing = mySubscriptions.some(
+                    sub =>
+                      sub.masterId?._id === master._id ||
+                      sub.masterId === master._id
+                  )
+
+                  return (
+
+                    <div
+                      key={master._id}
+                      className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"
+                    >
+
+                      <div className="flex items-center gap-3 mb-4">
+
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-500 font-bold">
+                            {master.displayName?.charAt(0)}
+                          </span>
+                        </div>
+
+                        <div className="flex-1">
+
+                          <h3 className="font-semibold text-gray-800">
+                            {master.displayName}
+                          </h3>
+
+                          <p className="text-gray-500 text-sm">
+                            {master.stats?.activeFollowers || 0} followers
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Win Rate</p>
+                          <p className="font-semibold text-gray-800">
+                            {master.stats?.winRate?.toFixed(1) || 0}%
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Trades</p>
+                          <p className="font-semibold text-gray-800">
+                            {master.stats?.totalTrades || 0}
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Commission</p>
+                          <p className="font-semibold text-gray-800">
+                            {master.approvedCommissionPercentage || 0}%
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Profit</p>
+                          <p className="text-green-600 font-semibold">
+                            $
+                            {master.stats?.totalProfitGenerated?.toFixed(2) ||
+                              "0.00"}
+                          </p>
+                        </div>
+
+                      </div>
+
+                      {isFollowing ? (
+
+                        <button
+                          onClick={() => setActiveTab("subscriptions")}
+                          className="w-full bg-green-100 text-green-600 py-2 rounded-lg font-medium"
+                        >
+                          ✓ Following
+                        </button>
+
+                      ) : (
+
+                        <button
+                          onClick={() => {
+                            setSelectedMaster(master)
+                            setShowFollowModal(true)
+                          }}
+                          className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600"
+                        >
+                          Follow
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  )
+
+                })}
+
+              </div>
+
+            )}
+
+          </div>
+
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+)
 }
 
 export default CopyTradePage

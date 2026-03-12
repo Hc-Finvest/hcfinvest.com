@@ -43,17 +43,27 @@ import AdminOxapay from './pages/AdminOxapay'
 import AdminBannerManagement from './pages/AdminBannerManagement'
 import AdminCarouselManagement from './pages/AdminCarouselManagement'
 import Trial from './pages/Trial'
+import AdminCompetition from './pages/AdminCompitition.jsx'
+import AdminCreateCompitition from './pages/AdminCreateCompitition.jsx';
+import Competitions from './pages/Competitions.jsx'
+import LeaderBoard  from './pages/LeaderBoard.jsx'
+import AdminCompetitionDetails from './pages/AdminCompititionDetails.jsx'
+import Switch_Account from "./pages/Switch_Account";
+
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Signup />} />
+         <Route path="/switch-account" element={<Switch_Account />} />
         <Route path="/user/signup" element={<Signup />} />
         <Route path="/user/trial" element={<Trial />} />
         <Route path="/user/login" element={<Login />} />
         <Route path="/user/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/competitions" element={<Competitions />} />
+        <Route path="/leader-board" element={<LeaderBoard />} />
         <Route path="/mobile" element={<MobileTradingApp />} />
         <Route path="/account" element={<Account />} />
         <Route path="/wallet" element={<WalletPage />} />
@@ -90,6 +100,9 @@ function App() {
         <Route path="/admin/oxapay" element={<AdminOxapay />} />
         <Route path="/admin/banners" element={<AdminBannerManagement />} />
         <Route path="/admin/carousel" element={<AdminCarouselManagement />} />
+        <Route path="/admin/competition" element={<AdminCompetition />} />
+        <Route path="/admin/create-competition" element={<AdminCreateCompitition />} />
+        <Route path="/admin/competition-details/:id" element={<AdminCompetitionDetails />} />
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />

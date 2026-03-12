@@ -1,3 +1,6 @@
+
+// InstructionsPage.jsx
+
 import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -7,6 +10,7 @@ import {
   ArrowLeft, Home, Sun, Moon
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import Sidebar from '../components/Sidebar'
 
 const InstructionsPage = () => {
   const navigate = useNavigate()
@@ -124,9 +128,9 @@ const InstructionsPage = () => {
     navigate('/user/login')
   }
 
-  return (
+  /* return (
     <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
-      {/* Mobile Header */}
+      {/* Mobile Header .*}
       {isMobile && (
         <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200'} border-b`}>
           <button onClick={() => navigate('/mobile')} className={`p-2 -ml-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
@@ -142,44 +146,12 @@ const InstructionsPage = () => {
         </header>
       )}
 
-      {/* Sidebar - Hidden on Mobile */}
+      {/* Sidebar - Hidden on Mobile .*}
       {!isMobile && (
-        <aside 
-          className={`${sidebarExpanded ? 'w-48' : 'w-16'} flex flex-col transition-all duration-300 ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}
-          onMouseEnter={() => setSidebarExpanded(true)}
-          onMouseLeave={() => setSidebarExpanded(false)}
-        >
-          <div className="p-4 flex items-center justify-center">
-            <img src="/hcfinvest_orange_logo.png" alt="hcfinvest" className="w-8 h-8 object-contain" />
-          </div>
-          <nav className="flex-1 px-2">
-            {menuItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
-                  item.name === 'Instructions' ? 'bg-accent-green text-black' : isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <item.icon size={18} className="flex-shrink-0" />
-                {sidebarExpanded && <span className="text-sm font-medium">{item.name}</span>}
-              </button>
-            ))}
-          </nav>
-          <div className={`p-2 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-            <button onClick={toggleDarkMode} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 ${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
-              {isDarkMode ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-gray-600" />}
-              {sidebarExpanded && <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
-            </button>
-            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
-              <LogOut size={18} />
-              {sidebarExpanded && <span className="text-sm">Log Out</span>}
-            </button>
-          </div>
-        </aside>
+        <Sidebar activeMenu="Instructions" />
       )}
 
-      {/* Main Content */}
+      {/* Main Content .*}
       <main className={`flex-1 overflow-auto ${isMobile ? 'pt-14' : ''}`}>
         {!isMobile && (
           <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
@@ -189,7 +161,7 @@ const InstructionsPage = () => {
 
         <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
           <div className={isMobile ? '' : 'max-w-4xl'}>
-            {/* Welcome Banner */}
+            {/* Welcome Banner .*}
             <div className={`bg-gradient-to-r from-accent-green/20 to-blue-500/20 rounded-xl ${isMobile ? 'p-4' : 'p-6'} mb-4 border border-accent-green/30`}>
               <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-4'}`}>
                 <div className={`${isMobile ? 'w-10 h-10' : 'w-14 h-14'} bg-accent-green/30 rounded-full flex items-center justify-center`}>
@@ -202,7 +174,7 @@ const InstructionsPage = () => {
               </div>
             </div>
 
-            {/* Accordion Sections */}
+            {/* Accordion Sections .*}
             <div className={`space-y-${isMobile ? '2' : '4'}`}>
               {sections.map(section => (
                 <div key={section.id} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
@@ -244,7 +216,7 @@ const InstructionsPage = () => {
               ))}
             </div>
 
-            {/* Contact Support */}
+            {/* Contact Support .*}
             <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-6 border mt-6`}>
               <h3 className={`font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Need More Help?</h3>
               <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -261,7 +233,123 @@ const InstructionsPage = () => {
         </div>
       </main>
     </div>
-  )
+  ) */
+
+    return (
+  <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
+
+    {/* Sidebar */}
+    {!isMobile && <Sidebar activeMenu="Instructions" />}
+
+    {/* MAIN CONTENT */}
+    <div className="flex-1 flex flex-col">
+
+      {/* TOP BAR */}
+      {!isMobile && (
+        <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-6 text-white">
+          <h1 className="text-lg font-semibold">Instructions & Guide</h1>
+        </div>
+      )}
+
+      {/* PAGE CONTENT */}
+      <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
+
+        {/* Welcome Banner */}
+        <div className="bg-white border rounded-xl p-6 flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <BookOpen size={24} className="text-blue-600" />
+          </div>
+
+          <div>
+            <h2 className="font-semibold text-lg">Welcome to hcfinvest</h2>
+            <p className="text-sm text-gray-500">
+              Learn how to use our trading platform
+            </p>
+          </div>
+        </div>
+
+        {/* Accordion Sections */}
+        <div className="space-y-4">
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              className="bg-white border rounded-xl overflow-hidden"
+            >
+              <button
+                onClick={() =>
+                  setExpandedSection(
+                    expandedSection === section.id ? "" : section.id
+                  )
+                }
+                className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <section.icon size={20} className="text-blue-600" />
+                  </div>
+
+                  <span className="font-semibold text-gray-800">
+                    {section.title}
+                  </span>
+                </div>
+
+                {expandedSection === section.id ? (
+                  <ChevronDown size={20} className="text-gray-500" />
+                ) : (
+                  <ChevronRight size={20} className="text-gray-500" />
+                )}
+              </button>
+
+              {expandedSection === section.id && (
+                <div className="px-5 pb-5 border-t">
+                  <div className="pt-4 space-y-4">
+                    {section.content.map((item, idx) => (
+                      <div key={idx} className="flex gap-4">
+                        <div className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-blue-600 text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="font-medium text-gray-800">
+                            {item.title}
+                          </h4>
+
+                          <p className="text-sm text-gray-500 mt-1">
+                            {item.text}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Contact Support */}
+        <div className="bg-white border rounded-xl p-6">
+          <h3 className="font-semibold mb-2">Need More Help?</h3>
+
+          <p className="text-gray-500 mb-4">
+            If you couldn't find what you're looking for, our support team is
+            ready to help.
+          </p>
+
+          <button
+            onClick={() => navigate("/support")}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+          >
+            Contact Support
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+);
 }
 
 export default InstructionsPage

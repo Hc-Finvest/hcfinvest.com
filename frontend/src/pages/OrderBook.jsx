@@ -1,3 +1,6 @@
+
+// OrderBook.jsx
+
 import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -29,12 +32,11 @@ import {
   Moon
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import Sidebar from '../components/Sidebar'
 
 const OrderBook = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()
-  const [activeMenu, setActiveMenu] = useState('Orders')
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('positions') // positions, history, pending
@@ -54,16 +56,6 @@ const OrderBook = () => {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
-  const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { name: 'Account', icon: User, path: '/account' },
-    { name: 'Wallet', icon: Wallet, path: '/wallet' },
-    { name: 'Orders', icon: BookOpen, path: '/orders' },
-    { name: 'IB', icon: Users, path: '/ib' },
-    { name: 'Copytrade', icon: Copy, path: '/copytrade' },
-    { name: 'Profile', icon: UserCircle, path: '/profile' },
-    { name: 'Support', icon: HelpCircle, path: '/support' },
-  ]
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -390,10 +382,12 @@ const OrderBook = () => {
   }
 
   return (
-    <div className={`min-h-screen flex transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
+    <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
+
+        {!isMobile && <Sidebar activeMenu="Orders" />}
       {/* Mobile Header */}
       {isMobile && (
-        <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
+        <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-b border-gray-200' : 'bg-white border-b border-gray-200'}`}>
           <button onClick={() => navigate('/mobile')} className={`p-2 -ml-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
             <ArrowLeft size={22} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
           </button>
@@ -411,9 +405,10 @@ const OrderBook = () => {
       )}
 
       {/* Sidebar - Desktop Only */}
-      {!isMobile && (
+{/*       
+        {!isMobile && (
         <aside 
-          className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300`}
+          className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-200' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300`}
           onMouseEnter={() => setSidebarExpanded(true)}
           onMouseLeave={() => setSidebarExpanded(false)}
         >
@@ -428,7 +423,7 @@ const OrderBook = () => {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
                   activeMenu === item.name 
                     ? 'bg-accent-green text-black' 
-                    : isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    : isDarkMode ? 'text-gray-600 hover:text-gray-900 hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <item.icon size={18} className="flex-shrink-0" />
@@ -436,7 +431,7 @@ const OrderBook = () => {
               </button>
             ))}
           </nav>
-          <div className={`p-2 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <div className={`p-2 border-t ${isDarkMode ? 'border-gray-200' : 'border-gray-200'}`}>
             <button 
               onClick={toggleDarkMode}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}
@@ -444,20 +439,20 @@ const OrderBook = () => {
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
               {sidebarExpanded && <span className="text-sm font-medium">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
             </button>
-            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg ${isDarkMode ? 'text-gray-600 hover:text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}>
               <LogOut size={18} />
               {sidebarExpanded && <span className="text-sm">Log Out</span>}
             </button>
           </div>
         </aside>
       )}
-
+ */}
       {/* Main Content */}
       <main className={`flex-1 overflow-auto ${isMobile ? 'pt-14' : ''}`}>
         {!isMobile && (
-          <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <header className="h-14 bg-[#2f3f74] flex items-center justify-between px-6 text-white">
             <div>
-              <h1 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Order Book</h1>
+              <h1 className="text-lg font-semibold">Order Book</h1>
               <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>View all your positions, history & pending orders</p>
             </div>
           </header>
@@ -467,12 +462,12 @@ const OrderBook = () => {
           {/* Account Filter & Stats */}
           <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-4 gap-4'} mb-4`}>
             {/* Account Selector */}
-            <div className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200'}`}>
+            <div className={`rounded-xl p-4 border ${isDarkMode ? 'bg-white border-gray-200 shadow-sm' : 'bg-white border-gray-200'}`}>
               <label className={`block text-xs mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Select Account</label>
               <select
                 value={selectedAccount}
                 onChange={(e) => setSelectedAccount(e.target.value)}
-                className={`w-full rounded-lg px-3 py-2 text-sm ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border`}
+                className={`w-full rounded-lg px-3 py-2 text-sm ${isDarkMode ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-50 border-gray-300 text-gray-900'} border`}
               >
                 <option value="all">All Accounts</option>
                 {accounts.map(acc => (
@@ -482,13 +477,13 @@ const OrderBook = () => {
             </div>
 
             {/* Open Positions Count */}
-            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+            <div className={`${isDarkMode ? 'bg-white border-gray-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
               <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Open Positions</p>
               <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{openTrades.length}</p>
             </div>
 
             {/* Floating P&L */}
-            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+            <div className={`${isDarkMode ? 'bg-white border-gray-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
               <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Floating P&L</p>
               <p className={`text-2xl font-bold ${getTotalPnl() >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {getTotalPnl() >= 0 ? '+' : ''}${getTotalPnl().toFixed(2)}
@@ -496,7 +491,7 @@ const OrderBook = () => {
             </div>
 
             {/* Total Closed P&L */}
-            <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+            <div className={`${isDarkMode ? 'bg-white border-gray-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
               <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Realized P&L</p>
               <p className={`text-2xl font-bold ${getHistoryTotalPnl() >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {getHistoryTotalPnl() >= 0 ? '+' : ''}${getHistoryTotalPnl().toFixed(2)}
@@ -505,12 +500,12 @@ const OrderBook = () => {
           </div>
 
           {/* Tabs */}
-          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
-            <div className={`flex border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <div className={`${isDarkMode ? 'bg-white border-gray-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
+            <div className={`flex border-b ${isDarkMode ? 'border-gray-200' : 'border-gray-200'}`}>
               <button
                 onClick={() => setActiveTab('positions')}
                 className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 ${
-                  activeTab === 'positions' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-400 hover:text-white'
+                  activeTab === 'positions' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 <Activity size={16} /> Positions ({openTrades.length})
@@ -518,7 +513,7 @@ const OrderBook = () => {
               <button
                 onClick={() => setActiveTab('history')}
                 className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 ${
-                  activeTab === 'history' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-400 hover:text-white'
+                  activeTab === 'history' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 <History size={16} /> History ({closedTrades.length + transactions.length})
@@ -526,7 +521,7 @@ const OrderBook = () => {
               <button
                 onClick={() => setActiveTab('pending')}
                 className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 ${
-                  activeTab === 'pending' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-400 hover:text-white'
+                  activeTab === 'pending' ? 'bg-accent-green/10 text-accent-green border-b-2 border-accent-green' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 <Clock size={16} /> Pending ({pendingOrders.length})
@@ -534,16 +529,16 @@ const OrderBook = () => {
             </div>
 
             {/* Tab Actions */}
-            <div className={`p-3 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <div className={`p-3 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-200' : 'border-gray-200'}`}>
               <button
                 onClick={fetchAllTrades}
-                className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-600 hover:text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
               </button>
               <button
                 onClick={() => downloadCSV(activeTab === 'positions' ? openTrades : closedTrades, activeTab)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isDarkMode ? 'bg-gray-100 hover:bg-gray-200 text-gray-900' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
               >
                 <Download size={14} /> Download CSV
               </button>
@@ -566,7 +561,7 @@ const OrderBook = () => {
                   ) : (
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-gray-700">
+                        <tr className="border-b border-gray-200">
                           <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Account</th>
                           <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Symbol</th>
                           <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Side</th>
@@ -583,7 +578,7 @@ const OrderBook = () => {
                           const pnl = calculateFloatingPnl(trade)
                           const currentPrice = livePrices[trade.symbol]?.[trade.side === 'BUY' ? 'bid' : 'ask']
                           return (
-                            <tr key={trade._id} className="border-b border-gray-800 hover:bg-dark-700/50">
+                            <tr key={trade._id} className="border-b border-gray-200 hover:bg-gray-50">
                               <td className="py-3 px-4 text-gray-400 text-sm">{trade.accountName}</td>
                               <td className="py-3 px-4 text-white font-medium">{trade.symbol}</td>
                               <td className="py-3 px-4">
@@ -605,7 +600,7 @@ const OrderBook = () => {
                               <td className="py-3 px-4">
                                 <button
                                   onClick={() => handleCloseTrade(trade)}
-                                  className="bg-red-500/20 text-red-500 hover:bg-red-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                  className="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                                 >
                                   Close
                                 </button>
@@ -622,9 +617,9 @@ const OrderBook = () => {
                 {activeTab === 'history' && (
                   <>
                     {/* Type Filter + Date Filter Buttons */}
-                    <div className="flex flex-wrap items-center gap-2 p-3 border-b border-gray-800">
+                    <div className="flex flex-wrap items-center gap-2 p-3 border-b border-gray-200">
                       {/* History Type Filter */}
-                      <div className="flex items-center gap-1 mr-4 pr-4 border-r border-gray-700">
+                      <div className="flex items-center gap-1 mr-4 pr-4 border-r border-gray-200">
                         {[
                           { key: 'all', label: 'All' },
                           { key: 'trades', label: 'Trades' },
@@ -636,7 +631,7 @@ const OrderBook = () => {
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                               historyType === type.key 
                                 ? 'bg-blue-500 text-white' 
-                                : 'bg-dark-700 text-gray-400 hover:text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
                             {type.label}
@@ -658,7 +653,7 @@ const OrderBook = () => {
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                             historyFilter === filter.key 
                               ? 'bg-accent-green text-black' 
-                              : 'bg-dark-700 text-gray-400 hover:text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                         >
                           {filter.label}
@@ -676,7 +671,7 @@ const OrderBook = () => {
                             setHistoryFilter('custom')
                             setCurrentPage(1)
                           }}
-                          className="px-2 py-1 rounded-lg text-xs bg-dark-700 border border-gray-700 text-white"
+                          className="px-2 py-1 rounded-lg text-xs bg-white border border-gray-300 text-gray-900"
                         />
                         <span className="text-gray-500 text-xs">to</span>
                         <input
@@ -687,7 +682,7 @@ const OrderBook = () => {
                             setHistoryFilter('custom')
                             setCurrentPage(1)
                           }}
-                          className="px-2 py-1 rounded-lg text-xs bg-dark-700 border border-gray-700 text-white"
+                          className="px-2 py-1 rounded-lg text-xs bg-white border border-gray-300 text-gray-900"
                         />
                       </div>
                       
@@ -705,7 +700,7 @@ const OrderBook = () => {
                       <>
                         <table className="w-full">
                           <thead>
-                            <tr className="border-b border-gray-700">
+                            <tr className="border-b border-gray-200">
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Date</th>
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Type</th>
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Details</th>
@@ -718,7 +713,7 @@ const OrderBook = () => {
                           </thead>
                           <tbody>
                             {getPaginatedHistory().map((item) => (
-                              <tr key={item._id} className="border-b border-gray-800 hover:bg-dark-700/50">
+                              <tr key={item._id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="py-3 px-4 text-gray-400 text-xs">{formatDate(item.closedAt || item.createdAt)}</td>
                                 <td className="py-3 px-4">
                                   {item.historyType === 'trade' ? (
@@ -776,7 +771,7 @@ const OrderBook = () => {
 
                         {/* Pagination */}
                         {totalPages > 1 && (
-                          <div className="flex items-center justify-between p-4 border-t border-gray-800">
+                          <div className="flex items-center justify-between p-4 border-t border-gray-200">
                             <span className="text-gray-500 text-sm">
                               Page {currentPage} of {totalPages}
                             </span>
@@ -813,7 +808,7 @@ const OrderBook = () => {
                   ) : (
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-gray-700">
+                        <tr className="border-b border-gray-200">
                           <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Account</th>
                           <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Symbol</th>
                           <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Type</th>
@@ -826,7 +821,7 @@ const OrderBook = () => {
                       </thead>
                       <tbody>
                         {pendingOrders.map((order) => (
-                          <tr key={order._id} className="border-b border-gray-800 hover:bg-dark-700/50">
+                          <tr key={order._id} className="border-b border-gray-200 hover:bg-gray-50">
                             <td className="py-3 px-4 text-gray-400 text-sm">{order.accountName}</td>
                             <td className="py-3 px-4 text-white font-medium">{order.symbol}</td>
                             <td className="py-3 px-4 text-yellow-500 text-sm">{order.orderType}</td>
@@ -846,7 +841,7 @@ const OrderBook = () => {
                             <td className="py-3 px-4">
                               <button
                                 onClick={() => handleCancelOrder(order)}
-                                className="bg-red-500/20 text-red-500 hover:bg-red-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                className="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                               >
                                 Cancel
                               </button>
