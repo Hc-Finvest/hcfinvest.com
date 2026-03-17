@@ -1,0 +1,15 @@
+.dropdown-box {
+  position: absolute;
+  top: 55px;
+  left: 0;
+  opacity: 0;
+  transform: translateY(200px);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  pointer-events: none;
+}
+
+.dropdown-box.show {
+  opacity: 1;
+  transform: translateY(0px);
+  pointer-events: auto;
+}

@@ -1,0 +1,32 @@
+.heading {
+  font-family: 'Poppins';
+  font-size: 27px;
+  font-weight: bold;
+}
+
+p {
+  font-family: 'Poppins';
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.head {
+  font-family: 'Poppins';
+  font-size: 22px;
+  margin-top: 20px;
+  font-weight: bold;
+}
+
+ul.b {
+  list-style-type: circle;
+  padding-left: 20px;
+  font-family: 'Poppins';
+}
+
+li {
+  font-family: 'Poppins';
+}
+
+.container {
+  padding: 20px;
+}

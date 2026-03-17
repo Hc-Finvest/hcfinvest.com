@@ -1,0 +1,56 @@
+.deposit-withdrawal-section {
+  font-family: "Poppins", Arial, sans-serif;
+  color: #000;
+  padding: 10px 80px;
+  line-height: 1.8;
+  background-color: #fff;
+  text-align: left;
+}
+
+.heading {
+  color: #ff8c00;
+  font-weight: 600;
+  font-size: 20px;
+  margin-top: 25px;
+  margin-bottom: 10px;
+}
+
+.note {
+  color: #ff8c00;
+  font-weight: 600;
+  font-size: 18px;
+  margin-top: 25px;
+  margin-bottom: 8px;
+  /* text-transform: lowercase; */
+}
+
+.main-text {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.faq-link {
+  color: #ff8c00;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.faq-link:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .deposit-withdrawal-section {
+    padding: 20px;
+  }
+
+  .heading {
+    font-size: 18px;
+  }
+
+  .main-text {
+    font-size: 15px;
+  }
+}

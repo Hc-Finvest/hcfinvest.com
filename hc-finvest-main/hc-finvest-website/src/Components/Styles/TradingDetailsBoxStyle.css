@@ -1,0 +1,123 @@
+.start {
+  background: url("../../../public/Images/MainContentImages/Background\ Image\ All\ Page.jpg")
+    center/cover no-repeat;
+  margin-top: 50px ;
+  color: white;
+  font-family: "Poppins", sans-serif;
+}
+
+.overlaay {
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 40px 20px;
+  border-radius: 10px;
+ 
+}
+
+.card-box {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 20px;
+  color: white;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.1);
+}
+
+.custom-input,
+.custom-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.custom-input:disabled,
+.custom-select:disabled {
+  opacity: 0.8;
+}
+
+.btn-purple {
+  background-color: #ff8c00;
+  color: white;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.btn-purple:hover {
+  background-color: #e67300;
+}
+
+.step-label {
+  font-size: 1.5rem;
+  color: #ff8c00;
+  font-weight: 700;
+}
+
+.step-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.candlestick-chart {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 100px;
+  gap: 4px;
+}
+
+.candle {
+  width: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.candle .wick {
+  width: 2px;
+  height: 40px;
+  background-color: #fff;
+}
+
+.candle .body {
+  width: 100%;
+  height: 30px;
+  border-radius: 2px;
+}
+
+.bullish .body {
+  background-color: #00c853;
+}
+
+.bearish .body {
+  background-color: #d50000;
+}
+
+.btn-buy {
+  background-color: #00c853;
+  color: #fff;
+  border-radius: 5px;
+}
+
+.btn-sell {
+  background-color: #d50000;
+  color: #fff;
+  border-radius: 5px;
+}
+
+@media (max-width: 767px) {
+  .start {
+    padding: 50px 0;
+  }
+
+  .card-box {
+    padding: 15px;
+  }
+}
