@@ -25,8 +25,10 @@ const roundPrice = (price, decimals) => {
 }
 
 // MetaAPI Configuration
-const METAAPI_TOKEN = () => process.env.METAAPI_TOKEN || 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIzODJhYTU4YjcwNTU0Yzc1MzczOTEyZDA3NDgwNGQwMyIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiXSwicmVzb3VyY2VzIjpbImFjY291bnQ6JFVTRVJfSUQkOmI2NjhiOWI4LTU5NGUtNDc4OS1hODdkLTE1ODYwNDBkMDg0ZCJdfSx7ImlkIjoibWV0YWFwaS1yZXN0LWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiYWNjb3VudDokVVNFUl9JRCQ6YjY2OGI5YjgtNTk0ZS00Nzg5LWE4N2QtMTU4NjA0MGQwODRkIl19LHsiaWQiOiJtZXRhYXBpLXJwYy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyJhY2NvdW50OiRVU0VSX0lEJDpiNjY4YjliOC01OTRlLTQ3ODktYTg3ZC0xNTg2MDQwZDA4NGQiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyJhY2NvdW50OiRVU0VSX0lEJDpiNjY4YjliOC01OTRlLTQ3ODktYTg3ZC0xNTg2MDQwZDA4NGQiXX0seyJpZCI6Im1ldGFzdGF0cy1hcGkiLCJtZXRob2RzIjpbIm1ldGFzdGF0cy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiYWNjb3VudDokVVNFUl9JRCQ6YjY2OGI5YjgtNTk0ZS00Nzg5LWE4N2QtMTU4NjA0MGQwODRkIl19XSwiaWdub3JlUmF0ZUxpbWl0cyI6ZmFsc2UsInRva2VuSWQiOiIyMDIxMDIxMyIsImltcGVyc29uYXRlZCI6ZmFsc2UsInJlYWxVc2VySWQiOiIzODJhYTU4YjcwNTU0Yzc1MzczOTEyZDA3NDgwNGQwMyIsImlhdCI6MTc3MDYzNTE4OX0.OtP0Fw4z0HzLKRqfasbRM3XvdquMBROjRD75QNqVfhMby1610fAlb95yG7H8WX_EhxFUXFVTEXOOCPumDCeCpFI0NAL-eGOiA6CgbXAPB5RjB95qCPamzub6MaK8c-ZWlkntrRekQgVu-vtYUsaTvC-1ZKY9Qcv4X4o7kesbiF373EXGdDyHD59i3p3FVkaVBT424jN8tA-qbBq7DPO6I_78P3U-Xg5tEQasam6LKG9UkJtMwi8CZMhL8Xtx63gb1phc0egXUhZQtfwyg7hQvdwFfV2fU8-vnVjZ_oq2kV8vg5Jk1mtyslfUmdHWeUJTFQ5QNWA5w1NDqwECsofPvGPqRMQmUOw6FQEpc9NpsRazOQ9Y_1c2FPGanrA-AbLopd8DpOCuok6LCFCWAtytkIyset9QTH6qMQyhJAHnxitIHqQhHp_5wbiGtZ0q1JC80cHGwd25F0nkrJt0wpF2CTpAhREC2tHnCDw2irbvFlfPLM_CTWKKTwb6TsaUPCRn6QEXkRKSQJSLozmtENsoah0nsbZN7jUYxR4WpOTu2b4Pswm1SY8cdC2TC2KCKLgDWVk7wsf_EQcXgmgrDXKthitNO5M5tldADVH_V6xr70Y3mfPXM-2kDVS5z4ikG_YleRFxjHeRSquooqTRD8SNRur38v-XFa9cbdmbxhfYj8U'
-const METAAPI_ACCOUNT_ID = () => process.env.METAAPI_ACCOUNT_ID || 'b668b9b8-594e-4789-a87d-1586040d084d'
+//Sanket - "Read MetaAPI credentials strictly from environment for production safety."
+const METAAPI_TOKEN = () => process.env.METAAPI_TOKEN || ''
+//Sanket - "Read MetaAPI account id strictly from environment for production safety."
+const METAAPI_ACCOUNT_ID = () => process.env.METAAPI_ACCOUNT_ID || ''
 // Region can be: london, new-york, singapore, etc. Default to new-york
 const METAAPI_REGION = () => process.env.METAAPI_REGION || 'new-york'
 const METAAPI_BASE_URL = () => `https://mt-client-api-v1.${METAAPI_REGION()}.agiliumtrade.ai`
@@ -143,6 +145,41 @@ const WORKING_SYMBOLS = [
   'AAL', 'AALB', 'ABDN', 'ABF', 'ABN', 'AC', 'ACA', 'ADAUSD.i', 'ADPR', 'ADS', 'ADYEN', 'AENA', 'AFX', 'AGN', 'AI', 'AIR', 'AKZA', 'ALGUSD.i', 'ALV', 'AMS', 'AMUN', 'ANA', 'ANTO', 'ASM', 'ASML', 'ASRNL', 'ATMUSD.i', 'ATOS', 'AUDCAD.i', 'AUDCHF.i', 'AUDJPY.i', 'AUDNZD.i', 'AUDUSD', 'AUDUSD.i', 'AUS200.i', 'AUTO', 'AVAUSD.i', 'AVIVA', 'AZN', 'BAE', 'BARC', 'BAS', 'BATS', 'BATUSD.i', 'BAYN', 'BBVA', 'BEI', 'BKG', 'BLND', 'BMW', 'BN', 'BNBUSD.i', 'BNP', 'BNR', 'BNZL', 'BP', 'BRBY', 'BT.A', 'BTCEUR.i', 'BTCUSD.crp', 'BTCUSD.i', 'BTCXBN.i', 'BTCXET.i', 'BTCXLC.i', 'BVSPX.i', 'CA', 'CABK', 'CADCHF.i', 'CADJPY.i', 'CAP', 'CBK', 'CCH', 'CCL', 'CDI', 'CHFJPY.i', 'CHINA50.i', 'CL-OIL.i', 'CLNX', 'CNA', 'CON', 'CPG', 'CRDA', 'CRH', 'CRVUSD.i', 'CS', 'Cocoa.i', 'Coffee.i', 'DAST', 'DB1', 'DBK', 'DCC', 'DG', 'DHER', 'DHL', 'DIAGEO', 'DIM', 'DJ30ft.i', 'DOGUSD.i', 'DOTUSD.i', 'DWNI', 'DWS', 'EL', 'ELE', 'EN', 'ENGI', 'ENT', 'EOAN', 'ESP35.i', 'ETCUSD.i', 'EUB10Y.i', 'EUB2Y.i', 'EUB30Y.i', 'EUB5Y.i', 'EURAUD.i', 'EURCAD.i', 'EURCHF.i', 'EURGBP.i', 'EURHUF.i', 'EURIBOR3M.i', 'EURJPY.i', 'EURMXN.i', 'EURNOK.i', 'EURNZD.i', 'EURSEK.i', 'EURSGD.i', 'EURTRY.i', 'EURUSD', 'EURUSD.i', 'EURZAR.i', 'EUSTX50.i', 'EXPN', 'EZJ', 'FIE', 'FILUSD.i', 'FLTR', 'FME', 'FP', 'FRA', 'FRA40.i', 'FRAS', 'FRE', 'FRES', 'G24', 'GALP', 'GAUUSD.i', 'GBPAUD.i', 'GBPCAD.i', 'GBPCHF.i', 'GBPJPY.i', 'GBPNOK.i', 'GBPNZD.i', 'GBPUSD', 'GBPUSD.i', 'GBXUSD', 'GER40.i', 'GER40ft.i', 'GLE', 'GLEN', 'GLPG', 'GOLDft.i', 'GRTUSD.i', 'GSK', 'HEI', 'HEIA', 'HEN3', 'HIK', 'HK50ft.i', 'HKG33.i', 'HLAG', 'HLMA', 'HNR1', 'HOT', 'HRMS', 'HSBA', 'HSX', 'IBE', 'IFX', 'IHG', 'III', 'IMB', 'IMCD', 'INCUSD.i', 'INF', 'INGA', 'IOTUSD.i', 'ITRK', 'ITV', 'ITX', 'JDI', 'JMAT', 'JPN225.i', 'JPN225ft.i', 'KAUUSD.i', 'KBX', 'KER', 'KGF', 'KGX', 'KRN', 'LAND', 'LEG', 'LGEN', 'LLOY', 'LNKUSD.i', 'LR', 'LRCUSD.i', 'LSEG', 'LVMH', 'LongGilt.i', 'MAP', 'MBG', 'ML', 'MNDI', 'MNG', 'MRCK', 'MT', 'MTX', 'MUV2', 'NAS100.i', 'NAS100ft.i', 'NEMD', 'NEOUSD.i', 'NERUSD.i', 'NG.i', 'NGRID', 'NN', 'NWG', 'NXT', 'NZDCAD.i', 'NZDCHF.i', 'NZDJPY.i', 'NZDUSD', 'NZDUSD.i', 'OCDO', 'ONEUSD.i', 'OR', 'PHIA', 'PRU', 'PRX', 'PSH', 'PSN', 'PSON', 'PUBP', 'PUM', 'RAA', 'RAND', 'RB', 'RELX', 'REP', 'RI', 'RIO', 'RMV', 'RNO', 'RR', 'RRTL', 'RTO', 'RWE', 'SAB', 'SAF', 'SANTANDER', 'SANUSD.i', 'SAP', 'SBRY', 'SDR', 'SGE', 'SGO', 'SGRO', 'SHBUSD.i', 'SHELL', 'SHL', 'SIE', 'SILVERft.i', 'SMIN', 'SMT', 'SN', 'SOLUSD.i', 'SON', 'SP500ft.i', 'SPX', 'SPX500.i', 'SRT3', 'SSE', 'STAN', 'STJ', 'STM', 'SU', 'SUSUSD.i', 'SVT', 'SW', 'SWR', 'SY1', 'TCFP', 'TEF', 'TESCO', 'TLX', 'TRST', 'TRXUSD.i', 'TW', 'UK100.i', 'UK100ft.i', 'UKOUSD.i', 'UKOUSDft.i', 'ULVR', 'UNA', 'UNIUSD.i', 'URW', 'US2000.i', 'US30.i', 'USDBRL.i', 'USDCAD.i', 'USDCHF-EXC', 'USDCHF-EXC.i', 'USDCHF.i', 'USDCLP.i', 'USDCNH.i', 'USDCOP.i', 'USDHKD', 'USDHKD.i', 'USDHUF.i', 'USDIDR.i', 'USDINR.i', 'USDJPY', 'USDJPY.i', 'USDKRW.i', 'USDMXN.i', 'USDNGN', 'USDNGN.i', 'USDNOK.i', 'USDRUB.i', 'USDSEK.i', 'USDSGD', 'USDSGD.i', 'USDTHB.i', 'USDTRY.i', 'USDTWD.i', 'USDX.i', 'USDZAR', 'USDZAR.i', 'USNote10Y.i', 'USOUSD.i', 'UTDI', 'UU', 'VIE', 'VIS', 'VIV', 'VIX.i', 'VNA', 'VOD', 'VOW', 'VPK', 'WKL', 'WPP', 'WTB', 'Wheat.i', 'XAGUSD.i', 'XAUAUD.i', 'XAUCHF.i', 'XAUEUR.i', 'XAUGBP.i', 'XAUJPY.i', 'XAUUSD.crp', 'XAUUSD.i', 'XBNUSD.crp', 'XBNUSD.i', 'XETEUR.i', 'XETUSD.crp', 'XETUSD.i', 'XETXBN.i', 'XETXLC.i', 'XLCUSD.crp', 'XLCUSD.i', 'XLMUSD.i', 'XPDUSD.i', 'XPTUSD.i', 'XRPUSD.i', 'XTZUSD.i', 'ZAL', 'ZECUSD.i'
 ]
 
+// Symbols shown in frontend trade page instrument list.
+const FRONTEND_TRADE_SYMBOLS = [
+  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY',
+  'EURAUD', 'EURCAD', 'EURCHF', 'AUDJPY', 'CADJPY', 'CHFJPY', 'AUDNZD', 'AUDCAD', 'CADCHF', 'NZDJPY',
+  'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD', 'AUDCHF', 'NZDCAD', 'NZDCHF', 'EURNZD',
+  'XAUUSD.i', 'XAGUSD.i', 'USOIL.i', 'UKOIL.i', 'NGAS.i',
+  'BTCUSD.i', 'ETHUSD.i', 'BNBUSD.i', 'SOLUSD.i', 'DOGEUSD.i', 'LTCUSD.i',
+  'US30.i', 'US500.i', 'US100.i', 'UK100.i', 'HK50.i'
+]
+
+const REQUESTED_TO_ACCOUNT_FALLBACKS = {
+  USOILI: ['USOUSD.i', 'CL-OIL.i'],
+  USOIL: ['USOUSD.i', 'CL-OIL.i'],
+  UKOILI: ['UKOUSD.i', 'UKOUSDft.i'],
+  UKOIL: ['UKOUSD.i', 'UKOUSDft.i'],
+  NGASI: ['NG.i'],
+  NGAS: ['NG.i'],
+  US500I: ['SPX500.i', 'SP500ft.i', 'SPX'],
+  US500: ['SPX500.i', 'SP500ft.i', 'SPX'],
+  US100I: ['NAS100.i', 'NAS100ft.i'],
+  US100: ['NAS100.i', 'NAS100ft.i'],
+  USTEC: ['NAS100.i', 'NAS100ft.i'],
+  HK50I: ['HKG33.i', 'HK50ft.i'],
+  HK50: ['HKG33.i', 'HK50ft.i'],
+  DOGEUSDI: ['DOGUSD.i'],
+  DOGEUSD: ['DOGUSD.i'],
+  ETHUSDI: ['XETUSD.i', 'XETUSD.crp'],
+  ETHUSD: ['XETUSD.i', 'XETUSD.crp'],
+  LTCUSDI: ['XLCUSD.i', 'XLCUSD.crp'],
+  LTCUSD: ['XLCUSD.i', 'XLCUSD.crp']
+}
+
+const toKey = (symbol = '') => symbol.toUpperCase().replace(/[^A-Z0-9]/g, '')
+const stripDotI = (symbol = '') => symbol.replace(/\.i$/i, '')
+
 class MetaApiService {
   constructor() {
     this.prices = new Map()
@@ -157,6 +194,58 @@ class MetaApiService {
     this.rateLimitBackoff = 0
     this.consecutiveErrors = 0
     this.maxConsecutiveErrors = 5
+    this.requestToActualMap = new Map()
+    this.actualToRequestsMap = new Map()
+    this.buildSymbolMappings()
+  }
+
+  resolveSymbolForAccount(requestedSymbol) {
+    if (!requestedSymbol) return null
+
+    if (WORKING_SYMBOLS.includes(requestedSymbol)) return requestedSymbol
+
+    const requestedKey = toKey(requestedSymbol)
+    const candidates = []
+
+    if (REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey]) {
+      candidates.push(...REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey])
+    }
+
+    if (!/\.i$/i.test(requestedSymbol)) {
+      candidates.push(`${requestedSymbol}.i`)
+    } else {
+      candidates.push(stripDotI(requestedSymbol))
+    }
+
+    const base = stripDotI(requestedSymbol)
+    const prefixMatches = WORKING_SYMBOLS.filter(s => {
+      const sBase = stripDotI(s)
+      return sBase === base || s.startsWith(`${base}-`) || s.startsWith(base)
+    })
+    candidates.push(...prefixMatches)
+
+    const uniqueCandidates = [...new Set(candidates)]
+    for (const candidate of uniqueCandidates) {
+      if (WORKING_SYMBOLS.includes(candidate)) return candidate
+    }
+
+    return null
+  }
+
+  buildSymbolMappings() {
+    this.requestToActualMap.clear()
+    this.actualToRequestsMap.clear()
+
+    for (const requested of FRONTEND_TRADE_SYMBOLS) {
+      const actual = this.resolveSymbolForAccount(requested)
+      if (!actual) continue
+
+      this.requestToActualMap.set(requested, actual)
+      if (!this.actualToRequestsMap.has(actual)) {
+        this.actualToRequestsMap.set(actual, new Set())
+      }
+      this.actualToRequestsMap.get(actual).add(requested)
+    }
   }
 
   /**
@@ -226,23 +315,12 @@ class MetaApiService {
       clearInterval(this.pollInterval)
     }
 
-    // Poll popular symbols for live pricing
-    // Using ~60 most popular symbols to balance rate limits vs coverage
-    this.liveSymbols = [
-      // Forex (15 major pairs)
-      'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'USDCAD.i', 'USDCHF.i', 'EURGBP.i', 'EURJPY.i', 'GBPJPY.i',
-      'EURAUD.i', 'EURCAD.i', 'EURCHF.i', 'GBPNZD.i', 'AUDJPY.i',
-      // Metals (6)
-      'XAUUSD.i', 'XAGUSD.i', 'XPTUSD.i', 'XPDUSD.i', 'XAUAUD.i', 'XAUJPY.i',
-      // Crypto (10)
-      'BTCUSD.i', 'XRPUSD.i', 'BNBUSD.i', 'SOLUSD.i', 'ADAUSD.i', 'DOTUSD.i', 'UNIUSD.i', 'XLMUSD.i', 'TRXUSD.i', 'ETCUSD.i',
-      // Indices (10)
-      'US30.i', 'UK100.i', 'GER40.i', 'FRA40.i', 'AUS200.i', 'JPN225.i', 'SPX500.i', 'NAS100.i', 'DJ30ft.i', 'SP500ft.i',
-      // Commodities (5)
-      'CL-OIL.i', 'NG.i', 'Coffee.i', 'Cocoa.i', 'Wheat.i',
-      // Popular Stocks/ETFs (4)
-      'EURUSD.i', 'EURUSD', 'GBPUSD.i', 'USDJPY.i'
-    ]
+    // Poll symbols required by trade page, resolved to symbols that exist on this account.
+    this.liveSymbols = [...new Set(
+      FRONTEND_TRADE_SYMBOLS
+        .map(symbol => this.requestToActualMap.get(symbol) || this.resolveSymbolForAccount(symbol))
+        .filter(Boolean)
+    )]
 
     console.log(`[MetaAPI] 🔴 Live polling: ${this.liveSymbols.length} symbols`)
     console.log(`[MetaAPI] Sample: ${this.liveSymbols.slice(0, 8).join(', ')}...`)
@@ -420,6 +498,28 @@ class MetaApiService {
     }
 
     this.prices.set(symbol, priceInfo)
+
+    // Publish the same price under requested frontend symbols that map to this account symbol.
+    const mappedRequestedSymbols = this.actualToRequestsMap.get(symbol)
+    if (mappedRequestedSymbols) {
+      mappedRequestedSymbols.forEach(requestedSymbol => {
+        const requestedDecimals = getDecimals(requestedSymbol)
+        const requestedPriceInfo = {
+          ...priceInfo,
+          bid: roundPrice(parseFloat(bid), requestedDecimals),
+          ask: roundPrice(parseFloat(ask), requestedDecimals),
+          spread: roundPrice(roundPrice(parseFloat(ask), requestedDecimals) - roundPrice(parseFloat(bid), requestedDecimals), requestedDecimals),
+          decimals: requestedDecimals,
+          category: SYMBOL_TO_CATEGORY[requestedSymbol] || priceInfo.category,
+          ...(SYMBOL_INFO[requestedSymbol] || {}),
+          symbol: requestedSymbol,
+          mappedFrom: symbol
+        }
+        this.prices.set(requestedSymbol, requestedPriceInfo)
+        this.notifySubscribers(requestedSymbol, requestedPriceInfo)
+      })
+    }
+
     this.totalTicksReceived++
 
     // Notify subscribers
@@ -520,14 +620,17 @@ class MetaApiService {
    * Get symbol info
    */
   getSymbolInfo(symbol) {
-    return SYMBOL_INFO[symbol] || null
+    if (SYMBOL_INFO[symbol]) return SYMBOL_INFO[symbol]
+
+    const resolved = this.requestToActualMap.get(symbol) || this.resolveSymbolForAccount(symbol)
+    return resolved ? (SYMBOL_INFO[resolved] || null) : null
   }
 
   /**
    * Check if symbol is supported
    */
   isSymbolSupported(symbol) {
-    return WORKING_SYMBOLS.includes(symbol)
+    return WORKING_SYMBOLS.includes(symbol) || !!(this.requestToActualMap.get(symbol) || this.resolveSymbolForAccount(symbol))
   }
 
   /**
@@ -575,17 +678,47 @@ class MetaApiService {
     }
 
     try {
-      // Build URL with query params
-      // //sanket - Use the specific market data subdomain for historical candles
-      let url = `${METAAPI_MARKET_DATA_URL()}/users/current/accounts/${accountId}/historical-market-data/symbols/${symbol}/timeframes/${metaTimeframe}/candles`
+      const baseUrl = `${METAAPI_MARKET_DATA_URL()}/users/current/accounts/${accountId}/historical-market-data/symbols/${symbol}/timeframes/${metaTimeframe}/candles`
+
+      const timeframeSecondsMap = {
+        '1m': 60,
+        '5m': 5 * 60,
+        '15m': 15 * 60,
+        '30m': 30 * 60,
+        '1h': 60 * 60,
+        '4h': 4 * 60 * 60,
+        '1d': 24 * 60 * 60,
+        '1w': 7 * 24 * 60 * 60,
+        '1M': 30 * 24 * 60 * 60
+      }
+
+      const tfSeconds = timeframeSecondsMap[timeframe] || 60
+      const hasBoundedWindow = Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime
+      const anchorTimeSec = Number.isFinite(endTime)
+        ? endTime
+        : Number.isFinite(startTime)
+          ? startTime
+          : Math.floor(Date.now() / 1000)
+
+      //Sanket - "MetaAPI candles endpoint is anchor-based, so request up to anchor and filter by requested bounds."
+      const requiredByWindow = hasBoundedWindow
+        ? Math.ceil((endTime - startTime) / tfSeconds) + 5
+        : 0
+      const effectiveLimit = Math.min(1000, Math.max(limit || 500, requiredByWindow || 0, 1))
+
       const params = new URLSearchParams()
-      if (startTime) params.append('startTime', new Date(startTime * 1000).toISOString())
-      if (endTime) params.append('endTime', new Date(endTime * 1000).toISOString())
-      if (limit) params.append('limit', Math.min(limit, 1000))
+      params.append('startTime', new Date(anchorTimeSec * 1000).toISOString())
+      params.append('limit', effectiveLimit)
+      const primaryUrl = `${baseUrl}?${params.toString()}`
 
-      if (params.toString()) url += `?${params.toString()}`
+      let response = await fetch(primaryUrl, { headers: this.getHeaders() })
 
-      const response = await fetch(url, { headers: this.getHeaders() })
+      //Sanket - "Retry with limit-only when provider rejects anchored query shape with HTTP 400."
+      if (!response.ok && response.status === 400) {
+        const fallbackParams = new URLSearchParams()
+        fallbackParams.append('limit', effectiveLimit)
+        response = await fetch(`${baseUrl}?${fallbackParams.toString()}`, { headers: this.getHeaders() })
+      }
 
       if (!response.ok) {
         console.warn(`[MetaAPI] ⚠️ Historical candles failed for ${symbol}: HTTP ${response.status}`)
@@ -608,7 +741,14 @@ class MetaApiService {
       // Sort by time ascending
       candles.sort((a, b) => a.time - b.time)
 
-      return candles
+      //Sanket - "Trim provider candles to the exact window requested by chart."
+      const filtered = candles.filter(c => {
+        if (Number.isFinite(startTime) && c.time < startTime) return false
+        if (Number.isFinite(endTime) && c.time > endTime) return false
+        return true
+      })
+
+      return filtered
     } catch (error) {
       console.error(`[MetaAPI] Historical candles error for ${symbol}:`, error.message)
       // Return empty instead of simulated candles

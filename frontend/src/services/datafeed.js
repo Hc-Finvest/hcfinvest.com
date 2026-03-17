@@ -209,6 +209,12 @@ const Datafeed = {
       const askPrice = parseFloat(ask);
       const midPrice = (bidPrice + askPrice) / 2;
       
+      // ✅ OHLC Calculation: Use bid/ask spread for H/L (like real trading platforms)
+      // This matches backend calculation in storageService.ingestTick()
+      // - HIGH/LOW: Use actual bid/ask range to show true market volatility
+      // - OPEN/CLOSE: Use mid-price as the representative price
+      // Example: bid=5040.50, ask=5041.00 → high=5041.00, low=5040.50, close=5040.75
+      
       // ✅ Create NEW bar OR update EXISTING bar
       if (lastBarTime !== null && barTimeMs > lastBarTime) {
         // New timeframe started

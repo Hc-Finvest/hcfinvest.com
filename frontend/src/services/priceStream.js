@@ -15,6 +15,26 @@ class PriceStreamService {
     this.isConnected = false
     this.reconnectAttempts = 0
     this.maxReconnectAttempts = 10
+    // Connection health tracking
+    this.connectionStatus = 'disconnected' // 'connecting'|'live'|'reconnecting'|'disconnected'
+    this.lastTickAt = null
+    this._statusListeners = new Map()
+  }
+
+  _emitStatus(status) {
+    if (this.connectionStatus === status) return
+    this.connectionStatus = status
+    this._statusListeners.forEach(cb => {
+      try { cb(status, this.lastTickAt) } catch {}
+    })
+  }
+
+  /** Subscribe to connection-status changes. Returns an unsubscribe fn. */
+  onStatusChange(id, callback) {
+    this._statusListeners.set(id, callback)
+    // Immediately deliver current state
+    try { callback(this.connectionStatus, this.lastTickAt) } catch {}
+    return () => this._statusListeners.delete(id)
   }
 
   connect() {
@@ -28,16 +48,21 @@ class PriceStreamService {
       reconnectionDelayMax: 5000
     })
 
+    this._emitStatus('connecting')
+
     this.socket.on('connect', () => {
       console.log('[PriceStream] Connected to server')
       this.isConnected = true
       this.reconnectAttempts = 0
+      this._emitStatus('live')
       // Subscribe to price stream
       this.socket.emit('subscribePrices')
     })
 
     this.socket.on('priceStream', (data) => {
       const { prices, categories, updated, timestamp } = data
+      this.lastTickAt = Date.now()
+      if (this.connectionStatus !== 'live') this._emitStatus('live')
       
       // Update local price cache with all prices
       if (prices) {
@@ -127,6 +152,8 @@ class PriceStreamService {
     // ✅ NEW: Handle real-time tick updates for candle aggregation
     this.socket.on('tickUpdate', (tickData) => {
       if (!tickData) return
+      this.lastTickAt = Date.now()
+      if (this.connectionStatus !== 'live') this._emitStatus('live')
       
       const { symbol, bid, ask, time } = tickData
       
@@ -151,11 +178,13 @@ class PriceStreamService {
     this.socket.on('disconnect', () => {
       console.log('[PriceStream] Disconnected')
       this.isConnected = false
+      this._emitStatus('reconnecting')
     })
 
     this.socket.on('connect_error', (error) => {
       console.error('[PriceStream] Connection error:', error.message)
       this.reconnectAttempts++
+      this._emitStatus('reconnecting')
     })
   }
 

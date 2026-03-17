@@ -46,6 +46,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
   const lastSymbolRef = useRef(null); // Track last symbol to detect symbol changes
   const tvShapeIdToLineIdRef = useRef({}); // Maps TradingView shape IDs to our lineIds
   const shapesByObjectRef = useRef(new Map()); // Maps shape objects directly to lineIds for lookup
+  const pollIntervalRef = useRef(null); // //Sanket - "Stored so clearInterval can be called on unmount to prevent timer leak"
 
   useEffect(() => {
     onTradeModifyRef.current = onTradeModify;
@@ -81,7 +82,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
    * Creates horizontal line using available chart APIs
    * Returns { id, obj } to track line for drag events
    */
-  const createOrderLineAtPrice = (price, label, color, lineStyle, tradeId, levelType) => {
+  const createOrderLineAtPrice = async (price, label, color, lineStyle, tradeId, levelType) => {
     dragLogger.log('CREATE', `${levelType}: price=${price}, tradeId=${tradeId}`);
     
     if (!chartRef.current) {
@@ -102,16 +103,41 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
           orderLine.setLineColor(color);
           orderLine.setLineWidth(2);
           orderLine.setLineStyle(lineStyle);
-          
+
           // Make orderLine draggable
           if (orderLine.setBodyBorderColor) orderLine.setBodyBorderColor(color);
-          
+          if (orderLine.setQuantity) orderLine.setQuantity('');
+
+          // //Sanket - "Attach onMove/onModify callbacks so drag directly triggers processPriceModification.
+          //  This is the correct TradingView broker-API pattern: no drawing_event or polling needed."
+          if (levelType !== 'entry') {
+            if (typeof orderLine.onMove === 'function') {
+              orderLine.onMove(function () {
+                const movedPrice = this.getPrice ? this.getPrice() : price;
+                dragLogger.success(`onMove fired for ${levelType}: newPrice=${movedPrice}`);
+                // Update mapping so polling stays in sync
+                const m = lineToTradeMapRef.current[lineId];
+                if (m) m.price = movedPrice;
+                processPriceModification(lineId, movedPrice);
+              });
+            }
+            if (typeof orderLine.onModify === 'function') {
+              orderLine.onModify(function () {
+                const movedPrice = this.getPrice ? this.getPrice() : price;
+                dragLogger.success(`onModify fired for ${levelType}: newPrice=${movedPrice}`);
+                const m = lineToTradeMapRef.current[lineId];
+                if (m) m.price = movedPrice;
+                processPriceModification(lineId, movedPrice);
+              });
+            }
+          }
+
           dragLogger.success(`Order line created (native): ${lineId}`);
-          
+
           // Store mapping for event detection
           lineToTradeMapRef.current[lineId] = { tradeId, levelType, price };
           dragLogger.log('MAPPING', `Created mapping for ${lineId}`);
-          
+
           return { id: lineId, obj: orderLine, type: 'orderline', price };
         } catch (natErr) {
           dragLogger.log('CREATE-NATIVE', `Failed: ${natErr.message}`);
@@ -122,18 +148,18 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       if (chartRef.current.createShape && typeof chartRef.current.createShape === 'function') {
         try {
           const now = Math.floor(Date.now() / 1000);
-          
-          // TREND_LINE requires TWO points. We'll anchor it at current time and 5 mins ago.
-          // Extensions will make it look horizontal and infinite.
+
+          // //Sanket - "Use 'horizontal_line' (single-point, auto-extends full width) instead of
+          //  'trend_line' (which requires 2 distinct points). The Charting Library createShape API
+          //  takes a single {time, price} object as first arg; passing an array caused
+          //  'Wrong points count for trend_line. Required 2'. horizontal_line needs only 1 point
+          //  and is draggable when lock:false, firing drawing_event on user drag."
           const shape = await chartRef.current.createShape(
-            [
-              { time: now - 300, price: price },
-              { time: now, price: price }
-            ],
+            { time: now, price: price },
             {
-              shape: 'trend_line',
+              shape: 'horizontal_line',
               text: label,
-              lock: true,
+              lock: false,
               disableSelection: false,
               disableSave: true,
               disableUndo: true,
@@ -144,69 +170,34 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
                 showLabel: true,
                 textcolor: color,
                 fontsize: 12,
-                extendLeft: true,
-                extendRight: true,
-                horzLabelsAlign: "left"
               }
             }
           );
-          
+
           dragLogger.success(`Shape line created: ${lineId}`);
-          
-          // DEBUG: Log all properties of the shape object
-          dragLogger.log('SHAPE-DEBUG', `Shape object type: ${typeof shape}`);
-          dragLogger.log('SHAPE-DEBUG', `Shape is Map? ${shape instanceof Map}`);
-          dragLogger.log('SHAPE-DEBUG', `Shape constructor: ${shape?.constructor?.name}`);
-          
-          // Try multiple ways to get the shape ID
-          const tvShapeId = 
-            shape?.id || 
-            shape?.tvId || 
-            shape?.entityId || 
-            shape?.shapeId ||
-            shape?._id ||
-            (shape instanceof Map ? shape.get('id') : null) ||
-            (shape instanceof Map ? shape.get('entityId') : null);
-          
-          // Log ALL object keys if it's a plain object
-          if (shape && typeof shape === 'object' && !(shape instanceof Map)) {
-            const allKeys = Object.keys(shape);
-            dragLogger.log('SHAPE-KEYS', `Keys on shape: ${allKeys.join(', ')}`);
-            // Try to get from first enumerable key that might be ID-like
-            for (const key of allKeys) {
-              if (key.toLowerCase().includes('id') || key.toLowerCase().includes('entity')) {
-                dragLogger.log('SHAPE-CANDIDATE', `Key "${key}" = ${shape[key]}`);
-              }
-            }
-          }
-          
-          dragLogger.log('TV-ID', `TradingView shape ID: ${tvShapeId || 'NOT FOUND - Will attempt runtime detection'}`);
-          
-          // Store the mapping from TV's shape ID to our lineId
+
+          // //Sanket - "In TradingView Charting Library v25+, createShape returns Promise<EntityId>.
+          //  After await, `shape` IS the EntityId (a string). Store it directly so that
+          //  drawing_event callbacks can look up our lineId by the TV-assigned entity ID."
+          const tvShapeId = (shape !== null && shape !== undefined) ? String(shape) : null;
+          dragLogger.log('TV-ID', `TradingView entity id: ${tvShapeId || 'null'}`);
+
+          // Map TV entity ID → our lineId for drawing_event lookup
           if (tvShapeId) {
             tvShapeIdToLineIdRef.current[tvShapeId] = lineId;
-            dragLogger.log('TV-MAPPING', `Stored TV ID mapping: ${tvShapeId} → ${lineId}`);
+            // Also store direct tv-id entry in lineToTradeMap for one-step lookup
+            lineToTradeMapRef.current[tvShapeId] = { tradeId, levelType, price, tvShapeId, lineId };
+            dragLogger.log('TV-MAPPING', `Stored TV entity mapping: ${tvShapeId} → ${lineId}`);
           }
-          
-          // Store mapping with both lineId and tvShapeId for lookups
+
+          // Store mapping keyed by our lineId
           lineToTradeMapRef.current[lineId] = { tradeId, levelType, price, tvShapeId };
           dragLogger.log('MAPPING', `Created mapping for ${lineId} (tvShapeId: ${tvShapeId})`);
-          
-          // Store shape object reference - this is the KEY for matching drawing events
-          shapeObjRef.current[lineId] = shape;
-          dragLogger.log('SHAPE-REF', `Stored shape object for ${lineId}`);
-          
-          // Map the shape object itself to trade info for event detection
-          shapeToTradeMapRef.current.set(shape, { tradeId, levelType, lineId });
-          shapesByObjectRef.current.set(shape, lineId);
-          dragLogger.log('SHAPE-MAP', `Mapped shape object to trade info for ${lineId}`);
-          
-          // Also try to store mapping by TV ID if object passed to event has it
-          if (tvShapeId) {
-            lineToTradeMapRef.current[tvShapeId] = { tradeId, levelType, price, tvShapeId, lineId };
-            dragLogger.log('MAPPING-TV', `Also stored mapping by TV ID: ${tvShapeId}`);
-          }
-          
+
+          // Store entityId so removeOrderLine can call chart.removeEntity(entityId)
+          shapeObjRef.current[lineId] = tvShapeId;
+          dragLogger.log('SHAPE-REF', `Stored entity id for ${lineId}`);
+
           return { id: lineId, obj: shape, type: 'shape', price, tvShapeId };
         } catch (shapeErr) {
           dragLogger.log('CREATE-SHAPE', `Failed: ${shapeErr.message}`);
@@ -679,7 +670,15 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
    */
   const processPriceModification = async (shapeId, newPrice) => {
     dragLogger.log('MODIFY', `Starting modification: shapeId=${shapeId}, newPrice=${newPrice}`);
-    
+
+    // //Sanket - "Guard: entry lines must never trigger a modify API call.
+    //  A fast lookup check on the mapping stops this before any real work."
+    const earlyMapping = lineToTradeMapRef.current[shapeId];
+    if (earlyMapping && earlyMapping.levelType === 'entry') {
+      dragLogger.log('SKIP', `Entry line drag ignored for ${shapeId}`);
+      return;
+    }
+
     // Find mapping - could be our custom lineId or TradingView's shape ID
     let mapping = lineToTradeMapRef.current[shapeId];
     dragLogger.log('LOOKUP', `Direct lookup (lineToTradeMapRef): ${mapping ? '✓ Found' : '✗ Not found'}`);
@@ -753,11 +752,17 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
 
       // Call API to modify trade
       dragLogger.log('API', `Sending PUT to ${API_URL}/trade/modify`);
-      
-      const response = await dragLogger.timing('API Call', () => 
+
+      // //Sanket - "Include JWT token in Authorization header so the protected
+      //  PUT /api/trade/modify route can authenticate the requesting user."
+      const token = localStorage.getItem('token') || '';
+      const response = await dragLogger.timing('API Call', () =>
         fetch(`${API_URL}/trade/modify`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({
             tradeId: tradeId,
             sl: parseFloat(newSL),
@@ -831,157 +836,105 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       try {
         widget.subscribe('drawing_event', async (id, status, object) => {
           dragLogger.event('drawing_event', { id, status, hasObject: !!object });
-          dragLogger.log('EVENT', `Status: ${status}, Object type: ${typeof object}`);
-          
-          if ((status === 'stopped' || status === 'points_changed') && id) {
+          dragLogger.log('EVENT', `Status: ${status}`);
+
+          // TradingView fires 'points_changed' when a shape is dragged/moved.
+          // Some older versions fire 'stopped'. Accept both.
+          if ((status === 'stopped' || status === 'points_changed' || status === 'move') && id) {
             dragLogger.log('DRAG-DETECTED', `Event status: ${status}, ID: ${id}`);
-            
+
             try {
               let mapping = null;
               let newPrice = null;
-              
-              // METHOD A: Try to find in shapeToTradeMapRef if object is the shape
-              if (object && shapeToTradeMapRef.current.has(object)) {
-                const tradeInfo = shapeToTradeMapRef.current.get(object);
-                mapping = lineToTradeMapRef.current[tradeInfo.lineId];
-                dragLogger.log('LOOKUP-A', `Found via shapeToTradeMapRef: ${tradeInfo.levelType}`);
-                
-                if (typeof object.getPrice === 'function') {
-                  try {
-                    newPrice = object.getPrice();
-                    dragLogger.log('PRICE-A', `Got from object.getPrice(): ${newPrice}`);
-                  } catch (e) {
-                    dragLogger.log('PRICE-A', `getPrice failed: ${e.message}`);
-                  }
-                }
-              } else {
-                dragLogger.log('LOOKUP-A', `Object not in shapeToTradeMapRef`);
+              const eventId = String(id);
+
+              // //Sanket - "Three-step lookup: (1) direct line-id, (2) tv entity-id → line-id,
+              //  (3) full tvShapeId scan. After the entity-id fix at creation time, step (2)
+              //  will reliably find the mapping for shapes created via createShape."
+
+              // Step 1: direct lookup by our lineId (works for createOrderLine lines)
+              mapping = lineToTradeMapRef.current[eventId];
+              if (mapping) dragLogger.log('LOOKUP-1', `✓ Direct lineId hit`);
+
+              // Step 2: look up by TV entity ID → lineId mapping
+              if (!mapping && tvShapeIdToLineIdRef.current[eventId]) {
+                const resolvedLineId = tvShapeIdToLineIdRef.current[eventId];
+                mapping = lineToTradeMapRef.current[resolvedLineId];
+                if (mapping) dragLogger.log('LOOKUP-2', `✓ Via tvShapeId→lineId: ${resolvedLineId}`);
               }
-              
-              // METHOD B: Try direct ID lookup (our lineId)
+
+              // Step 3: full scan for tvShapeId match (last resort)
               if (!mapping) {
-                mapping = lineToTradeMapRef.current[id];
-                dragLogger.log('LOOKUP-B', mapping ? `✓ Found via direct lineId` : '✗ Not found via direct lineId');
-              }
-              
-              // METHOD C: Map TradingView ID to our lineId, then look up
-              if (!mapping && tvShapeIdToLineIdRef.current[id]) {
-                const lineId = tvShapeIdToLineIdRef.current[id];
-                mapping = lineToTradeMapRef.current[lineId];
-                dragLogger.log('LOOKUP-C', `Found via tvShapeId mapping: ${id} → ${lineId}`);
-              }
-              
-              // METHOD D: Search for tvShapeId match (as backup)
-              if (!mapping) {
-                dragLogger.log('LOOKUP-D', `Starting tvShapeId search...`);
-                for (const [key, value] of Object.entries(lineToTradeMapRef.current)) {
-                  if (value.tvShapeId === id) {
+                for (const [, value] of Object.entries(lineToTradeMapRef.current)) {
+                  if (value && value.tvShapeId === eventId) {
                     mapping = value;
-                    dragLogger.log('LOOKUP-D', `✓ Found mapping via tvShapeId search`);
+                    dragLogger.log('LOOKUP-3', `✓ Via tvShapeId scan`);
                     break;
                   }
                 }
               }
-              
-              // METHOD E: CRITICAL FIX - Search stored shapes and resolve their Promise IDs
+
               if (!mapping) {
-                dragLogger.log('LOOKUP-E', `Starting shape ID resolution...`);
-                mapping = await findMappingByShapeId(id);
-                if (mapping) {
-                  dragLogger.log('LOOKUP-E', `✓ Found via shape ID resolution`);
-                }
-              }
-              
-              if (!mapping) {
-                dragLogger.error(`No mapping found after all methods. Event ID: ${id}`);
-                dragLogger.log('DEBUG', `Available mappings: ${Object.keys(lineToTradeMapRef.current).length}`);
+                dragLogger.error(`No mapping found for event id: ${eventId}`);
                 return;
               }
 
               dragLogger.success(`Mapping resolved: ${mapping.levelType} for trade ${mapping.tradeId}`);
 
-              // Extract price from the dragged shape
-              // Try multiple methods since TradingView has inconsistent APIs
-              if (!newPrice) {
-                // Method 1: From object parameter (if TradingView sends it)
-                if (object && typeof object.getPrice === 'function') {
-                  try {
-                    newPrice = object.getPrice();
-                    dragLogger.log('PRICE-1', `Got from object.getPrice(): ${newPrice}`);
-                  } catch (e) {
-                    dragLogger.log('PRICE-1', `getPrice() failed: ${e.message}`);
-                  }
-                }
-              }
-              
-              // Method 2: Direct property access
-              if (!newPrice && object && object.price !== undefined) {
-                newPrice = parseFloat(object.price);
-                dragLogger.log('PRICE-2', `Got from object.price: ${newPrice}`);
-              }
+              // //Sanket - "Price extraction after drag uses four methods in priority order:
+              //  P1: chart.getShapeById(entityId).getPoints()[0].price  (TradingView v25+ charting library)
+              //  P2: object.getPoints()[0].price  (older TV versions pass entity as 3rd arg)
+              //  P3: object.getPrice() / object.price  (order-line object, some TV versions)
+              //  P4: object as a raw number  (some TV versions pass price directly as 3rd param)"
 
-              // Method 3: Try to get point coordinates
-              if (!newPrice && object && typeof object.getPoints === 'function') {
+              // P1: chart.getShapeById — most reliable for v25+ after entity ID is correctly stored
+              if (!newPrice && chartRef.current && typeof chartRef.current.getShapeById === 'function') {
                 try {
-                  const points = object.getPoints();
-                  if (Array.isArray(points) && points.length > 0) {
-                    const point = points[0];
-                    if (point && point.price !== undefined) {
-                      newPrice = parseFloat(point.price);
-                      dragLogger.log('PRICE-3', `Got from points[0].price: ${newPrice}`);
+                  const shapeEntity = chartRef.current.getShapeById(eventId);
+                  if (shapeEntity && typeof shapeEntity.getPoints === 'function') {
+                    const pts = shapeEntity.getPoints();
+                    if (Array.isArray(pts) && pts.length > 0 && pts[0]?.price !== undefined) {
+                      newPrice = parseFloat(pts[0].price);
+                      dragLogger.log('PRICE-P1', `getShapeById.getPoints()[0].price = ${newPrice}`);
                     }
                   }
                 } catch (e) {
-                  dragLogger.log('PRICE-3', `getPoints() failed: ${e.message}`);
+                  dragLogger.log('PRICE-P1', `getShapeById failed: ${e.message}`);
                 }
               }
 
-              // Method 4: Try to get from stored shape object directly
-              if (!newPrice && mapping.lineId) {
-                const storedShape = shapeObjRef.current[mapping.lineId];
-                if (storedShape && typeof storedShape.getPoints === 'function') {
-                  try {
-                    const points = storedShape.getPoints();
-                    if (Array.isArray(points) && points.length > 0) {
-                      const point = points[0];
-                      if (point && point.price !== undefined) {
-                        newPrice = parseFloat(point.price);
-                        dragLogger.log('PRICE-4', `Got from stored shape.getPoints()[0].price: ${newPrice}`);
-                      }
-                    }
-                  } catch (e) {
-                    dragLogger.log('PRICE-4', `Stored shape getPoints() failed: ${e.message}`);
+              // P2: object.getPoints() — older TV versions pass entity as 3rd event arg
+              if (!newPrice && object && typeof object.getPoints === 'function') {
+                try {
+                  const pts = object.getPoints();
+                  if (Array.isArray(pts) && pts.length > 0 && pts[0]?.price !== undefined) {
+                    newPrice = parseFloat(pts[0].price);
+                    dragLogger.log('PRICE-P2', `object.getPoints()[0].price = ${newPrice}`);
                   }
-                }
-                
-                // Also try direct price access on stored shape
-                if (!newPrice && storedShape && storedShape.price !== undefined) {
-                  newPrice = parseFloat(storedShape.price);
-                  dragLogger.log('PRICE-4b', `Got from stored shape.price: ${newPrice}`);
+                } catch (e) {
+                  dragLogger.log('PRICE-P2', `object.getPoints failed: ${e.message}`);
                 }
               }
 
-              // Method 5: Try lower/upper bounds if available (for line tools)
+              // P3: object.getPrice() / object.price (order-line entity)
               if (!newPrice && object) {
-                if (object.price1 !== undefined) {
-                  newPrice = parseFloat(object.price1);
-                  dragLogger.log('PRICE-5', `Got from object.price1: ${newPrice}`);
-                } else if (object.price2 !== undefined) {
-                  newPrice = parseFloat(object.price2);
-                  dragLogger.log('PRICE-5', `Got from object.price2: ${newPrice}`);
+                if (typeof object.getPrice === 'function') {
+                  try { newPrice = object.getPrice(); dragLogger.log('PRICE-P3', `object.getPrice() = ${newPrice}`); } catch (e) {}
+                }
+                if (!newPrice && typeof object.price === 'number') {
+                  newPrice = object.price;
+                  dragLogger.log('PRICE-P3b', `object.price = ${newPrice}`);
                 }
               }
-              
-              // Debug: if we still don't have price, log available properties
-              if (!newPrice && object) {
-                dragLogger.log('PRICE-DEBUG', `Shape object keys: ${Object.keys(object).join(', ')}`);
-                dragLogger.log('PRICE-DEBUG', `Has getPrice: ${typeof object.getPrice}`);
-                dragLogger.log('PRICE-DEBUG', `Has getPoints: ${typeof object.getPoints}`);
-                dragLogger.log('PRICE-DEBUG', `Object.price: ${object.price}`);
+
+              // P4: third argument is a raw price number (some TV versions)
+              if (!newPrice && typeof object === 'number' && object > 0) {
+                newPrice = object;
+                dragLogger.log('PRICE-P4', `raw 3rd-arg price = ${newPrice}`);
               }
 
               // Process the modification on drag stop
-              if (newPrice && newPrice > 0 && (status === 'stopped' || status === 'points_changed')) {
+              if (newPrice && newPrice > 0) {
                 dragLogger.success(`🖱️ Ready to process: ${mapping.levelType} → ${newPrice}`);
                 const lineId = mapping.lineId || id;
                 dragLogger.log('PROCESS', `Calling processPriceModification: lineId=${lineId}, price=${newPrice}`);
@@ -1002,11 +955,11 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       }
 
       // Method 2: Polling-based detection (fallback for when events don't fire)
-      // NOTE: We don't query getPrice() from shapes since TradingView shapes don't expose this
-      // Instead, prices are updated via drawing_event listener and stored in lineToTradeMapRef
-      // This polling just watches lineToTradeMapRef for price changes
+      // //Sanket - "Store interval ID in pollIntervalRef so it can be cleared on unmount.
+      //  The interval watches lineToTradeMapRef for price changes that onMove already updates.
+      //  This covers edge-cases where drawing_event fires but onMove is unavailable."
       console.log('[Trading] 👂 Attaching listener (Method 2: polling fallback)...');
-      const pollInterval = setInterval(() => {
+      pollIntervalRef.current = setInterval(() => {
         if (!chartRef.current) return;
         
         // Skip polling if trades are being updated
@@ -1160,6 +1113,12 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       });
 
       return () => {
+        // //Sanket - "Clear polling interval on unmount to prevent memory/timer leak.
+        //  Without this, the interval keeps running after the component unmounts."
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
         try {
           if (widgetRef.current) {
             widgetRef.current.remove();

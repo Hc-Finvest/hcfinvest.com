@@ -33,6 +33,8 @@ const TradingChart = ({
   const [error, setError] = useState(null)
   const [currentPrice, setCurrentPrice] = useState(null)
   const [priceChange, setPriceChange] = useState({ value: 0, percent: 0 })
+  const [connectionStatus, setConnectionStatus] = useState('connecting') // 'connecting'|'live'|'reconnecting'|'disconnected'
+  const [lastTickAge, setLastTickAge] = useState(null) // seconds since last tick
 
   // Get timeframe interval in seconds
   const getTimeframeSeconds = useCallback(() => {
@@ -251,6 +253,24 @@ const TradingChart = ({
     loadData()
   }, [symbol, timeframe, fetchHistoricalData, isDarkMode])
 
+  // Subscribe to price stream connection status + tick staleness
+  useEffect(() => {
+    const unsub = priceStreamService.onStatusChange(`chart-status-${symbol}`, (status) => {
+      setConnectionStatus(status)
+    })
+
+    // Tick-age ticker: update lastTickAge every second.
+    const ageTimer = setInterval(() => {
+      const t = priceStreamService.lastTickAt
+      setLastTickAge(t ? Math.floor((Date.now() - t) / 1000) : null)
+    }, 1000)
+
+    return () => {
+      unsub()
+      clearInterval(ageTimer)
+    }
+  }, [symbol])
+
   // Subscribe to real-time price updates
   useEffect(() => {
     const tfSeconds = getTimeframeSeconds()
@@ -360,6 +380,27 @@ const TradingChart = ({
             )}
           </div>
           
+          {/* Live data indicator */}
+          {(() => {
+            const isStale = connectionStatus === 'live' && lastTickAge !== null && lastTickAge > 30
+            const dot = {
+              live:          'bg-green-500',
+              connecting:    'bg-yellow-400 animate-pulse',
+              reconnecting:  'bg-yellow-400 animate-pulse',
+              disconnected:  'bg-red-500',
+            }[connectionStatus] ?? 'bg-gray-400'
+            const label = isStale
+              ? `Stale ${lastTickAge}s`
+              : { live: 'LIVE', connecting: 'Connecting…', reconnecting: 'Reconnecting…', disconnected: 'Offline' }[connectionStatus] ?? connectionStatus
+            const textColor = isStale ? 'text-yellow-400' : connectionStatus === 'live' ? 'text-green-400' : connectionStatus === 'disconnected' ? 'text-red-400' : 'text-yellow-400'
+            return (
+              <div className={`flex items-center gap-1 text-xs font-medium ${textColor}`}>
+                <span className={`inline-block w-2 h-2 rounded-full ${dot}`} />
+                {label}
+              </div>
+            )
+          })()}
+
           {/* Timeframe selector */}
           <div className="flex items-center gap-1">
             {TIMEFRAMES.map(tf => (

@@ -453,6 +453,30 @@ class TradeEngine {
 
     const previousValue = { stopLoss: trade.stopLoss, takeProfit: trade.takeProfit }
 
+    // //Sanket - "Server-side directional validation: SL must be below entry for BUY trades
+    //  and above entry for SELL trades, with TP mirrored in the opposite direction.
+    //  Frontend validates too but server is the authority – never trust client-only guards."
+    const entryPrice = parseFloat(trade.openPrice || trade.price || 0)
+    const isLong = trade.side === 'BUY'
+
+    if (sl !== null && !isNaN(sl) && entryPrice > 0) {
+      if (isLong && sl >= entryPrice) {
+        throw new Error(`Stop Loss (${sl}) must be below entry price (${entryPrice}) for a BUY trade`)
+      }
+      if (!isLong && sl <= entryPrice) {
+        throw new Error(`Stop Loss (${sl}) must be above entry price (${entryPrice}) for a SELL trade`)
+      }
+    }
+
+    if (tp !== null && !isNaN(tp) && entryPrice > 0) {
+      if (isLong && tp <= entryPrice) {
+        throw new Error(`Take Profit (${tp}) must be above entry price (${entryPrice}) for a BUY trade`)
+      }
+      if (!isLong && tp >= entryPrice) {
+        throw new Error(`Take Profit (${tp}) must be below entry price (${entryPrice}) for a SELL trade`)
+      }
+    }
+
     // Update both stopLoss/takeProfit and sl/tp fields for compatibility
     // Handle NaN values - treat as null
     if (sl !== null && !isNaN(sl)) {

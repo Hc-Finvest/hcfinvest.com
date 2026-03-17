@@ -8,6 +8,7 @@ import propTradingEngine from '../services/propTradingEngine.js'
 import copyTradingEngine from '../services/copyTradingEngine.js'
 import ibEngine from '../services/ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
+import { authMiddleware } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -260,7 +261,9 @@ router.post('/close', async (req, res) => {
 })
 
 // PUT /api/trade/modify - Modify trade SL/TP
-router.put('/modify', async (req, res) => {
+// //Sanket - "authMiddleware verifies JWT and attaches req.user.
+//  Ownership check ensures a user can only modify their own trades."
+router.put('/modify', authMiddleware, async (req, res) => {
   try {
     const { tradeId, sl, tp } = req.body
     console.log('Modify trade request:', { tradeId, sl, tp })
@@ -282,6 +285,14 @@ router.put('/modify', async (req, res) => {
       })
     }
     console.log('Found trade:', existingTrade.tradeId, existingTrade.status)
+
+    // //Sanket - "Ownership check: reject if the authenticated user does not own this trade."
+    if (existingTrade.userId && existingTrade.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorised to modify this trade'
+      })
+    }
 
     // Parse values and handle NaN
     const parsedSl = sl !== undefined && sl !== null && sl !== '' ? parseFloat(sl) : null

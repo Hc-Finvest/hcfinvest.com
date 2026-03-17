@@ -65,14 +65,54 @@ app.set('io', io);
 // Store connected clients
 const connectedClients = new Map()
 const priceSubscribers = new Set()
+let isShuttingDown = false
+let broadcastInterval = null
+let syncInterval = null
+
+const ENABLE_LIVE_PERSIST = (process.env.ENABLE_LIVE_PERSIST || 'true').toLowerCase() !== 'false'
+const ENABLE_PERIODIC_HISTORY_SYNC = (process.env.ENABLE_PERIODIC_HISTORY_SYNC || 'true').toLowerCase() !== 'false'
 
 // Initialize MetaAPI market data connection
 console.log('[Server] Initializing MetaAPI market data service...')
 metaApiService.connect()
+console.log(`[Server] Feature flags -> ENABLE_LIVE_PERSIST=${ENABLE_LIVE_PERSIST}, ENABLE_PERIODIC_HISTORY_SYNC=${ENABLE_PERIODIC_HISTORY_SYNC}`)
+
+// Stream incremental price updates and persist live candles from each incoming tick.
+metaApiService.addSubscriber((symbol, priceData) => {
+  if (isShuttingDown) return
+  if (!symbol || !priceData) return
+
+  // Aliased symbols are already mapped from the same source tick.
+  // Persist only canonical updates to avoid duplicate writes.
+  if (priceData.mappedFrom) return
+
+  const payload = {
+    symbol,
+    bid: priceData.bid,
+    ask: priceData.ask,
+    time: priceData.time || Date.now()
+  }
+
+  if (priceSubscribers.size > 0) {
+    io.to('prices').emit('tickUpdate', payload)
+    io.to('prices').emit('priceStream', {
+      prices: { [symbol]: priceData },
+      updated: { [symbol]: priceData },
+      timestamp: Date.now(),
+      provider: 'metaapi'
+    })
+  }
+
+  if (ENABLE_LIVE_PERSIST) {
+    storageService.ingestTick(symbol, priceData).catch(err => {
+      console.error(`[StorageService] Live tick persist error for ${symbol}:`, err.message)
+    })
+  }
+})
 
 // Broadcast prices to connected clients every 1000ms (Reduced frequency for general data)
 // and specifically when prices change for active symbols (handled in metaApiService)
-setInterval(() => {
+broadcastInterval = setInterval(() => {
   if (priceSubscribers.size === 0) return
   
   const now = Date.now()
@@ -87,6 +127,47 @@ setInterval(() => {
     provider: 'metaapi'
   })
 }, 1000)
+
+const gracefulShutdown = async (signal) => {
+  if (isShuttingDown) return
+  isShuttingDown = true
+
+  console.log(`[Server] Received ${signal}. Starting graceful shutdown...`)
+
+  try {
+    if (broadcastInterval) clearInterval(broadcastInterval)
+    if (syncInterval) clearInterval(syncInterval)
+
+    metaApiService.disconnect()
+
+    if (ENABLE_LIVE_PERSIST) {
+      const finalStats = await storageService.shutdown()
+      console.log('[Server] Storage flush complete:', {
+        pendingLiveBarOps: finalStats.pendingLiveBarOps,
+        livePersistedWrites: finalStats.livePersistedWrites,
+        livePersistErrors: finalStats.livePersistErrors
+      })
+    }
+
+    await new Promise(resolve => io.close(resolve))
+    await new Promise(resolve => httpServer.close(resolve))
+
+    await mongoose.connection.close(false)
+    console.log('[Server] Graceful shutdown completed.')
+    process.exit(0)
+  } catch (error) {
+    console.error('[Server] Graceful shutdown failed:', error.message)
+    process.exit(1)
+  }
+}
+
+process.on('SIGINT', () => {
+  gracefulShutdown('SIGINT')
+})
+
+process.on('SIGTERM', () => {
+  gracefulShutdown('SIGTERM')
+})
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
@@ -241,15 +322,19 @@ httpServer.listen(PORT, async () => {
   streamer.startXAUUSDStreamer().catch(err => console.error('[Streamer] Error:', err.message));
   
   // Start background sync WITHOUT BLOCKING - fire and forget
-  console.log('[StorageService] Starting background sync (non-blocking)...');
-  storageService.syncAllSymbols()
-    .then(() => console.log('[StorageService] Initial sync completed'))
-    .catch(err => console.error('[StorageService] Initial sync failed:', err.message));
-
-  // Schedule periodic syncs every 5 minutes
-  setInterval(() => {
+  if (ENABLE_PERIODIC_HISTORY_SYNC) {
+    console.log('[StorageService] Starting background sync (non-blocking)...');
     storageService.syncAllSymbols()
-      .catch(err => console.error('[StorageService] Periodic sync failed:', err.message));
-  }, 5 * 60 * 1000);
+      .then(() => console.log('[StorageService] Initial sync completed'))
+      .catch(err => console.error('[StorageService] Initial sync failed:', err.message));
+
+    // Schedule periodic syncs every 5 minutes
+    syncInterval = setInterval(() => {
+      storageService.syncAllSymbols()
+        .catch(err => console.error('[StorageService] Periodic sync failed:', err.message));
+    }, 5 * 60 * 1000);
+  } else {
+    console.log('[StorageService] Periodic history sync is disabled by feature flag.');
+  }
 
 });
