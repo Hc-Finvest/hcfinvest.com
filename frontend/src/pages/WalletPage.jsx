@@ -603,6 +603,63 @@ const [transferFee] = useState(2);
     });
   };
 
+/* 
+  const getTransferText = (tx) => {
+  // Wallet → Account
+  if (tx.type === "Transfer_To_Account") {
+    return `Wallet → Account ${tx.tradingAccountId?.accountId || ""}`;
+  }
+
+  // Account → Wallet
+  if (tx.type === "Transfer_From_Account") {
+    return `Account ${tx.tradingAccountId?.accountId || ""} → Wallet`;
+  }
+
+  // Account → Account
+  if (
+    tx.type === "Account_Transfer_Out" ||
+    tx.type === "Account_Transfer_In"
+  ) {
+    return `Account ${tx.fromTradingAccountId?.accountId || ""} → Account ${tx.toTradingAccountId?.accountId || ""}`;
+  }
+
+  return tx.type;
+};
+ */
+
+// ✅ REMOVE DUPLICATE (IMPORTANT)
+const filteredTransactions = transactions.filter((tx) => {
+  return tx.type !== "Account_Transfer_In";
+});
+
+const getTransferText = (tx) => {
+
+  // Always prefer stored values first
+  const getId = (fallback, obj) =>
+    fallback || obj?.accountId || "N/A";
+
+  // Wallet → Account
+  if (tx.type === "Transfer_To_Account") {
+    return `Wallet → Account ${getId(tx.toAccountNumber, tx.tradingAccountId)}`;
+  }
+
+  // Account → Wallet
+  if (tx.type === "Transfer_From_Account") {
+    return `Account ${getId(tx.fromAccountNumber, tx.tradingAccountId)} → Wallet`;
+  }
+
+  // Account → Account
+  if (
+    tx.type === "Account_Transfer_Out" ||
+    tx.type === "Account_Transfer_In"
+  ) {
+    return `Account ${getId(tx.fromAccountNumber, tx.fromTradingAccountId)} → Account ${getId(tx.toAccountNumber, tx.toTradingAccountId)}`;
+  }
+
+  return tx.type;
+};
+
+
   return (
     <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
       {/* Mobile Header */}
@@ -752,7 +809,7 @@ const [transferFee] = useState(2);
 
 
 
-
+{/*  
                 {cryptoWithdrawAvailable && (
                   <button
                     onClick={() => {
@@ -769,6 +826,7 @@ const [transferFee] = useState(2);
                     <Bitcoin size={isMobile ? 16 : 20} /> Crypto Withdraw
                   </button>
                 )}
+ */}               
               </div>
             </div>
           </div>
@@ -836,7 +894,7 @@ const [transferFee] = useState(2);
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((tx) => (
+                    {filteredTransactions.map((tx) => (
                       <tr key={tx._id} className="border-b border-gray-200">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
@@ -871,6 +929,8 @@ const [transferFee] = useState(2);
                               />
                             )}
                             <div>
+                              
+                              {/* 
                               <span className="text-gray-900">
                                 {tx.type === "Transfer_To_Account"
                                   ? "To Trading Account"
@@ -882,6 +942,14 @@ const [transferFee] = useState(2);
                                         ? "Account Transfer (In)"
                                         : tx.type}
                               </span>
+ */}
+
+ <span className="text-gray-900">
+  {getTransferText(tx)}
+</span>
+
+
+
                               {tx.tradingAccountName && (
                                 <p className="text-white text-xs">
                                   {tx.tradingAccountName}

@@ -1,4 +1,3 @@
-
 // Sidebar.jsx
 
 import { useNavigate } from "react-router-dom";
@@ -8,12 +7,9 @@ import {
   Wallet,
   Users,
   Copy,
-  UserCircle,
   HelpCircle,
   FileText,
-  LogOut,
-  Sun,
-  Moon,
+
   Menu,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
@@ -35,12 +31,11 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
     { name: "Orders", icon: FileText, path: "/orders" },
     { name: "IB", icon: Users, path: "/ib" },
     { name: "Copytrade", icon: Copy, path: "/copytrade" },
-    { name: "Competitions", icon: MdLeaderboard, path: "/competitions" },
-    { name: "Leaderboard", icon: FileText, path: "/leader-board" },
-    { name: "Profile", icon: UserCircle, path: "/profile" },
+    { name: "Competition", icon: MdLeaderboard, path: "/competition" },
+    { name: "Leader Board", icon: FileText, path: "/leader-board" },
+    //{ name: "Profile", icon: UserCircle, path: "/profile" },
     { name: "Support", icon: HelpCircle, path: "/support" },
     { name: "Instructions", icon: FileText, path: "/instructions" },
-    // { name: "Competitions", icon: FileText, path: "/competitions" },
   ];
 
   const handleLogout = () => {
@@ -64,9 +59,7 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
           <Menu size={20} />
         </button>
 
-        {sidebarExpanded && (
-          <span className="font-semibold text-lg"></span>
-        )}
+        {sidebarExpanded && <span className="font-semibold text-lg"></span>}
       </div>
 
       {/* MENU */}
@@ -86,25 +79,6 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
           </button>
         ))}
       </nav>
-
-      {/* BOTTOM */}
-      <div className="border-t p-3 space-y-2">
-        <button
-          onClick={toggleDarkMode}
-          className="flex items-center gap-3 text-gray-600 hover:text-black"
-        >
-          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          {sidebarExpanded && "Theme"}
-        </button>
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 text-gray-600 hover:text-red-500"
-        >
-          <LogOut size={18} />
-          {sidebarExpanded && "Logout"}
-        </button>
-      </div>
     </aside>
   );
 };

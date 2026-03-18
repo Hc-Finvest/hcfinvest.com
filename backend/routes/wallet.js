@@ -1,10 +1,13 @@
+
+// wallet_Route.js
+
 import express from 'express'
 import Wallet from '../models/Wallet.js'
 import Transaction from '../models/Transaction.js'
 import TradingAccount from '../models/TradingAccount.js'
-// import User from '../models/User.js'
-// import AdminWallet from '../models/AdminWallet.js'
-// import AdminWalletTransaction from '../models/AdminWalletTransaction.js'
+import User from '../models/User.js'
+import AdminWallet from '../models/AdminWallet.js'
+import AdminWalletTransaction from '../models/AdminWalletTransaction.js'
 import KYC from '../models/KYC.js'
 import UserBankAccount from '../models/UserBankAccount.js'
 
@@ -257,6 +260,7 @@ router.get('/transactions/:userId', async (req, res) => {
     const demoAccountIds = demoAccounts.map(acc => acc._id)
     
     // Exclude demo-related transactions
+/*     
     const transactions = await Transaction.find({ 
       userId,
       // Exclude demo transaction types
@@ -268,7 +272,21 @@ router.get('/transactions/:userId', async (req, res) => {
         { $or: [{ fromTradingAccountId: { $exists: false } }, { fromTradingAccountId: null }, { fromTradingAccountId: { $nin: demoAccountIds } }] }
       ]
     }).sort({ createdAt: -1 })
-    
+ */    
+const transactions = await Transaction.find({ 
+  userId,
+  type: { $nin: ['Demo_Credit', 'Demo_Reset'] },
+  $and: [
+    { $or: [{ tradingAccountId: { $exists: false } }, { tradingAccountId: null }, { tradingAccountId: { $nin: demoAccountIds } }] },
+    { $or: [{ toTradingAccountId: { $exists: false } }, { toTradingAccountId: null }, { toTradingAccountId: { $nin: demoAccountIds } }] },
+    { $or: [{ fromTradingAccountId: { $exists: false } }, { fromTradingAccountId: null }, { fromTradingAccountId: { $nin: demoAccountIds } }] }
+  ]
+})
+.populate("tradingAccountId", "accountId")
+.populate("fromTradingAccountId", "accountId")
+.populate("toTradingAccountId", "accountId")
+.sort({ createdAt: -1 })
+
     res.json({ transactions })
   } catch (error) {
     res.status(500).json({ message: 'Error fetching transactions', error: error.message })

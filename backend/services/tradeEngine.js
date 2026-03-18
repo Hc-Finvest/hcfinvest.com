@@ -11,13 +11,19 @@ class TradeEngine {
     this.CONTRACT_SIZE = 100000
   }
 
+  normalizeSymbol(symbol = '') {
+    // Normalize broker-specific aliases (e.g. XAUUSD.i -> XAUUSD)
+    return String(symbol).toUpperCase().replace(/\.I$/i, '')
+  }
+
   // Get contract size based on symbol type
   getContractSize(symbol) {
+    const normalizedSymbol = this.normalizeSymbol(symbol)
     // Metals - 100 oz for gold, 5000 oz for silver
-    if (symbol === 'XAUUSD') return 100
-    if (symbol === 'XAGUSD') return 5000
+    if (normalizedSymbol === 'XAUUSD') return 100
+    if (normalizedSymbol === 'XAGUSD') return 5000
     // Crypto - 1 unit
-    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD'].includes(symbol)) return 1
+    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(normalizedSymbol)) return 1
     // Forex - standard 100,000
     return 100000
   }
@@ -176,12 +182,13 @@ class TradeEngine {
 
   // Check if market is open for a symbol
   isMarketOpen(symbol) {
+    const normalizedSymbol = this.normalizeSymbol(symbol)
     const now = new Date()
     const utcDay = now.getUTCDay() // 0 = Sunday, 6 = Saturday
     const utcHour = now.getUTCHours()
     
     // Crypto markets are always open
-    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(symbol)) {
+    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(normalizedSymbol)) {
       return true
     }
     

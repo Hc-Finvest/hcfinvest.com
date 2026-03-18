@@ -182,12 +182,13 @@ if (accs.length > 0) {
               {/* SWITCH ACCOUNT */}
               
               <button
-                onClick={() => navigate(`/trade/${selectedAccount?._id}`)}
+                onClick={() => window.open(`/trade/${selectedAccount?._id}`, "_blank")}
                 className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-medium shadow"
               >
                 <TrendingUp size={16} />
                 Trade Now
               </button>
+              
               <div className="relative">
                 <button
                   onClick={() => setShowAccountDropdown(!showAccountDropdown)}

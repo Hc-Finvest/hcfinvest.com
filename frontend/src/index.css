@@ -1,9 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+/* 
 :root {
-  /* Theme CSS Variables - Light Theme with Blue Header */
+ 
   --theme-primary: #2563EB;
   --theme-primaryHover: #1D4ED8;
   --theme-secondary: #10B981;
@@ -35,7 +35,7 @@
   --theme-buttonDanger: #EF4444;
   --theme-headerBg: #1E40AF;
   --theme-headerText: #FFFFFF;
-}
+} */
 
 * {
   margin: 0;

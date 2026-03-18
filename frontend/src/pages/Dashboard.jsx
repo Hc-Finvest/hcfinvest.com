@@ -1,9 +1,8 @@
-
 // Dashboard.jsx
 
 import { API_URL } from "../config/api";
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   TrendingUp,
@@ -12,14 +11,16 @@ import {
   Sun,
   Moon,
   UserCircle,
+  Settings,
   User,
+  ShieldCheck,
+  LogOut,
 } from "lucide-react";
 
 import { MdLeaderboard } from "react-icons/md";
 
 import { useTheme } from "../context/ThemeContext";
 import Sidebar from "../components/Sidebar";
-import ClientDashboardBannerSlider from "../components/ClientDashboardBannerSlider";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -41,6 +42,9 @@ const Dashboard = () => {
   const [marketNews, setMarketNews] = useState([]);
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [banners, setBanners] = useState([]);
+
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
   const tradingViewRef = useRef(null);
   const economicCalendarRef = useRef(null);
   const forexHeatmapRef = useRef(null);
@@ -98,7 +102,7 @@ const Dashboard = () => {
   useEffect(() => {
     checkAuthStatus();
     fetchChallengeStatus();
-    fetchBanners();
+    // fetchBanners();
     if (user._id) {
       fetchWalletBalance();
       fetchUserAccounts();
@@ -107,17 +111,17 @@ const Dashboard = () => {
   }, [user._id]);
 
   // Fetch active banners
-  const fetchBanners = async () => {
-    try {
-      const res = await fetch(`${API_URL}/banners/active`);
-      const data = await res.json();
-      if (data.success) {
-        setBanners(data.banners || []);
-      }
-    } catch (error) {
-      console.error("Error fetching banners:", error);
-    }
-  };
+  // const fetchBanners = async () => {
+  //   try {
+  //     const res = await fetch(`${API_URL}/banners/active`);
+  //     const data = await res.json();
+  //     if (data.success) {
+  //       setBanners(data.banners || []);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching banners:", error);
+  //   }
+  // };
 
   // Fetch trades after accounts are loaded
   useEffect(() => {
@@ -456,12 +460,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/user/login");
-  };
-
   // Load TradingView widgets with proper initialization
   useEffect(() => {
     // Helper function to safely load TradingView widget
@@ -564,254 +562,314 @@ const Dashboard = () => {
     (acc) => acc.isDemo || acc.accountTypeId?.isDemo,
   );
 
+  const handleLogout = () => {
+    console.log("onCLick on Logout button");
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/user/login");
+  };
+
   return (
-  <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
-
-    {/* SIDEBAR */}
-    <div className="hidden md:block">
-      <Sidebar activeMenu="Dashboard" />
-    </div>
-
-    {/* MAIN */}
-    <div className="flex-1 flex flex-col">
-
-      {/* TOP NAVBAR */}
-      <div className="h-14 bg-[#0b1a3a] text-white flex items-center justify-between px-3 sm:px-6">
-        <div className="font-semibold text-sm sm:text-base">
-          Dashboard
-        </div>
-
-        <div className="flex items-center gap-4 sm:gap-5">
-          <RefreshCw size={18} className="cursor-pointer" />
-          <UserCircle size={20} className="cursor-pointer" />
-        </div>
+    <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
+      {/* SIDEBAR */}
+      <div className="hidden md:block">
+        <Sidebar activeMenu="Dashboard" />
       </div>
 
-        {/* <ClientDashboardBannerSlider /> */}
-        <div className="w-full">
-          <ClientDashboardBannerSlider />
-        </div>
-
-
-      {/* DASHBOARD CONTENT */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6">
-
-        {/* BALANCE CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border">
-            <p className="text-gray-500 text-sm">Total Balance</p>
-            <p className="text-xl sm:text-2xl font-semibold mt-2">$0</p>
+      {/* MAIN */}
+      <div className="flex-1 flex flex-col">
+        {/* TOP NAVBAR */}
+        <div className="h-14 bg-[#0b1a3a] text-white flex items-center justify-between px-3 sm:px-6">
+          <div className="font-semibold text-sm sm:text-base">
+            User Dashboard
           </div>
 
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border">
-            <p className="text-gray-500 text-sm">Current Equity</p>
-            <p className="text-xl sm:text-2xl font-semibold mt-2">$0</p>
-          </div>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <RefreshCw size={18} className="cursor-pointer" />
+            {/* <div className="relative">
+              <Settings
+                size={20}
+                className="cursor-pointer"
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              />
 
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border">
-            <p className="text-gray-500 text-sm">Wallet Balance</p>
-            <p className="text-xl sm:text-2xl font-semibold mt-2">
-              ${walletBalance}
-            </p>
-          </div>
+              {showSettingsMenu && (
+                <div className="absolute right-0 mt-3 w-36 bg-gray-500 border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
+                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                    Profile
+                  </button>
 
-        </div>
+                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                    KYC
+                  </button>
 
-        {/* ACTION BUTTONS */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                    Theme
+                  </button>
 
-          <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer">
-            <TrendingUp size={22} />
-            <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
-              Deposit
-            </span>
-          </div>
-
-          <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer">
-            <DollarSign size={22} />
-            <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
-              Withdraw
-            </span>
-          </div>
-
-          <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer">
-            <RefreshCw size={22} />
-            <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
-              Transfer
-            </span>
-          </div>
-
-          <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer">
-            <User size={22} />
-            <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
-              Accounts
-            </span>
-          </div>
-
-        </div>
-
-        {/* ACCOUNTS SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          {/* LIVE ACCOUNTS */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-semibold text-base sm:text-lg text-gray-800">
-                Live Accounts
-              </h2>
-
-              <button
-                onClick={() => navigate("/account")}
-                className="text-xs sm:text-sm text-blue-600 hover:underline"
-              >
-                See All →
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">
-                  Total Live Accounts
-                </p>
-
-                <p className="text-2xl sm:text-3xl font-semibold text-gray-900 mt-1">
-                  {liveAccounts.length}
-                </p>
-              </div>
-
-              <button
-                onClick={() => navigate("/account")}
-                className="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm"
-              >
-                Create Account
-              </button>
-            </div>
-          </div>
-
-          {/* DEMO ACCOUNTS */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-semibold text-base sm:text-lg text-gray-800">
-                Demo Accounts
-              </h2>
-
-              <button
-                onClick={() => navigate("/account")}
-                className="text-xs sm:text-sm text-blue-600 hover:underline"
-              >
-                See All →
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">
-                  Total Demo Accounts
-                </p>
-
-                <p className="text-2xl sm:text-3xl font-semibold text-gray-900 mt-1">
-                  {demoAccounts.length}
-                </p>
-              </div>
-
-              <button
-                onClick={() => navigate("/account")}
-                className="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm"
-              >
-                Create Demo
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        {/* TRANSACTIONS TABLE */}
-        <div className="bg-white rounded-xl border p-4 sm:p-5 overflow-x-auto">
-
-          <h2 className="font-semibold mb-4 text-sm sm:text-base">
-            Transaction History
-          </h2>
-
-          <table className="w-full text-xs sm:text-sm min-w-[600px]">
-
-            <thead className="text-gray-500 border-b">
-              <tr>
-                <th className="text-left py-2">Description</th>
-                <th>Account</th>
-                <th>Amount</th>
-                <th>Fee</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loadingTransactions ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4 text-gray-500">
-                    Loading transactions...
-                  </td>
-                </tr>
-              ) : transactions.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4 text-gray-500">
-                    No transactions found
-                  </td>
-                </tr>
-              ) : (
-                transactions.slice(0, 5).map((tx) => (
-                  <tr key={tx._id} className="border-b">
-
-                    <td className="py-3">
-                      {tx.type === "Deposit"
-                        ? "Deposit"
-                        : tx.type === "Withdrawal"
-                        ? "Withdrawal"
-                        : tx.type}
-                    </td>
-
-                    <td>{tx.tradingAccountName || "-"}</td>
-
-                    <td
-                      className={
-                        tx.type === "Deposit"
-                          ? "text-green-500"
-                          : "text-red-500"
-                      }
-                    >
-                      {tx.type === "Deposit" ? "+" : "-"}${tx.amount} USD
-                    </td>
-
-                    <td>{tx.fee || 0}</td>
-
-                    <td>
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          tx.status === "Completed" ||
-                          tx.status === "Approved"
-                            ? "bg-green-100 text-green-700"
-                            : tx.status === "Rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {tx.status}
-                      </span>
-                    </td>
-
-                  </tr>
-                ))
+                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                    Log Out
+                  </button>
+                </div>
               )}
-            </tbody>
+            </div> */}
 
-          </table>
+            <div className="relative">
+              <Settings
+                size={20}
+                className="cursor-pointer hover:text-blue-300 transition"
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              />
 
+              {showSettingsMenu && (
+                <div className="absolute right-0 mt-3 w-44 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
+                  {/* Profile */}
+                  <button
+                    onClick={() => navigate("/profile")}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                  >
+                    <User size={16} />
+                    Profile
+                  </button>
+
+                  {/* KYC */}
+                  <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                    <ShieldCheck size={16} />
+                    KYC
+                  </button>
+
+                  {/* Theme */}
+                  <button
+                    onClick={toggleDarkMode}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                  >
+                    {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                    Theme
+                  </button>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Logout */}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
+        {/* DASHBOARD CONTENT */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6">
+          {/* BALANCE CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border">
+              <p className="text-gray-500 text-sm">Total Balance</p>
+              <p className="text-xl sm:text-2xl font-semibold mt-2">$0</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border">
+              <p className="text-gray-500 text-sm">Current Equity</p>
+              <p className="text-xl sm:text-2xl font-semibold mt-2">$0</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border">
+              <p className="text-gray-500 text-sm">Wallet Balance</p>
+              <p className="text-xl sm:text-2xl font-semibold mt-2">
+                ${walletBalance}
+              </p>
+            </div>
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer"
+            onClick={() => navigate("/wallet?action=deposit")}
+            >
+              <TrendingUp size={22} />
+              <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
+                Deposit
+              </span>
+            </div>
+
+            <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer"
+            onClick={() => navigate("/wallet?action=withdraw")}
+            >
+              <DollarSign size={22} />
+              <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
+                Withdraw
+              </span>
+            </div>
+
+            <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer">
+              <RefreshCw size={22} />
+              <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
+                Transfer
+              </span>
+            </div>
+
+            <div className="bg-white rounded-xl border p-4 sm:p-6 flex flex-col items-center justify-center hover:shadow transition cursor-pointer" onClick={() => navigate("/account") }>
+              <User size={22} />
+              <span className="mt-2 sm:mt-3 font-medium text-sm sm:text-base">
+                Accounts
+              </span>
+            </div>
+          </div>
+
+          {/* ACCOUNTS SECTION */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* LIVE ACCOUNTS */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-semibold text-base sm:text-lg text-gray-800">
+                  Live Accounts
+                </h2>
+
+                <button
+                  onClick={() => navigate("/account")}
+                  className="text-xs sm:text-sm text-blue-600 hover:underline"
+                >
+                  See All →
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm">Total Live Accounts</p>
+
+                  <p className="text-2xl sm:text-3xl font-semibold text-gray-900 mt-1">
+                    {liveAccounts.length}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => navigate("/switch-account?create=true")}
+                  className="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+
+            {/* DEMO ACCOUNTS */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-4" onClick={() => navigate("/account")} >
+                <h2 className="font-semibold text-base sm:text-lg text-gray-800">
+                  Demo Accounts
+                </h2>
+
+                <button
+                  onClick={() => navigate("/account")}
+                  className="text-xs sm:text-sm text-blue-600 hover:underline"
+                >
+                  See All →
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm">Total Demo Accounts</p>
+
+                  <p className="text-2xl sm:text-3xl font-semibold text-gray-900 mt-1">
+                    {demoAccounts.length}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => navigate("/switch-account?create=true&demo=true")}
+                  className="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm"
+                >
+                  Create Demo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* TRANSACTIONS TABLE */}
+          <div className="bg-white rounded-xl border p-4 sm:p-5 overflow-x-auto">
+            <h2 className="font-semibold mb-4 text-sm sm:text-base">
+              Transaction History
+            </h2>
+
+            <table className="w-full text-xs sm:text-sm min-w-[600px]">
+              <thead className="text-gray-500 border-b">
+                <tr>
+                  <th className="text-left py-2">Description</th>
+                  <th>Account</th>
+                  <th>Amount</th>
+                  <th>Fee</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {loadingTransactions ? (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4 text-gray-500">
+                      Loading transactions...
+                    </td>
+                  </tr>
+                ) : transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4 text-gray-500">
+                      No transactions found
+                    </td>
+                  </tr>
+                ) : (
+                  transactions.slice(0, 5).map((tx) => (
+                    <tr key={tx._id} className="border-b">
+                      <td className="py-3">
+                        {tx.type === "Deposit"
+                          ? "Deposit"
+                          : tx.type === "Withdrawal"
+                            ? "Withdrawal"
+                            : tx.type}
+                      </td>
+
+                      <td>{tx.tradingAccountName || "-"}</td>
+
+                      <td
+                        className={
+                          tx.type === "Deposit"
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }
+                      >
+                        {tx.type === "Deposit" ? "+" : "-"}${tx.amount} USD
+                      </td>
+
+                      <td>{tx.fee || 0}</td>
+
+                      <td>
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${
+                            tx.status === "Completed" ||
+                            tx.status === "Approved"
+                              ? "bg-green-100 text-green-700"
+                              : tx.status === "Rejected"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {tx.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default Dashboard;

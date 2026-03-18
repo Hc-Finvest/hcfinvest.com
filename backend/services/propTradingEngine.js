@@ -24,6 +24,10 @@ class PropTradingEngine {
     }
   }
 
+  normalizeSymbol(symbol = '') {
+    return String(symbol).toUpperCase().replace(/\.I$/i, '')
+  }
+
   // Check if challenge mode is enabled
   async isChallengeEnabled() {
     const settings = await PropSettings.getSettings()
@@ -261,9 +265,10 @@ class PropTradingEngine {
 
   // Get contract size based on symbol
   getContractSize(symbol) {
-    if (symbol === 'XAUUSD') return 100
-    if (symbol === 'XAGUSD') return 5000
-    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD'].includes(symbol)) return 1
+    const normalizedSymbol = this.normalizeSymbol(symbol)
+    if (normalizedSymbol === 'XAUUSD') return 100
+    if (normalizedSymbol === 'XAGUSD') return 5000
+    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(normalizedSymbol)) return 1
     return 100000
   }
 

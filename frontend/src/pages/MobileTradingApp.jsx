@@ -65,21 +65,30 @@ const MobileTradingApp = () => {
   const [notifications, setNotifications] = useState([])
   const notificationIdRef = useRef(0)
   const [adminSpreads, setAdminSpreads] = useState({})
+  const forexSymbols = new Set(['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY'])
+  const metalSymbols = new Set(['XAUUSD', 'XAGUSD'])
+  const cryptoSymbols = new Set(['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'])
+  const normalizeSymbol = (symbol = '') => String(symbol).trim().toUpperCase()
+  const getBaseSymbol = (symbol = '') => normalizeSymbol(symbol).replace(/\.I$/i, '')
+  const isJpyPair = (symbol = '') => getBaseSymbol(symbol).includes('JPY')
+  const isMetalSymbol = (symbol = '') => metalSymbols.has(getBaseSymbol(symbol))
+  const isCryptoSymbol = (symbol = '') => cryptoSymbols.has(getBaseSymbol(symbol))
+  const getSpreadConfig = (symbol = '') => adminSpreads[symbol] || adminSpreads[getBaseSymbol(symbol)] || null
 
   const categories = ['All', 'Starred', 'Forex', 'Metals', 'Crypto']
 
   // Same instruments as TradingPage
   const defaultInstruments = [
-    { symbol: 'EURUSD', name: 'EUR/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
-    { symbol: 'GBPUSD', name: 'GBP/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
-    { symbol: 'USDJPY', name: 'USD/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCHF', name: 'USD/CHF', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDUSD', name: 'AUD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDUSD', name: 'NZD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCAD', name: 'USD/CAD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'EURGBP', name: 'EUR/GBP', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'EURJPY', name: 'EUR/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPJPY', name: 'GBP/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'EURUSD.i', name: 'EUR/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
+    { symbol: 'GBPUSD.i', name: 'GBP/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
+    { symbol: 'USDJPY.i', name: 'USD/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCHF.i', name: 'USD/CHF', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDUSD.i', name: 'AUD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDUSD.i', name: 'NZD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCAD.i', name: 'USD/CAD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'EURGBP.i', name: 'EUR/GBP', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'EURJPY.i', name: 'EUR/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPJPY.i', name: 'GBP/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
     { symbol: 'XAUUSD', name: 'Gold', bid: 0, ask: 0, spread: 0, category: 'Metals', starred: true },
     { symbol: 'XAGUSD', name: 'Silver', bid: 0, ask: 0, spread: 0, category: 'Metals', starred: false },
     { symbol: 'BTCUSD', name: 'Bitcoin', bid: 0, ask: 0, spread: 0, category: 'Crypto', starred: true },
@@ -143,8 +152,8 @@ const MobileTradingApp = () => {
 
   // All symbols for price fetching
   const allSymbols = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
-    'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD',
+    'EURUSD.i', 'GBPUSD.i', 'USDJPY.i', 'USDCHF.i', 'AUDUSD.i', 'NZDUSD.i', 'USDCAD.i',
+    'EURGBP.i', 'EURJPY.i', 'GBPJPY.i', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD',
     'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD',
     'LTCUSD', 'AVAXUSD', 'LINKUSD'
   ]
@@ -310,7 +319,7 @@ const MobileTradingApp = () => {
 
   // Calculate display price with admin spread applied
   const getDisplayPrice = (symbol, side, rawBid, rawAsk) => {
-    const spreadConfig = adminSpreads[symbol]
+    const spreadConfig = getSpreadConfig(symbol)
     if (!spreadConfig || !spreadConfig.spread) {
       return side === 'BUY' ? rawAsk : rawBid
     }
@@ -323,11 +332,11 @@ const MobileTradingApp = () => {
       spread = (rawAsk - rawBid) * (spreadValue / 100)
     } else {
       // FIXED spread - convert from pips/cents to actual price units
-      if (symbol.includes('JPY')) {
+      if (isJpyPair(symbol)) {
         spread = spreadValue * 0.01 // JPY pairs: 1 pip = 0.01
-      } else if (['XAUUSD', 'XAGUSD'].includes(symbol)) {
+      } else if (isMetalSymbol(symbol)) {
         spread = spreadValue / 100 // Metals: cents to dollars
-      } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(symbol)) {
+      } else if (isCryptoSymbol(symbol)) {
         spread = spreadValue // Crypto: USD value as-is
       } else {
         spread = spreadValue * 0.0001 // Standard Forex: 1 pip = 0.0001
@@ -1444,6 +1453,7 @@ const MobileTradingApp = () => {
 
   // TradingView symbol mapping (same as TradingPage)
   const getSymbolForTradingView = (symbol) => {
+    const baseSymbol = getBaseSymbol(symbol)
     const symbolMap = {
       'EURUSD': 'OANDA:EURUSD', 'GBPUSD': 'OANDA:GBPUSD', 'USDJPY': 'OANDA:USDJPY',
       'USDCHF': 'OANDA:USDCHF', 'AUDUSD': 'OANDA:AUDUSD', 'NZDUSD': 'OANDA:NZDUSD',
@@ -1454,7 +1464,7 @@ const MobileTradingApp = () => {
       'ADAUSD': 'COINBASE:ADAUSD', 'DOGEUSD': 'BINANCE:DOGEUSDT', 'DOTUSD': 'COINBASE:DOTUSD',
       'MATICUSD': 'COINBASE:MATICUSD', 'AVAXUSD': 'COINBASE:AVAXUSD', 'LINKUSD': 'COINBASE:LINKUSD',
     }
-    return symbolMap[symbol] || `OANDA:${symbol}`
+    return symbolMap[baseSymbol] || `OANDA:${baseSymbol}`
   }
 
   // CHART TAB - Full screen chart with buy/sell at bottom

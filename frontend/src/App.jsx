@@ -63,7 +63,7 @@ function App() {
         <Route path="/user/login" element={<Login />} />
         <Route path="/user/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/competitions" element={<Competitions />} />
+        <Route path="/competition" element={<Competitions />} />
         <Route path="/leader-board" element={<LeaderBoard />} />
         <Route path="/mobile" element={<MobileTradingApp />} />
         <Route path="/account" element={<Account />} />

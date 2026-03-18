@@ -1,147 +1,191 @@
 
-// internalTransfer.js
+// internalTransfer.jsx
+
 import express from "express";
-import mongoose from "mongoose";
 import Wallet from "../models/Wallet.js";
 import TradingAccount from "../models/TradingAccount.js";
-/* import Wallet from "../models/Wallet.js";
-import TradingAccount from "../models/tradingAccountSchema.js"; */
+import Transaction from "../models/Transaction.js";
 
 const router = express.Router();
 
-/*
-================================================
-INTERNAL TRANSFER API
-POST /api/transfer/internal-transfer
-================================================
-*/
-
 router.post("/internal-transfer", async (req, res) => {
+
+  console.log("🚀 STEP 1: API HIT");
 
   const { userId, fromAccount, toAccount, amount } = req.body;
 
-  const session = await mongoose.startSession();
+  console.log("📦 STEP 2: Request Data:", {
+    userId,
+    fromAccount,
+    toAccount,
+    amount
+  });
 
   try {
 
-    session.startTransaction();
-
     const transferAmount = Number(amount);
 
-    /* ================================
-        VALIDATION
-    ================================ */
+    /* ========================
+       VALIDATION
+    ======================== */
 
     if (!transferAmount || transferAmount <= 0) {
-      throw new Error("Invalid transfer amount");
+      throw new Error("Invalid amount");
     }
 
     if (!fromAccount || !toAccount) {
-      throw new Error("Both accounts must be selected");
+      throw new Error("Select accounts");
     }
 
     if (fromAccount === toAccount) {
-      throw new Error("Cannot transfer to the same account");
+      throw new Error("Same account not allowed");
     }
 
-    let fromBalance = 0;
+    /* ========================
+       FETCH SOURCE
+    ======================== */
 
-    /* ================================
-        HANDLE SOURCE ACCOUNT
-    ================================ */
+    let fromWallet = null;
+    let fromTrading = null;
 
     if (fromAccount === "wallet") {
 
-      const wallet = await Wallet.findOne({ userId }).session(session);
+      fromWallet = await Wallet.findOne({ userId });
+      if (!fromWallet) throw new Error("Wallet not found");
 
-      if (!wallet) throw new Error("Wallet not found");
-
-      fromBalance = wallet.balance;
-
-      if (transferAmount > fromBalance || fromBalance <= 0) {
+      if (fromWallet.balance < transferAmount) {
         throw new Error("Insufficient wallet balance");
       }
 
-      wallet.balance -= transferAmount;
-
-      await wallet.save({ session });
+      fromWallet.balance -= transferAmount;
+      await fromWallet.save();
 
     } else {
 
-      const fromTradingAccount = await TradingAccount.findOne({
-        _id: fromAccount,
-        userId,
-        status: "Active"
-      }).session(session);
+      fromTrading = await TradingAccount.findById(fromAccount);
+      if (!fromTrading) throw new Error("Source account not found");
 
-      if (!fromTradingAccount) {
-        throw new Error("Source trading account not found or inactive");
+      // ✅ SECURITY CHECK
+      if (fromTrading.userId.toString() !== userId) {
+        throw new Error("Unauthorized access");
       }
 
-      fromBalance = fromTradingAccount.balance;
-
-      if (transferAmount > fromBalance || fromBalance <= 0) {
-        throw new Error("Insufficient account balance");
+      if (fromTrading.balance < transferAmount) {
+        throw new Error("Insufficient balance");
       }
 
-      fromTradingAccount.balance -= transferAmount;
-
-      await fromTradingAccount.save({ session });
+      fromTrading.balance -= transferAmount;
+      await fromTrading.save();
     }
 
-    /* ================================
-        HANDLE DESTINATION ACCOUNT
-    ================================ */
+    /* ========================
+       FETCH DESTINATION
+    ======================== */
+
+    let toWallet = null;
+    let toTrading = null;
 
     if (toAccount === "wallet") {
 
-      const wallet = await Wallet.findOne({ userId }).session(session);
+      toWallet = await Wallet.findOne({ userId });
+      if (!toWallet) throw new Error("Wallet not found");
 
-      if (!wallet) throw new Error("Wallet not found");
-
-      wallet.balance += transferAmount;
-
-      await wallet.save({ session });
+      toWallet.balance += transferAmount;
+      await toWallet.save();
 
     } else {
 
-      const toTradingAccount = await TradingAccount.findOne({
-        _id: toAccount,
-        userId,
-        status: "Active"
-      }).session(session);
+      toTrading = await TradingAccount.findById(toAccount);
+      if (!toTrading) throw new Error("Destination account not found");
 
-      if (!toTradingAccount) {
-        throw new Error("Destination trading account not found or inactive");
+      // ✅ SECURITY CHECK
+      if (toTrading.userId.toString() !== userId) {
+        throw new Error("Unauthorized access");
       }
 
-      toTradingAccount.balance += transferAmount;
-
-      await toTradingAccount.save({ session });
+      toTrading.balance += transferAmount;
+      await toTrading.save();
     }
 
-    /* ================================
-        COMMIT TRANSACTION
-    ================================ */
+    /* ========================
+       TRANSACTION HISTORY
+    ======================== */
 
-    await session.commitTransaction();
-    session.endSession();
+    console.log("🧾 STEP 15: Saving transaction");
 
-    res.status(200).json({
+    // ✅ Wallet → Account
+    if (fromAccount === "wallet" && toAccount !== "wallet") {
+
+      await Transaction.create({
+        userId,
+        type: "Transfer_To_Account",
+        amount: transferAmount,
+        paymentMethod: "Internal",
+        tradingAccountId: toAccount,
+        toAccountNumber: toTrading?.accountId || String(toTrading?._id),
+        fromAccount: "wallet",
+        status: "Completed"
+      });
+    }
+
+    // ✅ Account → Wallet
+    else if (fromAccount !== "wallet" && toAccount === "wallet") {
+
+      await Transaction.create({
+        userId,
+        type: "Transfer_From_Account",
+        amount: transferAmount,
+        paymentMethod: "Internal",
+        tradingAccountId: fromAccount,
+        fromAccountNumber: fromTrading?.accountId || String(fromTrading?._id),
+        toAccount: "wallet",
+        status: "Completed"
+      });
+    }
+
+    // ✅ Account → Account
+    else {
+
+      await Transaction.create([
+        {
+          userId,
+          type: "Account_Transfer_Out",
+          amount: transferAmount,
+          paymentMethod: "Internal",
+          fromTradingAccountId: fromAccount,
+          toTradingAccountId: toAccount,
+          fromAccountNumber: fromTrading?.accountId || String(fromTrading?._id),
+          toAccountNumber: toTrading?.accountId || String(toTrading?._id),
+          status: "Completed"
+        },
+        {
+          userId,
+          type: "Account_Transfer_In",
+          amount: transferAmount,
+          paymentMethod: "Internal",
+          fromTradingAccountId: fromAccount,
+          toTradingAccountId: toAccount,
+          fromAccountNumber: fromTrading?.accountId || String(fromTrading?._id),
+          toAccountNumber: toTrading?.accountId || String(toTrading?._id),
+          status: "Completed"
+        }
+      ]);
+    }
+
+    console.log("✅ STEP 16: Transfer completed");
+
+    res.json({
       success: true,
       message: "Transfer completed successfully"
     });
 
-  } catch (error) {
+  } catch (err) {
 
-    await session.abortTransaction();
-    session.endSession();
-
-    console.error("Internal Transfer Error:", error);
+    console.error("🔥 ERROR:", err.message);
 
     res.status(400).json({
       success: false,
-      message: error.message
+      message: err.message
     });
   }
 });

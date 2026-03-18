@@ -1242,79 +1242,185 @@ const IBPage = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 mb-6">
-
-              {["overview","referrals","commissions","downline","withdraw"].map(tab => (
-
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg font-medium capitalize ${
-                    activeTab === tab
-                      ? "bg-blue-500 text-white"
-                      : "bg-white border border-gray-200 text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {tab}
-                </button>
-
-              ))}
-
-            </div>
-
-            {/* Referrals */}
-            {activeTab === "referrals" && (
-
-              <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-
-                {referrals.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500">
-                    No referrals yet
-                  </div>
-                ) : (
-
-                  <table className="w-full">
-
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left text-sm px-4 py-3 text-gray-600">User</th>
-                        <th className="text-left text-sm px-4 py-3 text-gray-600">Email</th>
-                        <th className="text-left text-sm px-4 py-3 text-gray-600">Joined</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-
-                      {referrals.map(ref => (
-
-                        <tr key={ref._id} className="border-t border-gray-200">
-
-                          <td className="px-4 py-3">
-                            {ref.firstName} {ref.lastName}
-                          </td>
-
-                          <td className="px-4 py-3 text-gray-600">
-                            {ref.email}
-                          </td>
-
-                          <td className="px-4 py-3 text-gray-600">
-                            {new Date(ref.createdAt).toLocaleDateString()}
-                          </td>
-
-                        </tr>
-
-                      ))}
-
-                    </tbody>
-
-                  </table>
-
-                )}
-
+            <div className={`flex ${isMobile ? 'gap-1 overflow-x-auto pb-2' : 'gap-4'} mb-4`}>
+                {['overview', 'referrals', 'commissions', 'downline', 'withdraw'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`${isMobile ? 'px-3 py-1.5 text-xs whitespace-nowrap' : 'px-4 py-2'} rounded-lg font-medium capitalize transition-colors ${
+                      activeTab === tab ? 'bg-accent-green text-black' : isDarkMode ? 'bg-dark-800 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
 
-            )}
+              {/* Overview */}
+              {activeTab === 'overview' && (
+                <div className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-5 gap-4'}`}>
+                  {[1, 2, 3, 4, 5].map(level => (
+                    <div key={level} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-4'} border text-center`}>
+                      <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Level {level} Commissions</p>
+                      <p className={`font-bold ${isMobile ? 'text-lg' : 'text-xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ibProfile.stats?.[`level${level}Count`] || 0}</p>
+                      <p className={`text-xs ${isDarkMode ? 'text-gray-600' : 'text-gray-500'}`}>trades</p>
+                      <p className="text-accent-green text-sm mt-1">${(ibProfile.stats?.[`level${level}Commission`] || 0).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
+            {/* Referrals */}
+            {activeTab === 'referrals' && (
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
+                  {referrals.length === 0 ? (
+                    <div className={`text-center ${isMobile ? 'py-8' : 'py-12'} text-gray-500 text-sm`}>No referrals yet</div>
+                  ) : isMobile ? (
+                    <div className={`divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'}`}>
+                      {referrals.map(ref => (
+                        <div key={ref._id} className="p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ref.firstName} {ref.lastName}</p>
+                            <p className="text-gray-500 text-xs">{new Date(ref.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <p className="text-gray-400 text-xs">{ref.email}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
+                        <tr>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>User</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Email</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Joined</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Volume</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Commission</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {referrals.map(ref => (
+                          <tr key={ref._id} className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ref.firstName} {ref.lastName}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ref.email}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{new Date(ref.createdAt).toLocaleDateString()}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>-</td>
+                            <td className="px-4 py-3 text-accent-green text-sm">-</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {/* commissions */}
+
+              {activeTab === 'commissions' && (
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
+                  {commissions.length === 0 ? (
+                    <div className={`text-center ${isMobile ? 'py-8' : 'py-12'} text-gray-500 text-sm`}>No commissions yet</div>
+                  ) : isMobile ? (
+                    <div className={`divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'}`}>
+                      {commissions.map(comm => (
+                        <div key={comm._id} className="p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.symbol}</p>
+                            <p className="text-accent-green text-sm font-medium">${comm.commissionAmount?.toFixed(2)}</p>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <p className="text-gray-400 text-xs">Level {comm.level} • {comm.tradeLotSize?.toFixed(2)} lots</p>
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              comm.status === 'CREDITED' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                            }`}>{comm.status}</span>
+                          </div>
+                          <p className="text-gray-500 text-xs mt-1">{new Date(comm.createdAt).toLocaleDateString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
+                        <tr>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trader</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Symbol</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Level</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Lots</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Commission</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commissions.map(comm => (
+                          <tr key={comm._id} className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{new Date(comm.createdAt).toLocaleDateString()}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.traderUserId?.firstName || 'Unknown'}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.symbol}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Level {comm.level}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.tradeLotSize?.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-accent-green text-sm">${comm.commissionAmount?.toFixed(2)}</td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                comm.status === 'CREDITED' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                              }`}>
+                                {comm.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {/* downline */}
+
+              {activeTab === 'downline' && (
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
+                  {downline.length === 0 ? (
+                    <div className={`text-center ${isMobile ? 'py-8' : 'py-12'} text-gray-500 text-sm`}>No downline yet</div>
+                  ) : (
+                    <div>{renderDownlineTree(downline)}</div>
+                  )}
+                </div>
+              )}
+
+              {/* withdraw */}
+              {activeTab === 'withdraw' && (
+                <div className={isMobile ? '' : 'max-w-md'}>
+                  <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-6'} border`}>
+                    <h3 className={`font-semibold ${isMobile ? 'mb-3 text-sm' : 'mb-4'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Withdraw Commission</h3>
+                    <div className="mb-3">
+                      <p className="text-gray-400 text-xs mb-1">Available Balance</p>
+                      <p className={`text-accent-green font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>${ibProfile.ibWalletBalance?.toFixed(2) || '0.00'}</p>
+                    </div>
+                    <div className="mb-3">
+                      <label className="text-gray-400 text-xs mb-1 block">Amount</label>
+                      <input
+                        type="number"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        placeholder="Enter amount"
+                        className={`w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white ${isMobile ? 'text-sm' : ''}`}
+                      />
+                    </div>
+                    <button
+                      onClick={handleWithdraw}
+                      disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                      className={`w-full bg-accent-green text-black py-2 rounded-lg font-medium hover:bg-accent-green/90 disabled:opacity-50 ${isMobile ? 'text-sm' : ''}`}
+                    >
+                      Request Withdrawal
+                    </button>
+                    {ibProfile.pendingWithdrawal > 0 && (
+                      <p className="text-yellow-500 text-sm mt-3">
+                        Pending withdrawal: ${ibProfile.pendingWithdrawal.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
           </div>
 
         )}
