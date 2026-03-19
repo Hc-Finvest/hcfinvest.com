@@ -652,54 +652,54 @@ const SYMBOL_CATEGORIES = {
     name: 'Metals',
     description: 'Precious Metals & Commodities',
     symbols: [
-      { symbol: 'XAUUSD.i', name: 'XAU/USD', displayName: 'Gold / US Dollar' },
-      { symbol: 'XAGUSD.i', name: 'XAG/USD', displayName: 'Silver / US Dollar' },
-      { symbol: 'XPTUSD.i', name: 'XPT/USD', displayName: 'Platinum / US Dollar' },
-      { symbol: 'XPDUSD.i', name: 'XPD/USD', displayName: 'Palladium / US Dollar' },
-      { symbol: 'USOIL.i', name: 'US Oil', displayName: 'WTI Crude Oil' },
-      { symbol: 'UKOIL.i', name: 'UK Oil', displayName: 'Brent Crude Oil' },
-      { symbol: 'NGAS.i', name: 'Natural Gas', displayName: 'Natural Gas' },
-      { symbol: 'COPPER.i', name: 'Copper', displayName: 'Copper' }
+      { symbol: 'XAUUSD', name: 'XAU/USD', displayName: 'Gold / US Dollar' },
+      { symbol: 'XAGUSD', name: 'XAG/USD', displayName: 'Silver / US Dollar' },
+      { symbol: 'XPTUSD', name: 'XPT/USD', displayName: 'Platinum / US Dollar' },
+      { symbol: 'XPDUSD', name: 'XPD/USD', displayName: 'Palladium / US Dollar' },
+      { symbol: 'USOIL', name: 'US Oil', displayName: 'WTI Crude Oil' },
+      { symbol: 'UKOIL', name: 'UK Oil', displayName: 'Brent Crude Oil' },
+      { symbol: 'NGAS', name: 'Natural Gas', displayName: 'Natural Gas' },
+      { symbol: 'COPPER', name: 'Copper', displayName: 'Copper' }
     ]
   },
   Crypto: {
     name: 'Crypto',
     description: 'Cryptocurrencies',
     symbols: [
-      { symbol: 'BTCUSD.i', name: 'BTC/USD', displayName: 'Bitcoin / US Dollar' },
-      { symbol: 'ETHUSD.i', name: 'ETH/USD', displayName: 'Ethereum / US Dollar' },
-      { symbol: 'LTCUSD.i', name: 'LTC/USD', displayName: 'Litecoin / US Dollar' },
-      { symbol: 'XRPUSD.i', name: 'XRP/USD', displayName: 'Ripple / US Dollar' },
-      { symbol: 'BNBUSD.i', name: 'BNB/USD', displayName: 'Binance Coin / US Dollar' },
-      { symbol: 'SOLUSD.i', name: 'SOL/USD', displayName: 'Solana / US Dollar' },
-      { symbol: 'ADAUSD.i', name: 'ADA/USD', displayName: 'Cardano / US Dollar' },
-      { symbol: 'DOGEUSD.i', name: 'DOGE/USD', displayName: 'Dogecoin / US Dollar' },
-      { symbol: 'DOTUSD.i', name: 'DOT/USD', displayName: 'Polkadot / US Dollar' },
-      { symbol: 'MATICUSD.i', name: 'MATIC/USD', displayName: 'Polygon / US Dollar' },
-      { symbol: 'AVAXUSD.i', name: 'AVAX/USD', displayName: 'Avalanche / US Dollar' },
-      { symbol: 'LINKUSD.i', name: 'LINK/USD', displayName: 'Chainlink / US Dollar' },
-      { symbol: 'UNIUSD.i', name: 'UNI/USD', displayName: 'Uniswap / US Dollar' },
-      { symbol: 'ATOMUSD.i', name: 'ATOM/USD', displayName: 'Cosmos / US Dollar' },
-      { symbol: 'XLMUSD.i', name: 'XLM/USD', displayName: 'Stellar / US Dollar' },
-      { symbol: 'TRXUSD.i', name: 'TRX/USD', displayName: 'Tron / US Dollar' },
-      { symbol: 'ETCUSD.i', name: 'ETC/USD', displayName: 'Ethereum Classic / US Dollar' },
-      { symbol: 'NEARUSD.i', name: 'NEAR/USD', displayName: 'Near Protocol / US Dollar' },
-      { symbol: 'ALGOUSD.i', name: 'ALGO/USD', displayName: 'Algorand / US Dollar' }
+      { symbol: 'BTCUSD', name: 'BTC/USD', displayName: 'Bitcoin / US Dollar' },
+      { symbol: 'ETHUSD', name: 'ETH/USD', displayName: 'Ethereum / US Dollar' },
+      { symbol: 'LTCUSD', name: 'LTC/USD', displayName: 'Litecoin / US Dollar' },
+      { symbol: 'XRPUSD', name: 'XRP/USD', displayName: 'Ripple / US Dollar' },
+      { symbol: 'BNBUSD', name: 'BNB/USD', displayName: 'Binance Coin / US Dollar' },
+      { symbol: 'SOLUSD', name: 'SOL/USD', displayName: 'Solana / US Dollar' },
+      { symbol: 'ADAUSD', name: 'ADA/USD', displayName: 'Cardano / US Dollar' },
+      { symbol: 'DOGEUSD', name: 'DOGE/USD', displayName: 'Dogecoin / US Dollar' },
+      { symbol: 'DOTUSD', name: 'DOT/USD', displayName: 'Polkadot / US Dollar' },
+      { symbol: 'MATICUSD', name: 'MATIC/USD', displayName: 'Polygon / US Dollar' },
+      { symbol: 'AVAXUSD', name: 'AVAX/USD', displayName: 'Avalanche / US Dollar' },
+      { symbol: 'LINKUSD', name: 'LINK/USD', displayName: 'Chainlink / US Dollar' },
+      { symbol: 'UNIUSD', name: 'UNI/USD', displayName: 'Uniswap / US Dollar' },
+      { symbol: 'ATOMUSD', name: 'ATOM/USD', displayName: 'Cosmos / US Dollar' },
+      { symbol: 'XLMUSD', name: 'XLM/USD', displayName: 'Stellar / US Dollar' },
+      { symbol: 'TRXUSD', name: 'TRX/USD', displayName: 'Tron / US Dollar' },
+      { symbol: 'ETCUSD', name: 'ETC/USD', displayName: 'Ethereum Classic / US Dollar' },
+      { symbol: 'NEARUSD', name: 'NEAR/USD', displayName: 'Near Protocol / US Dollar' },
+      { symbol: 'ALGOUSD', name: 'ALGO/USD', displayName: 'Algorand / US Dollar' }
     ]
   },
   Indices: {
     name: 'Indices',
     description: 'Stock Market Indices',
     symbols: [
-      { symbol: 'US30.i', name: 'US30', displayName: 'Dow Jones Industrial Average' },
-      { symbol: 'US500.i', name: 'US500', displayName: 'S&P 500' },
-      { symbol: 'US100.i', name: 'US100', displayName: 'NASDAQ 100' },
-      { symbol: 'UK100.i', name: 'UK100', displayName: 'FTSE 100' },
-      { symbol: 'GER40.i', name: 'GER40', displayName: 'DAX 40' },
-      { symbol: 'FRA40.i', name: 'FRA40', displayName: 'CAC 40' },
-      { symbol: 'JP225.i', name: 'JP225', displayName: 'Nikkei 225' },
-      { symbol: 'HK50.i', name: 'HK50', displayName: 'Hang Seng 50' },
-      { symbol: 'AUS200.i', name: 'AUS200', displayName: 'ASX 200' }
+      { symbol: 'US30', name: 'US30', displayName: 'Dow Jones Industrial Average' },
+      { symbol: 'US500', name: 'US500', displayName: 'S&P 500' },
+      { symbol: 'US100', name: 'US100', displayName: 'NASDAQ 100' },
+      { symbol: 'UK100', name: 'UK100', displayName: 'FTSE 100' },
+      { symbol: 'GER40', name: 'GER40', displayName: 'DAX 40' },
+      { symbol: 'FRA40', name: 'FRA40', displayName: 'CAC 40' },
+      { symbol: 'JP225', name: 'JP225', displayName: 'Nikkei 225' },
+      { symbol: 'HK50', name: 'HK50', displayName: 'Hang Seng 50' },
+      { symbol: 'AUS200', name: 'AUS200', displayName: 'ASX 200' }
     ]
   }
 }
@@ -732,14 +732,11 @@ const FRONTEND_FOREX_SYMBOLS = [
 ]
 
 // Symbols shown in frontend trade page instrument list.
-// Keep both bare and .i Forex aliases so backend price cache supports legacy callers
-// and the new suffix-based UI at the same time.
 const FRONTEND_TRADE_SYMBOLS = [
   ...FRONTEND_FOREX_SYMBOLS,
-  ...FRONTEND_FOREX_SYMBOLS.map(symbol => `${symbol}.i`),
-  'XAUUSD.i', 'XAGUSD.i', 'USOIL.i', 'UKOIL.i', 'NGAS.i',
-  'BTCUSD.i', 'ETHUSD.i', 'BNBUSD.i', 'SOLUSD.i', 'DOGEUSD.i', 'LTCUSD.i',
-  'US30.i', 'US500.i', 'US100.i', 'UK100.i', 'HK50.i'
+  'XAUUSD', 'XAGUSD', 'USOIL', 'UKOIL', 'NGAS',
+  'BTCUSD', 'ETHUSD', 'BNBUSD', 'SOLUSD', 'DOGEUSD', 'LTCUSD',
+  'US30', 'US500', 'US100', 'UK100', 'HK50'
 ]
 
 const REQUESTED_TO_ACCOUNT_FALLBACKS = {
@@ -790,46 +787,66 @@ class MetaApiService {
     this.priorityPollMs = parseInt(process.env.METAAPI_PRIORITY_POLL_MS || '2000', 10)
     this.maxPrioritySymbols = parseInt(process.env.METAAPI_MAX_PRIORITY_SYMBOLS || '1', 10)
     this.isPriorityPolling = false
+    this.accountSymbols = new Set()
     this.buildSymbolMappings()
   }
 
   resolveSymbolForAccount(requestedSymbol) {
     if (!requestedSymbol) return null
 
-    if (WORKING_SYMBOLS.includes(requestedSymbol)) return requestedSymbol
+    // 1. Check if we have a dynamic mapping already discovered
+    const dynamicActual = this.requestToActualMap.get(requestedSymbol)
+    if (dynamicActual) return dynamicActual
 
+    // 2. Try to match by key (case-insensitive, non-alphanumeric stripped)
     const requestedKey = toKey(requestedSymbol)
-    const candidates = []
+    
+    // Check WORKING_SYMBOLS (which will be populated by syncing)
+    for (const actual of this.accountSymbols) {
+      if (toKey(actual) === requestedKey) return actual
+    }
 
+    // 3. Special Fallbacks
     if (REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey]) {
-      candidates.push(...REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey])
-    }
-
-    if (!/\.i$/i.test(requestedSymbol)) {
-      candidates.push(`${requestedSymbol}.i`)
-    } else {
-      candidates.push(stripDotI(requestedSymbol))
-    }
-
-    const base = stripDotI(requestedSymbol)
-    const prefixMatches = WORKING_SYMBOLS.filter(s => {
-      const sBase = stripDotI(s)
-      return sBase === base || s.startsWith(`${base}-`) || s.startsWith(base)
-    })
-    candidates.push(...prefixMatches)
-
-    const uniqueCandidates = [...new Set(candidates)]
-    for (const candidate of uniqueCandidates) {
-      if (WORKING_SYMBOLS.includes(candidate)) return candidate
+      for (const fallback of REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey]) {
+        if (this.accountSymbols.has(fallback)) return fallback
+      }
     }
 
     return null
+  }
+
+  async syncSymbolsFromAccount() {
+    const accountId = METAAPI_ACCOUNT_ID()
+    if (!accountId || !this.isConnected) return
+
+    try {
+      console.log('[MetaAPI] Syncing symbols from account...')
+      const response = await fetch(
+        `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/symbols`,
+        { headers: this.getHeaders() }
+      )
+
+      if (response.ok) {
+        const symbols = await response.json()
+        this.accountSymbols = new Set(symbols)
+        console.log(`[MetaAPI] Successfully synced ${symbols.length} symbols from account`)
+        this.buildSymbolMappings()
+      } else {
+        console.error(`[MetaAPI] Failed to sync symbols: ${response.status}`)
+        // Fallback to minimal set if sync fails
+        this.accountSymbols = new Set(['EURUSD', 'GBPUSD', 'XAUUSD', 'BTCUSD'])
+      }
+    } catch (error) {
+      console.error('[MetaAPI] Error syncing symbols:', error.message)
+    }
   }
 
   buildSymbolMappings() {
     this.requestToActualMap.clear()
     this.actualToRequestsMap.clear()
 
+    // Map everything from FRONTEND_TRADE_SYMBOLS
     for (const requested of FRONTEND_TRADE_SYMBOLS) {
       const actual = this.resolveSymbolForAccount(requested)
       if (!actual) continue
@@ -839,6 +856,15 @@ class MetaApiService {
         this.actualToRequestsMap.set(actual, new Set())
       }
       this.actualToRequestsMap.get(actual).add(requested)
+    }
+    
+    // Also map common base names to whatever the account uses
+    const commonBases = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD', 'ETHUSD', 'US30', 'US100']
+    for (const base of commonBases) {
+      const actual = this.resolveSymbolForAccount(base)
+      if (actual && actual !== base) {
+        this.requestToActualMap.set(base, actual)
+      }
     }
   }
 
@@ -880,6 +906,7 @@ class MetaApiService {
         console.log('[MetaAPI] Connection successful - starting real-time polling')
         this.isConnected = true
         this.connectionStartTime = Date.now()
+        await this.syncSymbolsFromAccount()
         this.startRateLimitSafePolling()
       } else if (response.status === 401) {
         console.error('[MetaAPI] Authentication failed - check METAAPI_TOKEN')
