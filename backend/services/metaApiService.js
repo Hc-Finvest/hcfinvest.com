@@ -806,6 +806,7 @@ class MetaApiService {
 
     // 2. Try to match by key (case-insensitive, non-alphanumeric stripped)
     const requestedKey = toKey(requestedSymbol)
+    console.log(`[MetaAPI] Resolving ${requestedSymbol} (key: ${requestedKey}) against ${this.accountSymbols.size} symbols`)
     
     // Check WORKING_SYMBOLS (which will be populated by syncing)
     for (const actual of this.accountSymbols) {
