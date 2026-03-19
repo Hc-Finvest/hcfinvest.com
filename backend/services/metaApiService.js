@@ -800,20 +800,27 @@ class MetaApiService {
   resolveSymbolForAccount(requestedSymbol) {
     if (!requestedSymbol) return null
 
-    // 1. Check if we have a dynamic mapping already discovered
-    const dynamicActual = this.requestToActualMap.get(requestedSymbol)
-    if (dynamicActual) return dynamicActual
-
-    // 2. Try to match by key (case-insensitive, non-alphanumeric stripped)
     const requestedKey = toKey(requestedSymbol)
-    console.log(`[MetaAPI] Resolving ${requestedSymbol} (key: ${requestedKey}) against ${this.accountSymbols.size} symbols`)
     
-    // Check WORKING_SYMBOLS (which will be populated by syncing)
-    for (const actual of this.accountSymbols) {
-      if (toKey(actual) === requestedKey) return actual
+    // 1. Check dynamic mapped names first
+    if (this.requestToActualMap.has(requestedSymbol)) {
+      return this.requestToActualMap.get(requestedSymbol)
     }
 
-    // 3. Special Fallbacks
+    // 2. Check if the symbol itself exists in the account
+    if (this.accountSymbols.has(requestedSymbol)) {
+      return requestedSymbol
+    }
+
+    // 3. Try key-based matching against account symbols
+    for (const actual of this.accountSymbols) {
+      if (toKey(actual) === requestedKey) {
+        console.log(`[MetaAPI] Matched ${requestedSymbol} to ${actual} via key ${requestedKey}`)
+        return actual
+      }
+    }
+
+    // 4. Special Fallbacks
     if (REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey]) {
       for (const fallback of REQUESTED_TO_ACCOUNT_FALLBACKS[requestedKey]) {
         if (this.accountSymbols.has(fallback)) return fallback
@@ -1377,8 +1384,8 @@ class MetaApiService {
     const accountId = METAAPI_ACCOUNT_ID()
     const token = METAAPI_TOKEN()
     
-    // Resolve the actual symbol if we have a mapping
-    const resolvedSymbol = this.requestToActualMap.get(symbol) || this.resolveSymbolForAccount(symbol) || symbol;
+    // Resolve the actual symbol
+    const resolvedSymbol = this.resolveSymbolForAccount(symbol) || symbol;
     
     // Map timeframe to MetaAPI format
     const timeframeMap = {
