@@ -761,7 +761,13 @@ const REQUESTED_TO_ACCOUNT_FALLBACKS = {
   LTCUSD: ['XLCUSD.i', 'XLCUSD.crp']
 }
 
-const toKey = (symbol = '') => symbol.toUpperCase().replace(/[^A-Z0-9]/g, '')
+const toKey = (symbol = '') => {
+  if (!symbol) return '';
+  // Strip common broker suffixes like .i, .f, .m, .crp
+  return symbol.toUpperCase()
+    .replace(/\.[A-Z0-9]+$/i, '') 
+    .replace(/[^A-Z0-9]/g, '');
+};
 const stripDotI = (symbol = '') => symbol.replace(/\.i$/i, '')
 
 class MetaApiService {
