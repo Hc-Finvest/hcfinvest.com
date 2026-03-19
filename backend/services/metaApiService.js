@@ -1451,7 +1451,7 @@ class MetaApiService {
       }
 
       if (!response.ok) {
-        console.warn(`[MetaAPI] ⚠️ Historical candles failed for ${requestedSymbol} (resolved ${resolvedSymbol}): HTTP ${response.status}`)
+        console.warn(`[MetaAPI] ⚠️ Historical candles failed for ${symbol} (resolved ${resolvedSymbol}): HTTP ${response.status}`)
         return []
       }
 
