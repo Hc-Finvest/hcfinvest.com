@@ -801,8 +801,10 @@ class MetaApiService {
     if (!requestedSymbol) return null
 
     const requestedKey = toKey(requestedSymbol)
-    
-    // 1. Check dynamic mapped names first
+    console.log(`[MetaAPI] resolveSymbolForAccount: requested=${requestedSymbol}, key=${requestedKey}, symbolsCount=${this.accountSymbols.size}`)
+    if (this.accountSymbols.size > 0) {
+      console.log(`[MetaAPI] Current Account Symbols: ${Array.from(this.accountSymbols).join(', ')}`)
+    }
     if (this.requestToActualMap.has(requestedSymbol)) {
       return this.requestToActualMap.get(requestedSymbol)
     }
