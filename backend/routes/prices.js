@@ -466,52 +466,36 @@ router.get('/history', async (req, res) => {
     const timeframe = resolutionMap[resolution] || '1m'
     
     // Parse timestamps (expect seconds)
-    const startTime = from ? parseInt(from) : undefined
+    let startTime = from ? parseInt(from) : undefined
     const endTime = to ? parseInt(to) : undefined
     const candleLimit = limit ? parseInt(limit) : 500
     
-    // //sanket - Fetch candles from StorageService (local cache with API fallback)
+    // [sanket] - If it's an initial load or large request with a very tight/recent window,
+    // ignore startTime to ensure a full chart is returned from either storage or API.
+    if (startTime && candleLimit >= 300) {
+      const now = Math.floor(Date.now() / 1000);
+      const isVeryRecent = (now - startTime) < 14400; // Less than 4 hours of history requested
+      if (isVeryRecent) {
+        // console.log(`[PricesAPI] Ignoring recent startTime for ${symbol} to ensure full chart filling`);
+        startTime = undefined;
+      }
+    }
+    
     // Ensure minimum 300 candles for proper chart display
     const minLimit = 300;
     const requestLimit = candleLimit || minLimit;
     const finalLimit = Math.max(requestLimit, minLimit);
 
-    let candles = []
-
-    // Fetch directly from MetaAPI first to ensure most recent and accurate data
-    try {
-      candles = await metaApiService.getHistoricalCandles(
-        symbol,
-        timeframe,
-        startTime,
-        endTime,
-        finalLimit
-      )
-    } catch (err) {
-      console.warn(`[PricesAPI] MetaAPI direct fetch failed for ${symbol}, trying storage:`, err.message)
-    }
-
-    // Fallback to storage only if MetaAPI returned no data
-    if (!candles || candles.length === 0) {
-      candles = await storageService.getCandles(
-        symbol,
-        timeframe,
-        startTime,
-        endTime,
-        finalLimit
-      )
-    }
-
-    // [Fix] Final fallback to MetaAPI if storage is empty or un-synced
-    if (!candles || candles.length === 0) {
-      console.log(`[PricesAPI] 🔄 Storage empty for ${symbol}, falling back to direct MetaAPI`);
-      candles = await metaApiService.getHistoricalCandles(
-        symbol,
-        timeframe,
-        startTime,
-        endTime,
-        finalLimit
-      )
+    // [sanket] - Fetch candles from StorageService (local cache with automatic API fallback/refill)
+    let candles = await storageService.getCandles(symbol, timeframe, startTime, endTime, requestLimit)
+    
+    // [sanket] - Improved fallback: If storage has sparse data (< 100) but we requested more,
+    // definitively call MetaAPI to get the full history and fill the chart.
+    if (!candles || candles.length < 100) {
+      const apiCandles = await metaApiService.getHistoricalCandles(symbol, timeframe, startTime, endTime, requestLimit)
+      if (apiCandles && apiCandles.length > (candles ? candles.length : 0)) {
+        candles = apiCandles;
+      }
     }
     
     console.log(`[PricesAPI] History: ${symbol} ${timeframe} returned ${candles.length} candles (requested: ${finalLimit})`);
