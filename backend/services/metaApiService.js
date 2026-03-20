@@ -1407,7 +1407,9 @@ class MetaApiService {
     
     try {
       // Build URL with query params
-      const baseUrl = `${METAAPI_BASE_URL()}/users/current/accounts/${accountId}/historical-market-data/symbols/${resolvedSymbol}/timeframes/${metaTimeframe}/candles`
+      const baseUrl = METAAPI_BASE_URL()
+      const url = `${baseUrl}/users/current/accounts/${accountId}/historical-market-data/symbols/${encodeURIComponent(resolvedSymbol)}/timeframes/${metaTimeframe}/candles?${startTime ? `startTime=${startTime}&` : ''}${endTime ? `endTime=${endTime}&` : ''}limit=${limit}`
+      console.error(`[MetaAPI] DEBUG REQUEST: ${url}`)
       
       const timeframeSecondsMap = {
         '1m': 60,
