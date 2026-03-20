@@ -9,9 +9,11 @@ const TIMEFRAMES = [
   { label: '15m', value: '15m', seconds: 900 },
   { label: '30m', value: '30m', seconds: 1800 },
   { label: '1H', value: '1h', seconds: 3600 },
+  { label: '2H', value: '2h', seconds: 7200 },
   { label: '4H', value: '4h', seconds: 14400 },
   { label: '1D', value: '1d', seconds: 86400 },
   { label: '1W', value: '1w', seconds: 604800 },
+  { label: '1M', value: '1M', seconds: 2592000 },
 ]
 
 const TradingChart = ({ 

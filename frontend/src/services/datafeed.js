@@ -168,14 +168,14 @@ const priceEventTarget = new EventTarget();
 export const getMetaApiPriceEvents = () => priceEventTarget;
 
 const configurationData = {
-  supported_resolutions: ["1", "5", "15", "30", "60", "240", "1D"]
+  supported_resolutions: ["1", "5", "15", "30", "60", "120", "240", "1D", "1W", "1M"]
 };
 
 // //sanket - Map TradingView resolution to backend timeframe format
 const formatResolution = (res) => {
   const map = {
     '1': '1m', '5': '5m', '15': '15m', '30': '30m',
-    '60': '1h', '240': '4h', 'D': '1d', '1D': '1d', 'W': '1w', 'M': '1M'
+    '60': '1h', '120': '2h', '240': '4h', 'D': '1d', '1D': '1d', 'W': '1w', '1W': '1w', 'M': '1M', '1M': '1M'
   };
   return map[res] || res;
 };
@@ -346,13 +346,19 @@ const Datafeed = {
    * Logic: Listens to priceUpdate events and creates proper OHLC candle updates
    */
   subscribeBars: (symbolInfo, resolution, onRealtimeCallback, subscriberUID) => {
-    // Parse resolution correctly - can be "1", "5", "15", "30", "60", "240", "1D"
+    // Parse resolution correctly - can be "1", "5", "15", "30", "60", "120", "240", "1D", "1W", "1M"
     let resolutionMinutes = 1;
-    if (resolution === '1D' || resolution === 'D') {
+    if (resolution === '1M' || resolution === 'M') {
+      resolutionMinutes = 30 * 24 * 60; // Approximate for throttling/candle logic
+    } else if (resolution === '1W' || resolution === 'W') {
+      resolutionMinutes = 7 * 24 * 60; // 10080 minutes in a week
+    } else if (resolution === '1D' || resolution === 'D') {
       resolutionMinutes = 24 * 60; // 1440 minutes in a day
-    } else if (resolution === '4h') {
+    } else if (resolution === '4h' || resolution === '240') {
       resolutionMinutes = 4 * 60;
-    } else if (resolution === '1h') {
+    } else if (resolution === '2h' || resolution === '120') {
+      resolutionMinutes = 2 * 60;
+    } else if (resolution === '1h' || resolution === '60') {
       resolutionMinutes = 60;
     } else {
       resolutionMinutes = parseInt(resolution) || 1;
