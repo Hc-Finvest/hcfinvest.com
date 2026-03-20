@@ -507,6 +507,18 @@ router.get('/history', async (req, res) => {
         finalLimit
       )
     }
+
+    // [Fix] Final fallback to MetaAPI if storage is empty or un-synced
+    if (!candles || candles.length === 0) {
+      console.log(`[PricesAPI] 🔄 Storage empty for ${symbol}, falling back to direct MetaAPI`);
+      candles = await metaApiService.getHistoricalCandles(
+        symbol,
+        timeframe,
+        startTime,
+        endTime,
+        finalLimit
+      )
+    }
     
     console.log(`[PricesAPI] History: ${symbol} ${timeframe} returned ${candles.length} candles (requested: ${finalLimit})`);
     
