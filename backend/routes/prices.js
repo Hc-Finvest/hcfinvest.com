@@ -478,26 +478,20 @@ router.get('/history', async (req, res) => {
 
     let candles = []
 
-    // Refresh issue hardening:
-    // For bounded intraday windows, prefer direct provider candles first.
-    // Cached DB bars may contain partial live-ingested bars which can render as dot-like dojis.
-    const hasBoundedWindow = Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime
-    const providerFirstTimeframes = new Set(['1m', '5m', '15m', '30m', '1h', '4h'])
-    const preferLiveCache = String(preferLive || '').toLowerCase() === '1' || String(preferLive || '').toLowerCase() === 'true'
-    if (providerFirstTimeframes.has(timeframe) && hasBoundedWindow && !preferLiveCache) {
-      const providerCandles = await metaApiService.getHistoricalCandles(
+    // Fetch directly from MetaAPI first to ensure most recent and accurate data
+    try {
+      candles = await metaApiService.getHistoricalCandles(
         symbol,
         timeframe,
         startTime,
         endTime,
         finalLimit
       )
-
-      if (Array.isArray(providerCandles) && providerCandles.length > 0) {
-        candles = providerCandles
-      }
+    } catch (err) {
+      console.warn(`[PricesAPI] MetaAPI direct fetch failed for ${symbol}, trying storage:`, err.message)
     }
 
+    // Fallback to storage only if MetaAPI returned no data
     if (!candles || candles.length === 0) {
       candles = await storageService.getCandles(
         symbol,
