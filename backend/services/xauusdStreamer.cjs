@@ -8,7 +8,7 @@ async function startXAUUSDStreamer() {
   // Credentials must be read INSIDE the function to ensure process.env is populated by dotenv
   const token = process.env.METAAPI_TOKEN;
   const accountId = process.env.METAAPI_ACCOUNT_ID;
-  const backendUrl = process.env.BACKEND_URL || `http://127.0.0.1:${process.env.PORT || 8080}`; // Fallback to 8080 if not set, but server.js uses app.get('PORT') or 8080 anyway
+  const backendUrl = process.env.BACKEND_URL || `http://127.0.0.1:${process.env.PORT || 5001}`; // Fallback to 5001 if not set, but server.js uses app.get('PORT') or 5001 anyway
   
   console.log("🚀 Starting XAUUSD Streamer with backend URL:", backendUrl);
   

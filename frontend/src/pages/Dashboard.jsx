@@ -573,47 +573,20 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
       {/* SIDEBAR */}
-      <div className="hidden md:block">
+      {/* <div className="hidden md:block"> */}
         <Sidebar activeMenu="Dashboard" />
-      </div>
+      {/* </div> */}
 
       {/* MAIN */}
       <div className="flex-1 flex flex-col">
         {/* TOP NAVBAR */}
-        <div className="h-14 bg-[#0b1a3a] text-white flex items-center justify-between px-3 sm:px-6">
+        <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
           <div className="font-semibold text-sm sm:text-base">
             User Dashboard
           </div>
 
           <div className="flex items-center gap-4 sm:gap-5">
             <RefreshCw size={18} className="cursor-pointer" />
-            {/* <div className="relative">
-              <Settings
-                size={20}
-                className="cursor-pointer"
-                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              />
-
-              {showSettingsMenu && (
-                <div className="absolute right-0 mt-3 w-36 bg-gray-500 border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
-                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                    Profile
-                  </button>
-
-                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                    KYC
-                  </button>
-
-                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                    Theme
-                  </button>
-
-                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                    Log Out
-                  </button>
-                </div>
-              )}
-            </div> */}
 
             <div className="relative">
               <Settings
