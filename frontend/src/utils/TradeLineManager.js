@@ -564,9 +564,8 @@ export class TradeLineManager {
     const statusPoints = status && typeof status === 'object' ? status.points : null;
     const shapePoints = shape.getPoints?.() || null;
 
-    // ✅ Phase 34: Crosshair Precision - Check if we can get the actual chart crosshair price
-    // This is the ultimate source of truth for where the user is looking.
-    const crosshairPrice = this.widget?.chart?.().crosshairPrice() || null;
+    // ✅ Phase 34: Crosshair Precision (REMOVED due to TypeError, reverting to standard extraction)
+    const mousePrice = Number(statusPoints?.[0]?.price ?? shapePoints?.[0]?.price);
     
     // Robustly extract the statusKey and statusKeys for logging
     let rawStatus = '';
@@ -577,18 +576,16 @@ export class TradeLineManager {
     const statusKey = String(rawStatus).toLowerCase();
     const statusKeys = status && typeof status === 'object' ? Object.keys(status).join(',') : 'n/a';
 
-    // ✅ Phase 34: Priority - Crosshair > live status > shape history
-    const mousePrice = Number(crosshairPrice ?? statusPoints?.[0]?.price ?? shapePoints?.[0]?.price);
-
     this._log('handleEntryDrag DIAGNOSTICS:', {
       tvId,
       statusKey,
       statusKeys,
       p0_status: statusPoints?.[0]?.price,
       p0_shape: shapePoints?.[0]?.price,
-      p_crosshair: crosshairPrice,
       p_final: mousePrice,
-      entryPrice
+      entryPrice,
+      // ✅ Phase 34: Serialized status to see all hidden properties
+      rawStatusJson: JSON.stringify(status) 
     });
     const isFinished = this._isStopStatus(status);
 
