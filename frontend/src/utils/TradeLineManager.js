@@ -349,10 +349,15 @@ export class TradeLineManager {
     try {
       // 🛡️ Safety: use a slightly older time (30s ago) to ensure it's within TradingView's loaded range
       const time = Math.floor((Date.now() - 30000) / 1000);
+      
+      // ✅ Phase 30: Use 'horizontal_ray' for entry lines. 
+      // Rays have a fixed origin point which is much more stable for dragging than 'horizontal_line'.
+      const shapeType = (type === 'entry') ? 'horizontal_ray' : 'horizontal_line';
+
       const tvId = String(await chart.createShape(
         { time, price },
         {
-          shape: 'horizontal_line',
+          shape: shapeType,
           lock: config.lock,
           disableSelection: Boolean(config.disableSelection),
           disableSave: true,
@@ -552,7 +557,11 @@ export class TradeLineManager {
     if (!shape) return;
 
     const entryPrice = Number(trade?.openPrice ?? trade?.price);
-    const mousePrice = Number(shape.getPoints?.()?.[0]?.price);
+
+    // ✅ Phase 30: Prioritize points from the 'status' object (live event data)
+    // over shape.getPoints(), as getPoints can be lagged or inaccurate during whole-body drags.
+    const statusPoints = status && typeof status === 'object' ? status.points : null;
+    const mousePrice = Number(statusPoints?.[0]?.price ?? shape.getPoints?.()?.[0]?.price);
     const isFinished = this._isStopStatus(status);
 
     // 🛡️ Guard: Precision-aware price comparison to avoid infinite setPoints loops
@@ -661,7 +670,8 @@ export class TradeLineManager {
       }
 
       if (type === 'entry') {
-        // Entry line dragging triggers SL/TP creation
+        // ✅ Phase 30: Pass the full status object to handleEntryDrag.
+        // This allows reading 'live' points from the cursor event if shape.getPoints() is lagged.
         await this.handleEntryDrag(tvId, status);
       } else if (this._isStopStatus(status)) {
         // Standard SL/TP dragging
