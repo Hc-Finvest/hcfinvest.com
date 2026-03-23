@@ -42,6 +42,7 @@ export class TradeLineManager {
     this.pendingModification = {}; // { tradeId: payload }
     this._drawingEventHandler = null;
     this.isInternalUpdate = false; // 🛡️ Safety: Recursion guard
+    this.entryAnchors = {}; // 🛡️ Phase 33: track stationary visual anchors { tradeId: tvId }
   }
 
   //Sanket v2.0 - Small debug logger (off by default) for quick runtime checks.
@@ -587,23 +588,56 @@ export class TradeLineManager {
     // 🛡️ Guard: Precision-aware price comparison to avoid infinite setPoints loops
     const isAtEntry = Math.abs(mousePrice - entryPrice) < 0.0000001;
 
-    // ✅ Phase 31: Continuous Snapback
-    // Always keep the entry line fixed at its execution price during EVERY move event.
-    // This makes the entry line appear stationary while the new SL/TP follows the cursor.
-    if (!isAtEntry) {
-      this._log('handleEntryDrag: snapping back to entry', entryPrice);
+    // ✅ Phase 33: Stationary Anchor System (Replaces Continuous Snapback)
+    // We stop calling setPoints during the 'move' event to prevent coordinate drift.
+    // Instead, we show a 'Stationary Anchor' at the original price for visual reference.
+    if (!isFinished && !isAtEntry) {
+      if (!this.entryAnchors[tradeId]) {
+        this._log('handleEntryDrag: creating stationary anchor', tradeId);
+        try {
+          this.isInternalUpdate = true;
+          const anchorShape = await this.createLine(tradeId, 'anchor', entryPrice, {
+            color: '#2196F3',
+            lock: true,
+            disableSelection: true,
+            width: 1, // Thinner than real line
+            style: 3, // Dotted
+            text: ''   // No redundant label
+          });
+          if (anchorShape) {
+            this.entryAnchors[tradeId] = anchorShape.tvId;
+          }
+          this.isInternalUpdate = false;
+        } catch (e) {
+          this._error('handleEntryDrag: anchor creation failed', e);
+          this.isInternalUpdate = false;
+        }
+      }
+    }
+
+    // ✅ Phase 33: Final Snapback (Only when dragging is finished)
+    if (isFinished && !isAtEntry) {
+      this._log('handleEntryDrag: final snapback to entry', entryPrice);
       try {
         this.isInternalUpdate = true;
+        
+        // Remove the visual anchor
+        if (this.entryAnchors[tradeId]) {
+          this.destroyShape(this.entryAnchors[tradeId]);
+          delete this.entryAnchors[tradeId];
+        }
+
+        // Snap the real entry line back to execution price
         shape.setPoints([{ price: entryPrice }]);
+        
         this.isInternalUpdate = false;
       } catch (e) {
-        this._error('handleEntryDrag: snapback failed', e);
+        this._error('handleEntryDrag: final snapback failed', e);
         this.isInternalUpdate = false;
       }
     }
  
     // 🛡️ Guard: No need to process further if we're already at entry 
-    // This happens because we just triggered a snapback or the cursor hasn't moved yet.
     if (isAtEntry) {
       return;
     }
