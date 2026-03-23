@@ -273,6 +273,8 @@ export class TradeLineManager {
       if (shape) {
         shape.lastLabel = label;
         this.lines[tradeId].sl = shape;
+        // ✅ Phase 35: Atomic Sync-Lock (lock before returning to prevent deletion)
+        this.syncLockTimes[shape.tvId] = Date.now();
       }
       this.inflightLines.delete(creationKey);
       this._log('createSLLine done', tradeId, price, shape?.tvId || 'failed');
@@ -319,6 +321,8 @@ export class TradeLineManager {
       if (shape) {
         shape.lastLabel = label;
         this.lines[tradeId].tp = shape;
+        // ✅ Phase 35: Atomic Sync-Lock
+        this.syncLockTimes[shape.tvId] = Date.now();
       }
       this.inflightLines.delete(creationKey);
       this._log('createTPLine done', tradeId, price, shape?.tvId || 'failed');
@@ -394,6 +398,10 @@ export class TradeLineManager {
     try {
       const shape = chart.getShapeById(tvId);
       shape?.setPoints?.([{ price }]);
+      // ✅ Phase 35: Standardize lock for moved shapes
+      if (tvId) {
+        this.syncLockTimes[tvId] = Date.now();
+      }
     } catch (e) {}
   }
 
@@ -592,53 +600,24 @@ export class TradeLineManager {
     // 🛡️ Guard: Precision-aware price comparison to avoid infinite setPoints loops
     const isAtEntry = Math.abs(mousePrice - entryPrice) < 0.0000001;
 
-    // ✅ Phase 33: Stationary Anchor System (Replaces Continuous Snapback)
-    // We stop calling setPoints during the 'move' event to prevent coordinate drift.
-    // Instead, we show a 'Stationary Anchor' at the original price for visual reference.
-    if (!isFinished && !isAtEntry) {
-      if (!this.entryAnchors[tradeId]) {
-        this._log('handleEntryDrag: creating stationary anchor', tradeId);
-        try {
-          this.isInternalUpdate = true;
-          const anchorShape = await this.createLine(tradeId, 'anchor', entryPrice, {
-            color: '#2196F3',
-            lock: true,
-            disableSelection: true,
-            width: 1, // Thinner than real line
-            style: 3, // Dotted
-            text: ''   // No redundant label
-          });
-          if (anchorShape) {
-            this.entryAnchors[tradeId] = anchorShape.tvId;
-          }
-          this.isInternalUpdate = false;
-        } catch (e) {
-          this._error('handleEntryDrag: anchor creation failed', e);
-          this.isInternalUpdate = false;
-        }
+    // ✅ Phase 35: Ultimate Stationary Logic
+    // We snap the entry line back to its execution price on EVERY move event.
+    // To avoid coordinate drift, we MUST use the RAW status points (statusPoints)
+    // for the 'mousePrice' calculation, as shape.getPoints() will now be stationary.
+    if (!isAtEntry) {
+      try {
+        this.isInternalUpdate = true;
+        shape.setPoints([{ price: entryPrice }]);
+        this.isInternalUpdate = false;
+      } catch (e) {
+        this.isInternalUpdate = false;
       }
     }
 
-    // ✅ Phase 33: Final Snapback (Only when dragging is finished)
-    if (isFinished && !isAtEntry) {
-      this._log('handleEntryDrag: final snapback to entry', entryPrice);
-      try {
-        this.isInternalUpdate = true;
-        
-        // Remove the visual anchor
-        if (this.entryAnchors[tradeId]) {
-          this.destroyShape(this.entryAnchors[tradeId]);
-          delete this.entryAnchors[tradeId];
-        }
-
-        // Snap the real entry line back to execution price
-        shape.setPoints([{ price: entryPrice }]);
-        
-        this.isInternalUpdate = false;
-      } catch (e) {
-        this._error('handleEntryDrag: final snapback failed', e);
-        this.isInternalUpdate = false;
-      }
+    // ✅ Phase 35: Clean up anchors if any (reverting Phase 33 approach)
+    if (this.entryAnchors[tradeId]) {
+      this.destroyShape(this.entryAnchors[tradeId]);
+      delete this.entryAnchors[tradeId];
     }
  
     // 🛡️ Guard: No need to process further if we're already at entry 
@@ -668,11 +647,6 @@ export class TradeLineManager {
       const updatedTrade = { ...trade, stopLoss: mousePrice, sl: mousePrice };
       const slShape = await this.createSLLine(updatedTrade);
       
-      // ✅ Phase 34: Extend Sync-Lock to the SL shape during entry-line interaction
-      if (slShape?.tvId) {
-        this.syncLockTimes[slShape.tvId] = Date.now();
-      }
-
       if (isFinished && slShape?.tvId) {
         this._log('handleEntryDrag: finished drag for SL', tradeId);
         await this.handleSLDrag(slShape.tvId);
@@ -680,11 +654,6 @@ export class TradeLineManager {
     } else {
       const updatedTrade = { ...trade, takeProfit: mousePrice, tp: mousePrice };
       const tpShape = await this.createTPLine(updatedTrade);
-
-      // ✅ Phase 34: Extend Sync-Lock to the TP shape during entry-line interaction
-      if (tpShape?.tvId) {
-        this.syncLockTimes[tpShape.tvId] = Date.now();
-      }
 
       if (isFinished && tpShape?.tvId) {
         this._log('handleEntryDrag: finished drag for TP', tradeId);
