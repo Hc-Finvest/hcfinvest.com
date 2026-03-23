@@ -563,9 +563,13 @@ export class TradeLineManager {
     const statusPoints = status && typeof status === 'object' ? status.points : null;
     const shapePoints = shape.getPoints?.() || null;
     
+    // Stringify status keys for easier reading in console
+    const statusKeys = status && typeof status === 'object' ? Object.keys(status).join(',') : 'n/a';
+
     this._log('handleEntryDrag DIAGNOSTICS:', {
       tvId,
-      statusKey: status && typeof status === 'object' ? (status.status || status.state) : status,
+      statusKey,
+      statusKeys,
       statusPoint0: statusPoints?.[0]?.price,
       shapePoint0: shapePoints?.[0]?.price,
       entryPrice
@@ -652,8 +656,9 @@ export class TradeLineManager {
         rawStatus = (status.status || status.state || status.type || status.value || 'points_changed');
       }
       const statusKey = String(rawStatus).toLowerCase();
+      const statusKeys = status && typeof status === 'object' ? Object.keys(status).join(',') : 'n/a';
       
-      this._log('drawing_event', { tvId, type, status, statusKey });
+      this._log('drawing_event raw data:', { tvId, type, statusKey, statusKeys });
 
       // 🛡️ Skip processing for 'remove' events to avoid recursion and errors
       if (statusKey === 'remove') {
