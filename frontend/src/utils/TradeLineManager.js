@@ -2,17 +2,18 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.24 — Phase 66: THE MT5-SPAWN VAULT
+ * TradeLineManager v7.25 — Phase 66: THE PRECISION ENGINE
  * ============================================================
- * v7.24 MT5-Spawn Vault:
- * - 15-Second Grace Period (Prevents deletion during sync lag)
- * - Persistent Metadata (Interaction remains active even if trade temporarily missing)
- * - Robust Ghost Serialization & Fix for 'started' event skips
+ * v7.25 Precision Engine:
+ * - State-Preserving Commits (TP no longer wipes SL and vice versa)
+ * - Anti-Slippage Precision (Syncs with chart DecimalPlaces)
+ * - Absolute Entry Pinning (Handle-only interaction)
+ * - 15-Second Grace Period (The Vault)
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
-window.TRADE_ENGINE_VERSION = '7.24-VAULT';
-console.log('%c [TradeManager v7.24] MT5-SPAWN VAULT ACTIVE ', 'background: #222; color: #00e5ff; font-size: 20px;');
+window.TRADE_ENGINE_VERSION = '7.25-PRECISION';
+console.log('%c [TradeManager v7.25] PRECISION ENGINE ACTIVE ', 'background: #222; color: #ff5722; font-size: 20px;');
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -185,7 +186,7 @@ export class TradeLineManager {
       
       const ghost = this.lines[tid]?.ghost;
       if (ghost) {
-          console.log(`[TradeManager] Confirming SPAWN: ${ghost.type} -> ${ghost.price} (from Entry Drag)`);
+          console.log(`[TradeManager] Confirming SPAWN: ${ghost.type} -> ${ghost.price} (v7.25-Pinned)`);
           this._destroyShape(ghost.tvId);
           const p = ghost.price;
           const t = ghost.type;
@@ -193,12 +194,14 @@ export class TradeLineManager {
           await this._commitTrade(tid, t, p);
       }
 
-      // Snap ENTRY back
+      // 🛡️ v7.25 Forced Snap-Back: The Entry line never moves on the chart.
       const realEntry = Number(trade?.openPrice || trade?.price);
-      shape.setPoints([{ price: realEntry }]);
-      shape.setProperties({ overrides: { text: `ENTRY  ${fmt(realEntry)}` } });
+      if (shape && realEntry) {
+          shape.setPoints([{ price: realEntry }]);
+          shape.setProperties({ overrides: { text: `ENTRY  ${fmt(realEntry)}` } });
+      }
       
-      setTimeout(() => { this.activeDragId = null; }, 500); // Guard time
+      setTimeout(() => { this.activeDragId = null; }, 100); 
       return;
     }
 
@@ -352,12 +355,23 @@ export class TradeLineManager {
     return this.trades.find(t => String(t._id || t.id) === tid);
   }
 
-  async _commitTrade(tid, type, price) {
+  async _commitTrade(tradeId, type, price) {
+    const tid = String(tradeId);
     console.log(`[TradeManager] Native Commit: ${tid} ${type} -> ${price}`);
-    const payload = { tradeId: tid };
-    if (type === 'sl') payload.sl = price;
-    else if (type === 'tp') payload.tp = price;
-    else return; // Don't allow entry change via drag for existing trades
+    
+    // 🛡️ v7.25 State-Preserving Commit
+    const trade = this.getTradeById(tid);
+    if (!trade) return;
+
+    // Preserve existing value if not the one being modified
+    const currentSL = type === 'sl' ? parseFloat(price.toFixed(5)) : (trade.stopLoss || trade.sl || 0);
+    const currentTP = type === 'tp' ? parseFloat(price.toFixed(5)) : (trade.takeProfit || trade.tp || 0);
+
+    const payload = { 
+        tradeId: tid,
+        sl: currentSL,
+        tp: currentTP
+    };
 
     const token = getAuthToken();
     if (!token) return;
@@ -370,7 +384,7 @@ export class TradeLineManager {
       });
       const data = await res.json();
       if (data.success && this.onTradeModify) {
-        this.onTradeModify({ tradeId: tid, [type]: price });
+        this.onTradeModify({ tradeId: tid, sl: currentSL, tp: currentTP });
       }
     } catch (e) {
       console.error('[TradeManager] Commit error:', e);
