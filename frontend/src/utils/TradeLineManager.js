@@ -2,13 +2,13 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.7 — Phase 65: The Internal Spy Engine
+ * TradeLineManager v7.8 — Phase 65: The Black-Box Breaker
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.7 Internal Probing:
- * - State Probing: Uses internal chart.crosshairPrice() to bypass Iframe capture
- * - Error Recovery: Fallback to event-based price extraction if probing fails
- * - Handle Fix: Increased opacity for better hit-tracking
+ * v7.8 Internal Handle Tracking:
+ * - Handle-Native: Uses onSelectedLinePointMove for real-time handle tracing
+ * - Force-Update: Bypasses library "Point Freeze" during modal drags
+ * - Style Specs: Dotted Green/Red (v7.6 style), Solid Blue Entry.
  * ============================================================
  */
 
@@ -98,32 +98,40 @@ export class TradeLineManager {
   _subscribeToCrosshair(widget) {
     if (!widget) return;
     
-    // 🛡️ v7.7 INTERNAL STATE SPY
-    // Instead of raw DOM mouse, we probe the library's internal crosshair price
+    // 🛡️ v7.8 HANDLE-NATIVE TRACKER
+    // This is the most robust way to track a handle during a modal drag
     try {
-        const probe = () => {
-            if (this.dragState.isDragging && this.dragState.activeTradeId) {
-                const chart = this.widget.activeChart();
-                if (chart) {
-                    // Try 3 different paths to internal price state
-                    let internalPrice = null;
-                    try { internalPrice = chart.crosshairPrice(); } catch {}
-                    if (!internalPrice) {
-                        try { internalPrice = chart.getCrosshairState?.()?.price; } catch {}
-                    }
-
-                    if (internalPrice && Number.isFinite(internalPrice)) {
-                        this.dragState.currentPrice = internalPrice;
-                        this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, internalPrice);
+        const chart = widget.activeChart();
+        if (chart && typeof chart.onSelectedLinePointMove === 'function') {
+            chart.onSelectedLinePointMove().subscribe(null, (param) => {
+                if (!this.dragState.isDragging || !this.dragState.activeTradeId) return;
+                
+                const price = param?.price;
+                if (price && Number.isFinite(price)) {
+                    this.dragState.currentPrice = price;
+                    this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, price);
+                }
+            });
+            console.log('[TradeManager] Handle-Native Tracking ACTIVATED');
+        } else {
+            // Fallback to RAF Probing if high-level API missing
+            const probe = () => {
+                if (this.dragState.isDragging && this.dragState.activeTradeId) {
+                    const c = this.widget.activeChart();
+                    let p = null;
+                    try { p = c.crosshairPrice(); } catch {}
+                    if (p) {
+                        this.dragState.currentPrice = p;
+                        this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, p);
                     }
                 }
-            }
+                requestAnimationFrame(probe);
+            };
             requestAnimationFrame(probe);
-        };
-        requestAnimationFrame(probe);
-        console.log('[TradeManager] v7.7 Internal Spy Engine ACTIVATED');
+            console.log('[TradeManager] RAF Probing (Fallback) Active');
+        }
     } catch (e) {
-        console.warn('[TradeManager] Spy setup failed:', e.message);
+        console.warn('[TradeManager] Setup error:', e.message);
     }
   }
 
