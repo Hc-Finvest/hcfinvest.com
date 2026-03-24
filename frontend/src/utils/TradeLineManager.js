@@ -2,16 +2,16 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.13 — Phase 65: The Pure Canvas Engine
+ * TradeLineManager v7.15 — Phase 65: The Final Fail-Safe
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.13 Native Overlay:
- * - Pure Canvas: Draws SL/TP ghosts on an independent <canvas> layer
- * - Zero-Library: Completely bypasses library shapes during interaction
- * - MT5 Styling: Custom dashed drawing (2px Green/Red) with price labels
- * - High-Performance: Hardware-accelerated 60fps interaction
+ * v7.15 Ultimate Pulse:
+ * - Move-to-Start: Forces Canvas activation on 'move' if 'started' was missed
+ * - Zero-Library: Pure Canvas SL/TP ghosts for absolute 0ms lag
+ * - Consolidated Logs: Better visibility into event flow
  * ============================================================
  */
+ Broadway
 // ─── Auth ────────────────────────────────────────────────────
 window.TRADE_ENGINE_VERSION = '7.14-SHIELD';
 console.log('%c [TradeManager v7.14] HARDWARE SHIELD ACTIVE ', 'background: #222; color: #bada55; font-size: 20px;');
@@ -87,7 +87,7 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.13] Pure Canvas Engine Active — Zero-Library interaction');
+    console.log('[TradeManager v7.15] Final Fail-Safe Engine Active — (v7.15)');
   }
 
   initialize(widget) {
@@ -574,7 +574,9 @@ export class TradeLineManager {
     const data = this.tradeStateMap.get(tradeId);
     if (!data) return;
 
-    const isStarting = (statusKey === 'started');
+    console.log(`[TradeManager] _handleEntryDrag: status=${statusKey} isDragging=${this.dragState.isDragging}`);
+
+    const isStarting = (statusKey === 'started') || (statusKey === 'move' && !this.dragState.isDragging);
     const isStopping = (statusKey === 'stopped' || statusKey === 'drag_end' || statusKey === 'finished');
     // 🛡️ v7.3 FIX: 'points_changed' is NOT a stop event. Removing it prevents ghosts from vanishing.
 
