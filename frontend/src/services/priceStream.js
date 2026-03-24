@@ -177,7 +177,7 @@ class PriceStreamService {
       this._lastTickKeyBySymbol.set(symbol, tickKey)
       this._lastTickTsBySymbol.set(symbol, now)
       
-      console.log(`[PriceStream] 📍 Tick received: ${symbol} bid=${bid} ask=${ask}`)
+      // console.log(`[PriceStream] 📍 Tick received: ${symbol} bid=${bid} ask=${ask}`)
       
       // ✅ Dispatch priceUpdate event for the chart datafeed to aggregate into candles
       try {

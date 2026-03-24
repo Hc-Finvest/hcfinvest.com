@@ -424,7 +424,7 @@ if(data.user){
 
     <AdminLayout>
 
-      <div className="p-6">
+      <div className="p-6 bg-">
 
         {/* HEADER */}
 
@@ -433,12 +433,12 @@ if(data.user){
           <button
             onClick={()=>navigate('/admin/users')}
             className="p-2 rounded-lg"
-            style={{backgroundColor:modeColors.bgCard}}
+            // style={{backgroundColor:modeColors.bgCard}}
           >
             <ArrowLeft size={20}/>
           </button>
 
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-black">
             Client Details
           </h1>
 
@@ -1125,4 +1125,4 @@ Update
 
 }
 
-export default AdminUserDetails
+export default AdminUserDetails;

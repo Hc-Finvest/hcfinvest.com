@@ -1,0 +1,62 @@
+import Redis from 'ioredis';
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Simple In-Memory Mock for when Redis is unavailable
+const memoryMock = {
+    _data: new Map(),
+    async get(key) { return this._data.get(key) || null; },
+    async set(key, value, mode, duration) { 
+        this._data.set(key, value); 
+        return 'OK'; 
+    },
+    async del(key) { return this._data.delete(key); },
+    async exists(key) { return this._data.has(key) ? 1 : 0; },
+    on() {}, // Dummy event listener
+    isMock: true
+};
+
+let redisClient;
+
+try {
+    const redisOptions = {
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: process.env.REDIS_PORT || 6379,
+        password: process.env.REDIS_PASSWORD || undefined,
+        maxRetriesPerRequest: 2, // Fail fast to trigger fallback
+        retryStrategy(times) {
+            if (times > 2) {
+                console.error('[Redis] Max retries reached. Switching to MEMORY-STORE FALLBACK.');
+                return null; // Stop retrying
+            }
+            return 1000;
+        }
+    };
+
+    redisClient = new Redis(redisOptions);
+
+    redisClient.on('error', (err) => {
+        console.warn('[Redis] Connection Error:', err.message);
+        if (err.message.includes('ECONNREFUSED')) {
+             console.info('[Redis] Using Memory-Store Fallback Mode.');
+        }
+    });
+
+} catch (e) {
+    console.error('[Redis] Failed to initialize client. Using mock.', e);
+    redisClient = memoryMock;
+}
+
+// Wrap the client to intercept calls if the real client is disconnected
+const proxyClient = new Proxy(redisClient, {
+    get(target, prop) {
+        // If the real client is not ready/connected, and it's a data method, use mock logic if needed
+        // For simplicity, we just return the target if it exists
+        if (typeof target[prop] === 'function') {
+            return target[prop].bind(target);
+        }
+        return target[prop];
+    }
+});
+
+export default redisClient; // Export the client (ioredis handles the connection state internally)

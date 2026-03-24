@@ -23,16 +23,18 @@ import {
   ArrowRightLeft,
   Bitcoin,
   ExternalLink,
+  Settings,  User,  Moon, ShieldCheck,  LogOut, Sun,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import Sidebar from "../components/Sidebar";
 import { Internal_Transfer } from "./Internal_Transfer";
 
+
 const WalletPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const { isDarkMode } = useTheme();
+  // const { isDarkMode } = useTheme();
 
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -41,11 +43,13 @@ const WalletPage = () => {
   const [loading, setLoading] = useState(true);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-const [showInternalTransferModal, setShowInternalTransferModal] = useState(false);
-const [transferAmount, setTransferAmount] = useState("");
-const [fromAccount, setFromAccount] = useState("");
-const [toAccount, setToAccount] = useState("");
-const [transferFee] = useState(2);
+  const [showInternalTransferModal, setShowInternalTransferModal] = useState(false);
+  const [transferAmount, setTransferAmount] = useState("");
+  const [fromAccount, setFromAccount] = useState("");
+  const [toAccount, setToAccount] = useState("");
+  const [transferFee] = useState(2);
+    const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+      const { isDarkMode, toggleDarkMode } = useTheme();
 
 
 
@@ -681,9 +685,6 @@ const getTransferText = (tx) => {
           >
             Wallet
           </h1>
-          {/* <button onClick={toggleDarkMode} className={`p-2 rounded-lg ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button> */}
           <button
             onClick={() => navigate("/mobile")}
             className={`p-2 rounded-lg ${isDarkMode ? "hover:bg-dark-700" : "hover:bg-gray-100"}`}
@@ -699,7 +700,7 @@ const getTransferText = (tx) => {
 
       {/* Main Content - Scrollable */}
       <main className={`flex-1 overflow-y-auto ${isMobile ? "pt-14" : ""}`}>
-        {!isMobile && (
+        {/* {!isMobile && (
           <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
             <div>
               <h1
@@ -714,7 +715,67 @@ const getTransferText = (tx) => {
               </p>
             </div>
           </header>
-        )}
+        )} */}
+
+
+
+        <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
+          <div className="font-semibold text-sm sm:text-base">
+            Wallet
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-5">
+            <RefreshCw size={18} className="cursor-pointer" />
+
+            <div className="relative">
+              <Settings
+                size={20}
+                className="cursor-pointer hover:text-blue-300 transition"
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              />
+
+              {showSettingsMenu && (
+                <div className="absolute right-0 mt-3 w-44 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
+                  {/* Profile */}
+                  <button
+                    onClick={() => navigate("/profile")}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                  >
+                    <User size={16} />
+                    Profile
+                  </button>
+
+                  {/* KYC */}
+                  <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                    <ShieldCheck size={16} />
+                    KYC
+                  </button>
+
+                  {/* Theme */}
+                  <button
+                    onClick={toggleDarkMode}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                  >
+                    {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                    Theme
+                  </button>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-200"></div>
+
+                  {/* Logout */}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className={`${isMobile ? "p-4" : "p-6"}`}>
           {/* Success/Error Messages */}

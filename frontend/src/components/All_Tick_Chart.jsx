@@ -264,7 +264,7 @@ function All_Tick_Chart({ symbol = "BTCUSDT", onPriceUpdate }) {
 
         const unsubscribe = alltickWebSocket.subscribe(symbolInfo.name, (data) => {
 
-          console.log('[All_Tick_Chart] 📊 Tick received:', data.price, 'at', new Date().toLocaleTimeString())
+          // console.log('[All_Tick_Chart] 📊 Tick received:', data.price, 'at', new Date().toLocaleTimeString())
 
           
 

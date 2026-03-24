@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, User, Wallet, Users, Copy, UserCircle, HelpCircle, FileText, LogOut,
   ChevronDown, ChevronRight, BookOpen, PlayCircle, DollarSign, TrendingUp, Shield, Settings, Trophy,
-  ArrowLeft, Home, Sun, Moon
+  ArrowLeft, Home, Sun, Moon, RefreshCw, ShieldCheck,
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import Sidebar from '../components/Sidebar'
@@ -19,6 +19,8 @@ const InstructionsPage = () => {
   const [expandedSection, setExpandedSection] = useState('getting-started')
   const [challengeModeEnabled, setChallengeModeEnabled] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    // const { isDarkMode, toggleDarkMode } = useTheme();
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -245,11 +247,68 @@ const InstructionsPage = () => {
     <div className="flex-1 flex flex-col">
 
       {/* TOP BAR */}
-      {!isMobile && (
+      {/* {!isMobile && (
         <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-6 text-white">
           <h1 className="text-lg font-semibold">Instructions & Guide</h1>
         </div>
-      )}
+      )} */}
+                    <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
+                      <div className="font-semibold text-sm sm:text-base">
+                        Support
+                      </div>
+            
+                      <div className="flex items-center gap-4 sm:gap-5">
+                        <RefreshCw size={18} className="cursor-pointer" />
+            
+                        <div className="relative">
+                          <Settings
+                            size={20}
+                            className="cursor-pointer hover:text-blue-300 transition"
+                            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                          />
+            
+                          {showSettingsMenu && (
+                            <div className="absolute right-0 mt-3 w-44 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
+                              {/* Profile */}
+                              <button
+                                onClick={() => navigate("/profile")}
+                                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                              >
+                                <User size={16} />
+                                Profile
+                              </button>
+            
+                              {/* KYC */}
+                              <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                                <ShieldCheck size={16} />
+                                KYC
+                              </button>
+            
+                              {/* Theme */}
+                              <button
+                                onClick={toggleDarkMode}
+                                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                              >
+                                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                                Theme
+                              </button>
+            
+                              {/* Divider */}
+                              <div className="border-t border-gray-200"></div>
+            
+                              {/* Logout */}
+                              <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                              >
+                                <LogOut size={16} />
+                                Logout
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
       {/* PAGE CONTENT */}
       <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
