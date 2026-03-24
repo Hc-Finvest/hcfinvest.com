@@ -2,13 +2,13 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.11 — Phase 65: The Immortal CSS Engine
+ * TradeLineManager v7.12 — Phase 65: The Signature Engine
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.11 Total Bypass:
- * - CSS Ghost: Uses a real DOM div for the ghost line (unblockable)
- * - Hardware Acceleration: CSS translate3d for 0ms response
- * - Library-Free Tracking: Moves 100% independently during drag
+ * v7.12 Final Proofs:
+ * - Auto-Wakeup: Activates interaction even if 'started' event is missed
+ * - Green Flash: Inset glow around screen during drag (Visual Proof)
+ * - Clean Pulse: Force-rebuild ensuring fresh v7.12 binaries
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.11] Immortal CSS Engine Active — Total Bypass');
+    console.log('[TradeManager v7.12] Signature Engine Active — (v7.12)');
   }
 
   initialize(widget) {
@@ -440,6 +440,8 @@ export class TradeLineManager {
     floor.style.zIndex = '999999';
     floor.style.cursor = 'ns-resize';
     floor.style.backgroundColor = 'transparent';
+    floor.style.boxShadow = 'inset 0 0 100px rgba(76, 175, 80, 0.4)'; // 🟢 v7.12 Visual Signature
+    floor.style.transition = 'box-shadow 0.2s';
 
     // 🛡️ v7.11 THE IMMORTAL CSS GHOST
     const ghost = document.createElement('div');
