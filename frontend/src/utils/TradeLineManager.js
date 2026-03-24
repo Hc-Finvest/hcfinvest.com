@@ -13,6 +13,9 @@ import { API_URL } from '../config/api';
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
+window.TRADE_ENGINE_VERSION = '7.14-SHIELD';
+console.log('%c [TradeManager v7.14] HARDWARE SHIELD ACTIVE ', 'background: #222; color: #bada55; font-size: 20px;');
+
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
   const t = raw.trim();
