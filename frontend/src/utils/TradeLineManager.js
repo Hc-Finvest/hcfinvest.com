@@ -2,15 +2,16 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.8 — Phase 65: The Black-Box Breaker
+ * TradeLineManager v7.9 — Phase 65: The Glass-Floor Engine
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.8 Internal Handle Tracking:
- * - Handle-Native: Uses onSelectedLinePointMove for real-time handle tracing
- * - Force-Update: Bypasses library "Point Freeze" during modal drags
- * - Style Specs: Dotted Green/Red (v7.6 style), Solid Blue Entry.
+ * v7.9 Final "Universal Bypass":
+ * - Glass Floor: Transparent full-screen overlay during drag to capture mouse
+ * - Direct Injection: Bypasses library event capture entirely
+ * - Style Specs: 2px Dotted Green/Red, Solid Blue Entry.
  * ============================================================
  */
+ Broadway
 
 // ─── Auth ────────────────────────────────────────────────────
 const normalizeToken = (raw) => {
@@ -84,7 +85,7 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.6] High-Frequency Engine Active — 60fps Probing');
+    console.log('[TradeManager v7.9] Glass-Floor Engine Active — 100% Universal');
   }
 
   initialize(widget) {
@@ -453,12 +454,63 @@ export class TradeLineManager {
 
       // Commit when user drops
       if (statusKey === 'stopped' || statusKey === 'drag_end' || statusKey === 'finished') {
+        this._removeGlassFloor(); // 🛡️ v7.9 Cleanup
         this.dragState.isDragging = false;
         this._scheduleCommit(tvId, meta);
       }
     };
 
     widget.subscribe('drawing_event', this._handler);
+  }
+
+  // ─── v7.9 GLASS-FLOOR ENGINE ────────────────────────────────
+  
+  _createGlassFloor() {
+    if (document.getElementById('tm-glass-floor')) return;
+    const floor = document.createElement('div');
+    floor.id = 'tm-glass-floor';
+    floor.style.position = 'fixed';
+    floor.style.top = '0';
+    floor.style.left = '0';
+    floor.style.width = '100vw';
+    floor.style.height = '100vh';
+    floor.style.zIndex = '999999';
+    floor.style.cursor = 'ns-resize'; // Native MT5 drag cursor
+    floor.style.backgroundColor = 'transparent';
+    
+    floor.onmousemove = (e) => {
+        if (!this.dragState.isDragging || !this.dragState.activeTradeId) return;
+        
+        const container = document.querySelector('iframe[id^="tradingview_"]') || document.querySelector('[class*="chart-container"]');
+        if (!container) return;
+        
+        const chart = this.widget.activeChart();
+        const rect = container.getBoundingClientRect();
+        const localY = e.clientY - rect.top;
+        
+        const price = chart.coordinateToPrice(localY);
+        if (price && Number.isFinite(price)) {
+            this.dragState.currentPrice = price;
+            this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, price);
+        }
+    };
+    
+    // Safety release on global mouse up
+    floor.onmouseup = () => {
+        this._removeGlassFloor();
+        // The drawing_event stopped handler will take care of the commit
+    };
+
+    document.body.appendChild(floor);
+    console.log('[TradeManager] Glass-Floor deployed');
+  }
+
+  _removeGlassFloor() {
+    const floor = document.getElementById('tm-glass-floor');
+    if (floor) {
+        floor.remove();
+        console.log('[TradeManager] Glass-Floor removed');
+    }
   }
 
   _onDragMove(tvId, meta) {
@@ -538,9 +590,10 @@ export class TradeLineManager {
     // 1. Initial StartPrice used to determine Ghost Type (SL vs TP)
     if (isStarting) {
       this.dragState.isDragging = true;
+      this._createGlassFloor(); // ⚡ v7.9 Deploy overlay instantly
       this.dragState.activeTradeId = tradeId;
       this.dragState.startPrice = data.entry;
-      console.log(`[TradeManager] v7.0 Engine Drag START: ${tradeId.slice(-6)}`);
+      console.log(`[TradeManager] v7.9 Glass-Floor Drag START: ${tradeId.slice(-6)}`);
     }
 
     // 2. Logic to determine SL vs TP based on side and direction
