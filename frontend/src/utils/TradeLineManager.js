@@ -2,13 +2,14 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.4 — Phase 65: The Stylized Immortal Engine
+ * TradeLineManager v7.5 — Phase 65: The DOM Interaction Engine
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.4 Design & Logic Specs:
- * - TP: Dotted, Green. SL: Dotted, Red. Entry: Solid, Blue.
- * - Logic Fix: 'points_changed' no longer triggers drag STOP.
- * - Deep Freeze: syncTrades totally blocked during drag.
+ * v7.5 Final "Our Logic" Overhaul:
+ * - DOM Tracking: 0ms latency via direct chart container mouse listeners
+ * - Unified Ghost: Single dynamic shape for SL/TP to prevent vanishing
+ * - Style Specs: Dotted Green/Red, Solid Blue Entry.
+ * - Deep Freeze: Total sync blockade during DOM interaction
  * ============================================================
  */
 
@@ -84,7 +85,7 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.4] Engine Initialized — Stylized Perfection');
+    console.log('[TradeManager v7.5] DOM Interaction Engine Active — 100% Custom');
   }
 
   initialize(widget) {
@@ -97,28 +98,31 @@ export class TradeLineManager {
 
   _subscribeToCrosshair(widget) {
     if (!widget) return;
+    
+    // 🛡️ v7.5 DOM-NATIVE TRACKING
+    // Find the chart container iframe or div to attach direct mouse listeners
     try {
-      // 🛡️ v7.3 Triple-Path Check for crosshair subscription
-      const chart = widget.activeChart ? widget.activeChart() : (widget.chart ? widget.chart() : null);
-      
-      const subMethod = chart?.subscribeCrosshairMove || chart?.subscribe?.bind(chart, 'crosshair_move');
-      
-      if (typeof subMethod === 'function') {
-        subMethod((param) => {
-          if (!this.dragState.isDragging || !this.dragState.activeTradeId) return;
-          
-          const price = typeof param === 'object' ? param.price : param;
-          if (!Number.isFinite(price)) return;
-          
-          this.dragState.currentPrice = price;
-          this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, price);
-        });
-        console.log('[TradeManager] Crosshair sync ACTIVATED (0ms mode)');
-      } else {
-        console.warn('[TradeManager] Crosshair logic not found; using move-event mode');
-      }
+        const container = document.querySelector('iframe[id^="tradingview_"]') || document.querySelector('[class*="chart-container"]');
+        if (container) {
+            const handleMouseMove = (e) => {
+                if (!this.dragState.isDragging || !this.dragState.activeTradeId) return;
+                
+                const chart = this.widget.activeChart();
+                const rect = container.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                
+                const price = chart.coordinateToPrice(y);
+                if (price) {
+                    this.dragState.currentPrice = price;
+                    this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, price);
+                }
+            };
+            
+            container.addEventListener('mousemove', handleMouseMove, { passive: true });
+            console.log('[TradeManager] DOM Mouse Tracking ACTIVATED');
+        }
     } catch (e) {
-      console.warn('[TradeManager] Crosshair sub error:', e.message);
+        console.warn('[TradeManager] DOM Track setup failed:', e.message);
     }
   }
 
@@ -504,16 +508,22 @@ export class TradeLineManager {
   _updateGhostPosition(tradeId, type, price) {
     const rec = this.lines[tradeId];
     if (!rec) return;
-    const ghost = type === 'tp' ? rec.ghostTP : rec.ghostSL;
+
+    // Determine color and text based on type
+    const isTP = type === 'tp';
+    const color = isTP ? '#4caf50' : '#f44336'; // Green vs Red
+    const label = `${type.toUpperCase()} (RELEASE TO DROP)  ${fmt(price)}`;
+    
+    // Use ghostSL as the "Unified Ghost"
+    const ghost = rec.ghostSL; 
     if (!ghost) return;
 
-    this._moveShape(ghost.tvId, price);
-    this._setShapeText(ghost.tvId, `${type.toUpperCase()} (RELEASE TO DROP)  ${fmt(price)}`);
-    
-    // 🛡️ v7.3 IMMORTALITY: Ensure visible if hidden or off-screen
     try {
+      this._moveShape(ghost.tvId, price);
+      this._setShapeText(ghost.tvId, label);
+      this._setShapeColor(ghost.tvId, color);
       this._setShapeVisible(ghost.tvId, true);
-    } catch {}
+    } catch (e) {}
   }
 
   async _handleEntryDrag(tvId, meta, statusKey) {
