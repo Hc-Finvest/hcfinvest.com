@@ -2,14 +2,13 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.5 — Phase 65: The DOM Interaction Engine
+ * TradeLineManager v7.6 — Phase 65: The High-Frequency Engine
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.5 Final "Our Logic" Overhaul:
- * - DOM Tracking: 0ms latency via direct chart container mouse listeners
- * - Unified Ghost: Single dynamic shape for SL/TP to prevent vanishing
- * - Style Specs: Dotted Green/Red, Solid Blue Entry.
- * - Deep Freeze: Total sync blockade during DOM interaction
+ * v7.6 RAF Overhaul:
+ * - RAF Probing: 60fps price tracking via RequestAnimationFrame
+ * - Global Mouse: Window-level tracking to bypass library capture
+ * - Style Specs: Dotted Green/Red (2px for visibility), Solid Blue Entry.
  * ============================================================
  */
 
@@ -85,7 +84,7 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.5] DOM Interaction Engine Active — 100% Custom');
+    console.log('[TradeManager v7.6] High-Frequency Engine Active — 60fps Probing');
   }
 
   initialize(widget) {
@@ -99,30 +98,36 @@ export class TradeLineManager {
   _subscribeToCrosshair(widget) {
     if (!widget) return;
     
-    // 🛡️ v7.5 DOM-NATIVE TRACKING
-    // Find the chart container iframe or div to attach direct mouse listeners
+    // 🛡️ v7.6 GLOBAL MOUSE & RAF TRACKER
     try {
-        const container = document.querySelector('iframe[id^="tradingview_"]') || document.querySelector('[class*="chart-container"]');
-        if (container) {
-            const handleMouseMove = (e) => {
-                if (!this.dragState.isDragging || !this.dragState.activeTradeId) return;
-                
+        // Tracker for raw screen coordinates
+        window._tm_mouse_y = 0;
+        window.addEventListener('mousemove', (e) => {
+            window._tm_mouse_y = e.clientY;
+        }, { passive: true });
+
+        const probe = () => {
+            if (this.dragState.isDragging && this.dragState.activeTradeId) {
                 const chart = this.widget.activeChart();
-                const rect = container.getBoundingClientRect();
-                const y = e.clientY - rect.top;
+                const container = document.querySelector('iframe[id^="tradingview_"]') || document.querySelector('[class*="chart-container"]');
                 
-                const price = chart.coordinateToPrice(y);
-                if (price) {
-                    this.dragState.currentPrice = price;
-                    this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, price);
+                if (chart && container) {
+                    const rect = container.getBoundingClientRect();
+                    const localY = window._tm_mouse_y - rect.top;
+                    
+                    const price = chart.coordinateToPrice(localY);
+                    if (price && Number.isFinite(price)) {
+                        this.dragState.currentPrice = price;
+                        this._updateGhostPosition(this.dragState.activeTradeId, this.dragState.ghostType, price);
+                    }
                 }
-            };
-            
-            container.addEventListener('mousemove', handleMouseMove, { passive: true });
-            console.log('[TradeManager] DOM Mouse Tracking ACTIVATED');
-        }
+            }
+            requestAnimationFrame(probe);
+        };
+        requestAnimationFrame(probe);
+        console.log('[TradeManager] High-Frequency RAF Probing ACTIVATED');
     } catch (e) {
-        console.warn('[TradeManager] DOM Track setup failed:', e.message);
+        console.warn('[TradeManager] RAF setup failed:', e.message);
     }
   }
 
@@ -239,21 +244,9 @@ export class TradeLineManager {
     // ── Ghost SL (Persistent, off-screen at price 0.001) ──
     if (!rec.ghostSL) {
       rec.ghostSL = await this._createShape(tradeId, 'ghost', 0.001, {
-        color: '#f44336', // Bright Red
-        width: 1,
-        style: 1,         // Dotted (MT5 style)
-        text: '',
-        lock: true,
-        disableSelection: true,
-      });
-    }
-
-    // ── Ghost TP (Persistent, off-screen at price 0.001) ──
-    if (!rec.ghostTP) {
-      rec.ghostTP = await this._createShape(tradeId, 'ghost', 0.001, {
-        color: '#4caf50', // Bright Green
-        width: 1,
-        style: 1,         // Dotted (MT5 style)
+        color: '#f44336', 
+        width: 2,         // Increased thickness for v7.6 visibility
+        style: 1,         // Dotted
         text: '',
         lock: true,
         disableSelection: true,
@@ -511,10 +504,10 @@ export class TradeLineManager {
 
     // Determine color and text based on type
     const isTP = type === 'tp';
-    const color = isTP ? '#4caf50' : '#f44336'; // Green vs Red
-    const label = `${type.toUpperCase()} (RELEASE TO DROP)  ${fmt(price)}`;
+    const color = isTP ? '#4caf50' : '#f44336'; 
+    const label = `PLACE ${type.toUpperCase()}  ${fmt(price)}`; // More aggressive label
     
-    // Use ghostSL as the "Unified Ghost"
+    // Unified Ghost
     const ghost = rec.ghostSL; 
     if (!ghost) return;
 
