@@ -2,12 +2,13 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.2 — Phase 65: The Stabilized Engine
+ * TradeLineManager v7.4 — Phase 65: The Stylized Immortal Engine
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.2 Restoration:
- * - Method Restoration: Restored initialize() accidentally deleted in v7.1
- * - Crosshair Refinement: Maintained dual-path crosshair checks
+ * v7.4 Design & Logic Specs:
+ * - TP: Dotted, Green. SL: Dotted, Red. Entry: Solid, Blue.
+ * - Logic Fix: 'points_changed' no longer triggers drag STOP.
+ * - Deep Freeze: syncTrades totally blocked during drag.
  * ============================================================
  */
 
@@ -83,7 +84,7 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.2] Engine Initialized — Stabilized');
+    console.log('[TradeManager v7.4] Engine Initialized — Stylized Perfection');
   }
 
   initialize(widget) {
@@ -97,13 +98,16 @@ export class TradeLineManager {
   _subscribeToCrosshair(widget) {
     if (!widget) return;
     try {
-      // 🛡️ v7.1 Dual-Path Check for crosshair subscription
+      // 🛡️ v7.3 Triple-Path Check for crosshair subscription
       const chart = widget.activeChart ? widget.activeChart() : (widget.chart ? widget.chart() : null);
-      if (chart && typeof chart.subscribeCrosshairMove === 'function') {
-        chart.subscribeCrosshairMove((param) => {
+      
+      const subMethod = chart?.subscribeCrosshairMove || chart?.subscribe?.bind(chart, 'crosshair_move');
+      
+      if (typeof subMethod === 'function') {
+        subMethod((param) => {
           if (!this.dragState.isDragging || !this.dragState.activeTradeId) return;
           
-          const price = param.price;
+          const price = typeof param === 'object' ? param.price : param;
           if (!Number.isFinite(price)) return;
           
           this.dragState.currentPrice = price;
@@ -111,7 +115,7 @@ export class TradeLineManager {
         });
         console.log('[TradeManager] Crosshair sync ACTIVATED (0ms mode)');
       } else {
-        console.warn('[TradeManager] Crosshair sync UNAVAILABLE; using Event Fallback');
+        console.warn('[TradeManager] Crosshair logic not found; using move-event mode');
       }
     } catch (e) {
       console.warn('[TradeManager] Crosshair sub error:', e.message);
@@ -231,9 +235,9 @@ export class TradeLineManager {
     // ── Ghost SL (Persistent, off-screen at price 0.001) ──
     if (!rec.ghostSL) {
       rec.ghostSL = await this._createShape(tradeId, 'ghost', 0.001, {
-        color: '#E53935',
+        color: '#f44336', // Bright Red
         width: 1,
-        style: 2,
+        style: 1,         // Dotted (MT5 style)
         text: '',
         lock: true,
         disableSelection: true,
@@ -243,22 +247,22 @@ export class TradeLineManager {
     // ── Ghost TP (Persistent, off-screen at price 0.001) ──
     if (!rec.ghostTP) {
       rec.ghostTP = await this._createShape(tradeId, 'ghost', 0.001, {
-        color: '#43A047',
+        color: '#4caf50', // Bright Green
         width: 1,
-        style: 2,
+        style: 1,         // Dotted (MT5 style)
         text: '',
         lock: true,
         disableSelection: true,
       });
     }
 
-    // ── SL (draggable, red, dashed) ──
+    // ── SL (draggable, red, dotted) ──
     if (Number.isFinite(slPrice) && slPrice > 0) {
       if (!rec.sl) {
         rec.sl = await this._createShape(tradeId, 'sl', slPrice, {
-          color: '#E53935',
+          color: '#f44336', // Red
           width: 1,
-          style: 2,
+          style: 1,         // Dotted
           text: `SL  ${fmt(slPrice)}`,
           lock: false,
           disableSelection: false,
@@ -273,13 +277,13 @@ export class TradeLineManager {
       rec.sl = null;
     }
 
-    // ── TP (draggable, green, dashed) ──
+    // ── TP (draggable, green, dotted) ──
     if (Number.isFinite(tpPrice) && tpPrice > 0) {
       if (!rec.tp) {
         rec.tp = await this._createShape(tradeId, 'tp', tpPrice, {
-          color: '#43A047',
+          color: '#4caf50', // Green
           width: 1,
-          style: 2,
+          style: 1,         // Dotted
           text: `TP  ${fmt(tpPrice)}`,
           lock: false,
           disableSelection: false,
@@ -505,6 +509,11 @@ export class TradeLineManager {
 
     this._moveShape(ghost.tvId, price);
     this._setShapeText(ghost.tvId, `${type.toUpperCase()} (RELEASE TO DROP)  ${fmt(price)}`);
+    
+    // 🛡️ v7.3 IMMORTALITY: Ensure visible if hidden or off-screen
+    try {
+      this._setShapeVisible(ghost.tvId, true);
+    } catch {}
   }
 
   async _handleEntryDrag(tvId, meta, statusKey) {
@@ -516,7 +525,8 @@ export class TradeLineManager {
     if (!data) return;
 
     const isStarting = (statusKey === 'started');
-    const isStopping = (statusKey === 'stopped' || statusKey === 'drag_end' || statusKey === 'finished' || statusKey === 'points_changed');
+    const isStopping = (statusKey === 'stopped' || statusKey === 'drag_end' || statusKey === 'finished');
+    // 🛡️ v7.3 FIX: 'points_changed' is NOT a stop event. Removing it prevents ghosts from vanishing.
 
     // 1. Initial StartPrice used to determine Ghost Type (SL vs TP)
     if (isStarting) {
