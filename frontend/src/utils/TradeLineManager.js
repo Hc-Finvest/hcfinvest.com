@@ -2,13 +2,12 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.1 — Phase 65: The Robust Engine
+ * TradeLineManager v7.2 — Phase 65: The Stabilized Engine
  * ============================================================
  * createOrderLine() was NOT available on this TV license.
- * v7.1 Refinements:
- * - Crosshair Resiliency: Fixed subscribeCrosshairMove call & added fallback
- * - Event-Based Move Fallback: Restored move tracking if crosshair fails
- * - Global Drag Freeze: Maintained v7.0 state protection
+ * v7.2 Restoration:
+ * - Method Restoration: Restored initialize() accidentally deleted in v7.1
+ * - Crosshair Refinement: Maintained dual-path crosshair checks
  * ============================================================
  */
 
@@ -84,7 +83,13 @@ export class TradeLineManager {
     this.isDragging = false;
     this.draggedTradeId = null;
 
-    console.log('[TradeManager v7.1] Engine Initialized — Robust Perfection');
+    console.log('[TradeManager v7.2] Engine Initialized — Stabilized');
+  }
+
+  initialize(widget) {
+    this.widget = widget;
+    this._attachEvents(widget);
+    this._subscribeToCrosshair(widget);
   }
 
   // ─── Lifecycle ──────────────────────────────────────────────
