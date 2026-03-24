@@ -42,7 +42,8 @@ import competitionRoutes from "./routes/competitionRoutes.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import internalTransferRoutes from "./routes/internalTransfer.js";
 import redisClient from './services/redisClient.js';
-
+import competitionLeaderboard from "./routes/competitionLeaderboard.js";
+import competitionEmailRoutes from "./routes/emailRoutes.js";
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -365,6 +366,9 @@ app.use("/api/binance", binanceRoutes);
 app.use("/api/transfer", internalTransferRoutes);
 app.use("/api/admin", adminUserRoutes);
 app.use("/api/competitions", competitionRoutes);
+app.use("/api/competition", competitionLeaderboard);
+app.use("/api/email", emailRoutes);
+app.use("/api/competition-email", competitionEmailRoutes);
 
 // Historical API route
 // app.use("/api/history", historyRoute);

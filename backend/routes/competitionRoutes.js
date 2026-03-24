@@ -1,5 +1,8 @@
+//CompititionRoutes.js
+
 import express from "express";
 import Competition from "../models/Compitition.js";
+import CompetitionParticipant from "../models/competitionParticipantSchema.js";
 
 const router = express.Router();
 
@@ -192,6 +195,79 @@ router.post("/create", async (req, res) => {
   }
 
 });
+
+
+router.post("/createParticipant", async (req, res) => {
+  try {
+    const {
+      competitionId,
+      userId,
+      participantName,
+      tradingAccountNumber,
+      initialDeposit
+    } = req.body;
+
+    console.log("Incoming Payload:", req.body);
+
+    // ✅ VALIDATION
+    if (!competitionId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: "competitionId and userId are required"
+      });
+    }
+
+    // ✅ CHECK DUPLICATE
+    const existing = await CompetitionParticipant.findOne({
+      competitionId,
+      userId
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "User already joined this competition"
+      });
+    }
+
+    // ✅ CREATE PARTICIPANT (SAFE)
+    const participant = await CompetitionParticipant.create({
+      competitionId,
+      userId,
+      participantName,
+      tradingAccountNumber,
+      initialDeposit,
+      equity: initialDeposit,
+      profitLoss: 0,
+      roi: 0
+    });
+
+    console.log("Participant created:", participant);
+
+    res.status(201).json({
+      success: true,
+      message: "Joined competition successfully",
+      participant
+    });
+
+  } catch (err) {
+    console.error("CREATE PARTICIPANT ERROR:", err);
+
+    // ✅ DUPLICATE KEY HANDLING
+    if (err.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "User already joined this competition"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: err.message || "Server error"
+    });
+  }
+});
+
 
 
 export default router;

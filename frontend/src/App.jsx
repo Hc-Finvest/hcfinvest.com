@@ -50,6 +50,7 @@ import Competitions from './pages/Competitions.jsx'
 import LeaderBoard  from './pages/LeaderBoard.jsx'
 import AdminCompetitionDetails from './pages/AdminCompititionDetails.jsx'
 import Switch_Account from "./pages/Switch_Account";
+import New_Dashboard from './pages/New_Dashboard.jsx'
 
 
 function App() {
@@ -63,6 +64,7 @@ function App() {
         <Route path="/user/login" element={<Login />} />
         <Route path="/user/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        {/* <Route path="/dashboard" element={<New_Dashboard />} /> */}
         <Route path="/competition" element={<Competitions />} />
         <Route path="/leader-board" element={<LeaderBoard />} />
         <Route path="/mobile" element={<MobileTradingApp />} />

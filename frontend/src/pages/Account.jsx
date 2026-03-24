@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
-import { UserCircle, RefreshCw, TrendingUp  } from "lucide-react";
+import { UserCircle, RefreshCw, TrendingUp,  Settings,  User,  Moon, ShieldCheck,  LogOut, Sun,} from "lucide-react";
 import { API_URL } from "../config/api";
 import Sidebar from "../components/Sidebar";
 
@@ -17,6 +17,8 @@ export default function Account() {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+    // const { isDarkMode, toggleDarkMode } = useTheme();
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   const [wallet, setWallet] = useState(null);
 
@@ -144,14 +146,74 @@ if (accs.length > 0) {
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col">
         {/* TOP BAR */}
-        <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
+        {/* <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
           <h1 className="text-sm sm:text-lg font-semibold">My Account</h1>
 
           <div className="flex items-center gap-4 sm:gap-5">
             <RefreshCw size={18} />
             <UserCircle size={20} />
           </div>
-        </div>
+        </div> */}
+
+
+                <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
+                  <div className="font-semibold text-sm sm:text-base">
+                    My Account
+                  </div>
+        
+                  <div className="flex items-center gap-4 sm:gap-5">
+                    <RefreshCw size={18} className="cursor-pointer" />
+        
+                    <div className="relative">
+                      <Settings
+                        size={20}
+                        className="cursor-pointer hover:text-blue-300 transition"
+                        onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                      />
+        
+                      {showSettingsMenu && (
+                        <div className="absolute right-0 mt-3 w-44 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
+                          {/* Profile */}
+                          <button
+                            onClick={() => navigate("/profile")}
+                            className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                          >
+                            <User size={16} />
+                            Profile
+                          </button>
+        
+                          {/* KYC */}
+                          <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                            <ShieldCheck size={16} />
+                            KYC
+                          </button>
+        
+                          {/* Theme */}
+                          <button
+                            onClick={toggleDarkMode}
+                            className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                          >
+                            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                            Theme
+                          </button>
+        
+                          {/* Divider */}
+                          <div className="border-t border-gray-200"></div>
+        
+                          {/* Logout */}
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                          >
+                            <LogOut size={16} />
+                            Logout
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+        
 
         {/* PAGE CONTENT */}
         <div className="flex-1 p-3 sm:p-6 space-y-6 overflow-y-auto">
@@ -188,6 +250,17 @@ if (accs.length > 0) {
                 <TrendingUp size={16} />
                 Trade Now
               </button>
+
+                {/* <button
+                  onClick={() =>
+                  window.open(`/trade/${competitionAccount._id}`, "_blank")
+                  }
+                  className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-medium shadow"
+                >
+                  <TrendingUp size={16} />
+                    Trade Competition
+              </button> */}
+
               
               <div className="relative">
                 <button
@@ -199,7 +272,7 @@ if (accs.length > 0) {
 
                 {showAccountDropdown && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
-                    {accounts.map((acc) => (
+                    {/* {accounts.map((acc) => (
                       <button
                         key={acc._id}
                         onClick={() => {
@@ -215,7 +288,30 @@ if (accs.length > 0) {
                           {acc.accountTypeId?.name}
                         </div>
                       </button>
-                    ))}
+                    ))} */}
+
+                    {accounts.map((acc) => (
+  <button
+    key={acc._id}
+    onClick={() => {
+      setSelectedAccount(acc);
+      localStorage.setItem("selectedAccount", JSON.stringify(acc));
+      setShowAccountDropdown(false);
+    }}
+    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+  >
+    {/* Account Name */}
+    <div className="font-medium">
+      {acc.accountTypeId?.name || "Account"}
+    </div>
+
+    {/* Account Number */}
+    <div className="text-gray-500 text-xs">
+      {acc.accountId}
+    </div>
+  </button>
+))}
+                    
                   </div>
                 )}
               </div>

@@ -12,9 +12,9 @@ class EmailService {
   _loadConfig() {
     this.resendApiKey = process.env.RESEND_API_KEY
     this.provider = process.env.EMAIL_PROVIDER || 'smtp'
-    this.appName = process.env.APP_NAME || 'hcfinvest'
-    this.fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@hcfinvest.com'
-    this.fromName = process.env.SMTP_FROM_NAME || 'hcfinvest'
+    this.appName = process.env.APP_NAME || 'HC Finvest'
+    this.fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'supportdesk@heddgecapitals.com'
+    this.fromName = process.env.SMTP_FROM_NAME || 'HC Finvest'
   }
 
   async initialize() {
@@ -34,39 +34,33 @@ class EmailService {
           console.log(`📧 From: ${this.fromName} <${this.fromEmail}>`)
           break
 
-        case 'smtp':
-        case 'zoho':
-          const port = parseInt(process.env.SMTP_PORT) || 465
-          const isSecure = port === 465
-          
-          // Zoho SMTP Configuration
-          // Host: smtppro.zoho.in (India) or smtp.zoho.com (Global)
-          // Port 465: SSL (secure: true)
-          // Port 587: STARTTLS (secure: false)
-          this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtppro.zoho.in',
-            port: port,
-            secure: isSecure,
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS
-            },
-            tls: {
-              rejectUnauthorized: true,
-              minVersion: 'TLSv1.2'
-            },
-            connectionTimeout: 30000,
-            greetingTimeout: 30000,
-            socketTimeout: 60000,
-            debug: true,
-            logger: true
-          })
-          
-          // Log configuration (without password)
-          console.log(`📧 Email Config: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`)
-          console.log(`📧 User: ${process.env.SMTP_USER}`)
-          console.log(`📧 From: ${this.fromName} <${this.fromEmail}>`)
-          break
+      case 'smtp':
+      case 'zoho':
+        const port = parseInt(process.env.SMTP_PORT) || 587;
+        const isSecure = port === 465;
+
+        this.transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || "mail.spacemail.com",
+          port: port,
+          secure: isSecure, // ✅ auto handles 465/587
+          auth: {
+            user: process.env.SMTP_USER || "supportdesk@heddgecapitals.com",
+            pass: process.env.SMTP_PASS || "Heddge@2025"
+          },
+          tls: {
+            rejectUnauthorized: false // ✅ prevents SSL issues
+          },
+          connectionTimeout: 30000,
+          greetingTimeout: 30000,
+          socketTimeout: 60000,
+          debug: true,
+          logger: true
+        })
+
+        console.log(`📧 Email Config: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`)
+        console.log(`📧 User: ${process.env.SMTP_USER}`)
+        console.log(`📧 From: ${this.fromName} <${this.fromEmail}>`)
+        break
 
         case 'sendgrid':
           // SendGrid configuration
@@ -201,7 +195,7 @@ class EmailService {
         info = await this.sendViaResend({ to, toName, subject, html, text })
       } else {
         // Use SMTP_USER as sender to avoid relay errors
-        const senderEmail = process.env.SMTP_USER || this.fromEmail
+        const senderEmail = this.fromEmail || process.env.SMTP_USER
         const mailOptions = {
           from: `"${this.fromName}" <${senderEmail}>`,
           to: toName ? `"${toName}" <${to}>` : to,

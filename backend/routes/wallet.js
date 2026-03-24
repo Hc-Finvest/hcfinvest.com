@@ -1,6 +1,6 @@
 
-// wallet_Route.js
-
+// wallet.js routes
+ 
 import express from 'express'
 import Wallet from '../models/Wallet.js'
 import Transaction from '../models/Transaction.js'
@@ -446,5 +446,66 @@ router.put('/transaction/:id/reject', async (req, res) => {
     res.status(500).json({ message: 'Error rejecting transaction', error: error.message })
   }
 })
+
+
+// POST /api/wallet/deduct-entry-fee
+router.post('/deduct-entry-fee', async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+
+    console.log("REQ BODY 👉", req.body);
+
+    // ✅ Validate
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid amount' });
+    }
+
+    // ✅ Get wallet
+    const wallet = await Wallet.findOne({ userId });
+
+    if (!wallet) {
+      return res.status(404).json({ message: 'Wallet not found' });
+    }
+
+    // ✅ Check balance
+    if (wallet.balance < amount) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // ✅ Deduct balance
+    wallet.balance -= amount;
+    await wallet.save();
+
+    // ✅ Create transaction (USE EXISTING TYPE)
+    const transaction = new Transaction({
+      userId,
+      walletId: wallet._id,
+      type: 'Withdrawal', // 🔥 safe (already exists in your system)
+      amount,
+      status: 'Completed'
+    });
+
+    await transaction.save();
+
+    res.json({
+      message: 'Entry fee deducted successfully',
+      balance: wallet.balance
+    });
+
+  } catch (error) {
+    console.error("BACKEND ERROR 👉", error);
+    res.status(500).json({
+      message: 'Error deducting entry fee',
+      error: error.message
+    });
+  }
+});
+
+
+
 
 export default router

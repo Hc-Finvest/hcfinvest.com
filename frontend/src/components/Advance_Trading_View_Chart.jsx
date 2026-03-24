@@ -98,7 +98,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         library_path: "/charting_library/",
         load_last_chart: false,
         locale: "en",
-        theme: "dark",
+        theme: "light",
         autosize: true,
         datafeed: Datafeed,
         symbol_search_request_delay: 1000,
@@ -113,7 +113,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
           "trading_objects"
         ],
         overrides: {
-          "paneProperties.background": "#0d0d0d",
+          "paneProperties.background": "#ffffff",
           "mainSeriesProperties.style": 1,
         }
       });
@@ -209,7 +209,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       style={{ 
         width: "100%", 
         height: "100%",
-        backgroundColor: "#0d0d0d"
+        backgroundColor: "#341b1b"
       }} 
     />
   );

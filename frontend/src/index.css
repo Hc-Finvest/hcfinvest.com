@@ -37,7 +37,7 @@
   --theme-headerText: #FFFFFF;
 } */
 
-* {
+/* * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -47,10 +47,10 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--theme-bgPrimary, #0a0a0a);
   color: var(--theme-textPrimary, #ffffff);
-}
+} */
 
 /* Theme utility classes */
-.theme-primary { color: var(--theme-primary); }
+/* .theme-primary { color: var(--theme-primary); }
 .theme-secondary { color: var(--theme-secondary); }
 .theme-accent { color: var(--theme-accent); }
 .theme-bg-primary { background-color: var(--theme-bgPrimary); }
@@ -66,34 +66,34 @@ body {
 .theme-buy { color: var(--theme-buyColor); }
 .theme-sell { color: var(--theme-sellColor); }
 .theme-profit { color: var(--theme-profitColor); }
-.theme-loss { color: var(--theme-lossColor); }
+.theme-loss { color: var(--theme-lossColor); } */
 
 /* Accent color backgrounds */
-.bg-accent-theme { background-color: var(--theme-accent); }
+/* .bg-accent-theme { background-color: var(--theme-accent); }
 .bg-primary-theme { background-color: var(--theme-primary); }
 .border-accent-theme { border-color: var(--theme-accent); }
-.border-primary-theme { border-color: var(--theme-primary); }
+.border-primary-theme { border-color: var(--theme-primary); } */
 
 /* Override Tailwind accent-green with theme primary */
-.text-accent-green { color: var(--theme-primary) !important; }
+/* .text-accent-green { color: var(--theme-primary) !important; }
 .bg-accent-green { background-color: var(--theme-primary) !important; }
 .border-accent-green { border-color: var(--theme-primary) !important; }
 .bg-accent-green\/20 { background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent) !important; }
 .bg-accent-green\/10 { background-color: color-mix(in srgb, var(--theme-primary) 10%, transparent) !important; }
-.hover\:bg-accent-green\/90:hover { background-color: color-mix(in srgb, var(--theme-primary) 90%, transparent) !important; }
+.hover\:bg-accent-green\/90:hover { background-color: color-mix(in srgb, var(--theme-primary) 90%, transparent) !important; } */
 
 /* Override dark backgrounds with theme */
-.bg-dark-900 { background-color: var(--theme-bgPrimary) !important; }
+/* .bg-dark-900 { background-color: var(--theme-bgPrimary) !important; }
 .bg-dark-800 { background-color: var(--theme-bgSecondary) !important; }
 .bg-dark-700 { background-color: var(--theme-bgCard) !important; }
-.bg-dark-600 { background-color: var(--theme-bgHover) !important; }
+.bg-dark-600 { background-color: var(--theme-bgHover) !important; } */
 
 /* Override border colors */
-.border-gray-800 { border-color: var(--theme-border) !important; }
-.border-gray-700 { border-color: var(--theme-borderLight) !important; }
+/* .border-gray-800 { border-color: var(--theme-border) !important; }
+.border-gray-700 { border-color: var(--theme-borderLight) !important; } */
 
 /* Sidebar active state */
-.sidebar-active { 
+/* .sidebar-active { 
   background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent) !important;
   color: var(--theme-primary) !important;
 }
@@ -109,10 +109,10 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 3px;
-}
+} */
 
 /* Mobile animations */
-@keyframes slide-up {
+/* @keyframes slide-up {
   from {
     transform: translateY(100%);
     opacity: 0;
@@ -125,15 +125,15 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out forwards;
-}
+} */
 
 /* Safe area for mobile devices */
-.safe-area-pb {
+/* .safe-area-pb {
   padding-bottom: env(safe-area-inset-bottom, 0);
-}
+} */
 
 /* Hide scrollbar on mobile */
-@media (max-width: 768px) {
+/* @media (max-width: 768px) {
   ::-webkit-scrollbar {
     display: none;
   }
@@ -142,14 +142,14 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-}
+} */
 
 /* Utility class to hide scrollbar while keeping scroll functionality */
-.scrollbar-hide {
+/* .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
+} */
