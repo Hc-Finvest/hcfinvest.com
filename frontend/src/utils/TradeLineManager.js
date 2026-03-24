@@ -2,17 +2,17 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.23 — Phase 66: THE MT5-SPAWN TANK
+ * TradeLineManager v7.24 — Phase 66: THE MT5-SPAWN VAULT
  * ============================================================
- * v7.23 MT5-Spawn Tank:
- * - Serialized Move (No overlapping ghost creation)
- * - Sync-Flicker Protection (Protects lines during transient empty states)
- * - Enhanced Diagnostic Labels (TV_ID included)
+ * v7.24 MT5-Spawn Vault:
+ * - 15-Second Grace Period (Prevents deletion during sync lag)
+ * - Persistent Metadata (Interaction remains active even if trade temporarily missing)
+ * - Robust Ghost Serialization & Fix for 'started' event skips
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
-window.TRADE_ENGINE_VERSION = '7.23-TANK';
-console.log('%c [TradeManager v7.23] MT5-SPAWN TANK ACTIVE ', 'background: #222; color: #76ff03; font-size: 20px;');
+window.TRADE_ENGINE_VERSION = '7.24-VAULT';
+console.log('%c [TradeManager v7.24] MT5-SPAWN VAULT ACTIVE ', 'background: #222; color: #00e5ff; font-size: 20px;');
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -64,6 +64,8 @@ export class TradeLineManager {
     // Ghost tracking
     this.activeDragId = null;
     this.dragStartPrice = 0;
+    this.isUpdatingGhost = false;
+    this._missingTrades = {}; // tid -> timestamp
 
     console.log('[TradeManager v7.20] Native Drawing Engine Initialized');
   }
@@ -209,33 +211,47 @@ export class TradeLineManager {
   }
 
   async syncTrades(trades, symbol = null) {
-    if (this.activeDragId) return; // Locked during drag
+    if (this.activeDragId) return; // Locked
 
     this.trades = trades || [];
     const curSym = canonicalSymbol(symbol);
     const visible = this.trades.filter(t => canonicalSymbol(t.symbol) === curSym);
-    
-    // 🛡️ Flicker Protection: If incoming list is empty but we HAD trades, wait one cycle.
-    if (visible.length === 0 && Object.keys(this.lines).length > 0) {
-        if (!this._flickerGuard) {
-            console.log('[TradeManager] Flicker protected. Waiting for second empty signal.');
-            this._flickerGuard = true;
-            return;
-        }
-    }
-    this._flickerGuard = false;
-
     const visibleIds = new Set(visible.map(t => String(t._id || t.id)));
 
     if (!this.widget) return;
     const chart = this.widget.chart();
+    const now = Date.now();
 
-    // Cleanup
+    // ─── The Vault (Graceful Removal) ──────────────────────────
+    // Track when we first see a trade missing
     Object.keys(this.lines).forEach(tid => {
-        if (!visibleIds.has(tid)) this.removeTradeLines(tid);
+        if (!visibleIds.has(tid)) {
+            if (!this._missingTrades[tid]) {
+                this._missingTrades[tid] = now;
+                console.log(`[TradeManager] Trade ${tid} missing. Starting 15s grace period.`);
+            }
+        } else {
+            delete this._missingTrades[tid]; // Reset if it reappears
+        }
     });
 
-    // Sync
+    // Actually remove only if missing for > 15s
+    Object.keys(this._missingTrades).forEach(tid => {
+        if (now - this._missingTrades[tid] > 15000) {
+            console.log(`[TradeManager] Grace period expired for ${tid}. Removing lines.`);
+            this.removeTradeLines(tid);
+            delete this._missingTrades[tid];
+        }
+    });
+
+    // Cleanup internal state for IDs that are definitively gone
+    Object.keys(this.lines).forEach(tid => {
+        if (!visibleIds.has(tid) && !this._missingTrades[tid]) {
+            // This should only happen if removeTradeLines was already called
+        }
+    });
+
+    // Sync active trades
     for (const trade of visible) {
       await this._syncTradeShapes(chart, trade);
     }
@@ -318,13 +334,18 @@ export class TradeLineManager {
     delete this.tvIdMap[tvId];
   }
 
-  removeTradeLines(tid) {
+  removeTradeLines(tradeId) {
+    const tid = String(tradeId);
+    if (!this.lines[tid]) return;
     const set = this.lines[tid];
-    if (!set) return;
+
     if (set.entry) this._destroyShape(set.entry.tvId);
     if (set.sl) this._destroyShape(set.sl.tvId);
     if (set.tp) this._destroyShape(set.tp.tvId);
+    if (set.ghost) this._destroyShape(set.ghost.tvId);
+
     delete this.lines[tid];
+    console.log(`[TradeManager] Cleaned up lines for trade ${tid}`);
   }
 
   getTradeById(tid) {
