@@ -2,18 +2,17 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.25 — Phase 66: THE PRECISION ENGINE
+ * TradeLineManager v7.26 — Phase 66: THE DEBUGGER
  * ============================================================
- * v7.25 Precision Engine:
- * - State-Preserving Commits (TP no longer wipes SL and vice versa)
- * - Anti-Slippage Precision (Syncs with chart DecimalPlaces)
- * - Absolute Entry Pinning (Handle-only interaction)
- * - 15-Second Grace Period (The Vault)
+ * v7.26 Debugger:
+ * - Absolute Event Logging (Dumps every status from the library)
+ * - Metadata Preservation (Safeguard for null shape on stop)
+ * - Robust Ghost Lifecycle
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
-window.TRADE_ENGINE_VERSION = '7.25-PRECISION';
-console.log('%c [TradeManager v7.25] PRECISION ENGINE ACTIVE ', 'background: #222; color: #ff5722; font-size: 20px;');
+window.TRADE_ENGINE_VERSION = '7.26-DEBUG';
+console.log('%c [TradeManager v7.26] DEBUGGER ACTIVE ', 'background: #222; color: #ffeb3b; font-size: 20px;');
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -92,7 +91,7 @@ export class TradeLineManager {
       if (!meta || this.isCommitBlocked) return;
 
       const action = String(status?.status || status || '').toLowerCase();
-      // console.log(`[TradeManager] Event: ${tvId} (${meta.type}) status=${action}`);
+      console.log(`[TradeManager] EVENT: ${tvId} (${meta.type}) status="${action}"`);
 
       if (action === 'started') {
         this.activeDragId = meta.tradeId;
