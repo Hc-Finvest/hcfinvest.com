@@ -169,7 +169,7 @@ export class TradeLineManager {
         if (ghostId) set.ghost = { tvId: ghostId.tvId, type, price };
     } else {
         set.ghost.price = price;
-        this._updateShape(set.ghost.tvId, price, `NEW ${type.toUpperCase()}  ${fmt(price)}`);
+        this._updateShape(set.ghost.tvId, price);
     }
   }
 
@@ -199,7 +199,7 @@ export class TradeLineManager {
           // ✨ OPTIMISTIC RAW PLOT: Immediately draw solid line so user doesn't wait 2.5s for API fallback
           const color = t === 'tp' ? '#4caf50' : '#f44336';
           const shapeRef = await this._createShape(tid, t, price, {
-              color, style: 1, width: 1, text: `${t.toUpperCase()}  ${fmt(price)}`
+              color, style: 1, width: 1, text: `${t.toUpperCase()}`
           });
           this.lines[tid][t] = shapeRef;
 
@@ -209,7 +209,7 @@ export class TradeLineManager {
       // 🛡️ v7.25 Forced Snap-Back: The Entry line never moves on the chart.
       const realEntry = Number(trade?.openPrice || trade?.price);
       if (shape && realEntry) {
-          this._updateShape(tvId, realEntry, `ENTRY  ${fmt(realEntry)}`);
+          this._updateShape(tvId, realEntry);
       }
       
       setTimeout(() => { this.activeDragId = null; }, 100); 
@@ -218,8 +218,7 @@ export class TradeLineManager {
 
     if (meta.type === 'sl' || meta.type === 'tp') {
         console.log(`[TradeManager] Confirming ${meta.type.toUpperCase()} DROP -> ${price}`);
-        // Optimistically update the text label locally so it doesn't look old!
-        this._updateShape(tvId, price, `${meta.type.toUpperCase()}  ${fmt(price)}`);
+        this._updateShape(tvId, price);
         await this._commitTrade(meta.tradeId, meta.type, price);
     }
     
@@ -267,26 +266,26 @@ export class TradeLineManager {
 
     // ENTRY (Fixed position, but draggable to spawn ghosts)
     if (!set.entry) {
-      set.entry = await this._createShape(tid, 'entry', entry, { color: '#2196F3', style: 0, width: 2, text: `ENTRY  ${fmt(entry)}` });
+      set.entry = await this._createShape(tid, 'entry', entry, { color: '#2196F3', style: 0, width: 2, text: `ENTRY` });
     } else {
-      this._updateShape(set.entry.tvId, entry, `ENTRY  ${fmt(entry)}`);
+      this._updateShape(set.entry.tvId, entry);
     }
 
     // SL
     if (Number.isFinite(sl) && sl > 0) {
       if (!set.sl) {
-        set.sl = await this._createShape(tid, 'sl', sl, { color: '#f44336', style: 1, width: 1, text: `SL  ${fmt(sl)}` });
+        set.sl = await this._createShape(tid, 'sl', sl, { color: '#f44336', style: 1, width: 1, text: `SL` });
       } else {
-        this._updateShape(set.sl.tvId, sl, `SL  ${fmt(sl)}`);
+        this._updateShape(set.sl.tvId, sl);
       }
     } else if (set.sl) { this._destroyShape(set.sl.tvId); set.sl = null; }
 
     // TP
     if (Number.isFinite(tp) && tp > 0) {
       if (!set.tp) {
-        set.tp = await this._createShape(tid, 'tp', tp, { color: '#4caf50', style: 1, width: 1, text: `TP  ${fmt(tp)}` });
+        set.tp = await this._createShape(tid, 'tp', tp, { color: '#4caf50', style: 1, width: 1, text: `TP` });
       } else {
-        this._updateShape(set.tp.tvId, tp, `TP  ${fmt(tp)}`);
+        this._updateShape(set.tp.tvId, tp);
       }
     } else if (set.tp) { this._destroyShape(set.tp.tvId); set.tp = null; }
   }
