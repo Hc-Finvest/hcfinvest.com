@@ -1,7 +1,9 @@
 import { canonicalSymbol } from './symbolUtils';
 
+const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+const API_URL = base.endsWith('/api') ? base : `${base}/api`;
+
 const getAuthToken = () => localStorage.getItem('token');
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // ─── Debounce ─────────────────────────────────────────────────
 const debounce = (fn, ms) => {
@@ -166,6 +168,12 @@ export class TradeLineManager {
         return;
     }
 
+    // 🛡️ v7.67 BUG BASH: Ignore ghost interaction
+    if (meta.type.includes('ghost')) {
+        this.activeDragId = null;
+        return;
+    }
+
     if (meta.type === 'entry') {
       const trade = this.getTradeById(meta.tradeId);
       
@@ -321,6 +329,10 @@ export class TradeLineManager {
   }
 
   async _commitTrade(tradeId, type, price) {
+    // 🛡️ v7.67 BUG BASH: Explicitly block ghost commits
+    if (!type || type.includes('ghost')) return;
+    if (type !== 'sl' && type !== 'tp') return;
+
     const tid = String(tradeId);
     const trade = this.getTradeById(tid);
     if (!trade) return;
