@@ -2,17 +2,17 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.26 — Phase 66: THE DEBUGGER
+ * TradeLineManager v7.27 — Phase 66: THE UNIVERSAL ENGINE
  * ============================================================
- * v7.26 Debugger:
- * - Absolute Event Logging (Dumps every status from the library)
- * - Metadata Preservation (Safeguard for null shape on stop)
- * - Robust Ghost Lifecycle
+ * v7.27 Universal Release:
+ * - Event Mapping Fix: 'properties_changed' now triggers Commit (TV Compatibility)
+ * - State-Preserving Commits (Merge SL/TP)
+ * - Anti-Slippage Precision & Entry Pinning
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
-window.TRADE_ENGINE_VERSION = '7.26-DEBUG';
-console.log('%c [TradeManager v7.26] DEBUGGER ACTIVE ', 'background: #222; color: #ffeb3b; font-size: 20px;');
+window.TRADE_ENGINE_VERSION = '7.27-UNIVERSAL';
+console.log('%c [TradeManager v7.27] UNIVERSAL ENGINE ACTIVE ', 'background: #222; color: #4caf50; font-size: 20px;');
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -103,7 +103,9 @@ export class TradeLineManager {
         this._onNativeMove(tvId, meta);
       }
 
-      if (action === 'stopped' || action === 'finished') {
+      // 🛡️ v7.27 Universal Compatibility Mapping
+      // Some TV versions use 'properties_changed' as the final drag release event.
+      if (action === 'stopped' || action === 'finished' || action === 'properties_changed') {
         this._onNativeStop(tvId, meta);
       }
     };
