@@ -3,11 +3,13 @@ import Datafeed from "../services/datafeed.js";
 import { getPriceEvents } from '../services/priceStream';
 import { TradeLineManager } from "../utils/TradeLineManager.js";
 
+// ─── v7.55 localStorage Keys ────────────────────────────────────────────────
+const LS_SYMBOL   = 'hcf_chart_symbol';
+const LS_INTERVAL = 'hcf_chart_interval';
+
 const canonicalSymbol = (raw) => {
   const value = String(raw || '').trim().toUpperCase();
   if (!value) return '';
-
-  //Sanket v2.0 - Normalize XAU/USD, XAUUSDm, XAUUSD.pro variants to one stable key.
   const compact = value.replace(/[^A-Z0-9]/g, '');
   if (!compact) return '';
   if (/^[A-Z]{6}[A-Z]$/.test(compact)) return compact.slice(0, 6);
@@ -15,93 +17,66 @@ const canonicalSymbol = (raw) => {
   return compact;
 };
 
-const purgeTradingViewPersistedState = () => {
-  //Sanket v2.0 - Clear only TradingView persisted blobs that can break schema on library upgrades.
-  // This removes stale layout/settings entries that trigger "state data type ... does not match schema".
-  const shouldPurgeKey = (key) => {
-    const k = String(key || '').toLowerCase();
-    return (
-      k.includes('tradingview') ||
-      k.includes('tv_chart') ||
-      k.includes('chartproperties') ||
-      k.includes('chartlayout') ||
-      k.includes('charting_library') ||
-      k.includes('tv_ecosystem') ||
-      k.includes('tv.study') ||
-      k.includes('study_templates')
-    );
-  };
-
-  try {
-    const localKeys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && shouldPurgeKey(key)) localKeys.push(key);
-    }
-    localKeys.forEach((k) => localStorage.removeItem(k));
-  } catch (e) {}
-
-  try {
-    const sessionKeys = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && shouldPurgeKey(key)) sessionKeys.push(key);
-    }
-    sessionKeys.forEach((k) => sessionStorage.removeItem(k));
-  } catch (e) {}
-};
-
 /**
- * Production-Grade Trading Chart Component
- * Manages trade visualization using TradingView Charting Library
- * Integrates TradeLineManager for Exness-style draggable order lines.
+ * Production-Grade Trading Chart Component — v7.55
+ * - Persists symbol, interval, and all chart settings across refreshes.
+ * - Volume indicator and other indicators are saved/restored automatically.
+ * - Active tab symbol is always what the chart loads on refresh.
  */
 const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeModify }) => {
-  const containerRef = useRef(null);
-  const widgetRef = useRef(null);
-  const chartRef = useRef(null);
-  const managerRef = useRef(null);
+  const containerRef  = useRef(null);
+  const widgetRef     = useRef(null);
+  const chartRef      = useRef(null);
+  const managerRef    = useRef(null);
   const isInitializingRef = useRef(false);
   const latestSymbolRef = useRef(symbol);
   const latestTradesRef = useRef(trades);
   const latestOnTradeModifyRef = useRef(onTradeModify);
   const [isChartReady, setIsChartReady] = useState(false);
   const chartReadyRef = useRef(false);
-  
-  // Track continuous price for metrics if needed
   const currentPriceRef = useRef(null);
 
+  // ─── Keep latest refs in sync ─────────────────────────────────────────────
   useEffect(() => {
     latestSymbolRef.current = symbol;
     latestTradesRef.current = trades;
     latestOnTradeModifyRef.current = onTradeModify;
+
+    // v7.55: Persist the active tab symbol every time the prop changes
+    if (symbol) {
+      try { localStorage.setItem(LS_SYMBOL, symbol); } catch (e) {}
+    }
   }, [symbol, trades, onTradeModify]);
 
-  /**
-   * Initialize TradingView widget & TradeLineManager once.
-   */
+  // ─── Initialize TradingView widget ONCE ───────────────────────────────────
   useEffect(() => {
     if (!window.TradingView || !containerRef.current) return;
     if (widgetRef.current || isInitializingRef.current) return;
 
-    //Sanket v2.0 - Lock initialization so widget creation cannot run twice for a single mount.
-    // This prevents accidental duplicate TradingView instances and repeated onChartReady churn.
     isInitializingRef.current = true;
 
     try {
-      // purgeTradingViewPersistedState();
+      // v7.55: Read saved interval (fallback "1") and symbol
+      const savedInterval = localStorage.getItem(LS_INTERVAL) || "1";
+      const initSymbol    = latestSymbolRef.current || localStorage.getItem(LS_SYMBOL) || "XAUUSD";
 
       const widget = new window.TradingView.widget({
-        symbol: latestSymbolRef.current || "XAUUSD",
-        interval: "1",
+        // ── Core ──────────────────────────────────────────────────────────
+        symbol:   initSymbol,
+        interval: savedInterval,           // ✅ FIX #2: Use saved interval
         container: containerRef.current,
         library_path: "/charting_library/",
-        load_last_chart: false,
+
+        // ✅ FIX #1: load_last_chart MUST be true to restore indicators/drawings
+        load_last_chart: true,
+
         locale: "en",
         theme: "light",
         autosize: true,
         datafeed: Datafeed,
         symbol_search_request_delay: 1000,
+
+        // ── Feature flags ─────────────────────────────────────────────────
         disabled_features: [
           "header_saveload"
         ],
@@ -112,6 +87,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
           "header_chart_type",
           "trading_objects"
         ],
+
         overrides: {
           "paneProperties.background": "#ffffff",
           "mainSeriesProperties.style": 1,
@@ -121,15 +97,31 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       widget.onChartReady(() => {
         chartReadyRef.current = true;
         setIsChartReady(true);
-        console.log(`[Trading] onChartReady triggered for ${latestSymbolRef.current}`);
-        widgetRef.current = widget;
-        chartRef.current = widget.activeChart();
+        console.log(`[v7.55] Chart ready | symbol=${initSymbol} | interval=${savedInterval}`);
 
-        // Instantiate manager
-        managerRef.current = new TradeLineManager(chartRef, (...args) => latestOnTradeModifyRef.current?.(...args));
+        widgetRef.current = widget;
+        chartRef.current  = widget.activeChart();
+
+        // ✅ FIX #2: Save interval whenever user changes it
+        chartRef.current.onIntervalChanged().subscribe(null, (interval) => {
+          console.log(`[v7.55] Interval changed → ${interval}`);
+          try { localStorage.setItem(LS_INTERVAL, interval); } catch (e) {}
+        });
+
+        // ✅ FIX #3: Save symbol whenever chart changes it (e.g. via search bar)
+        chartRef.current.onSymbolChanged().subscribe(null, () => {
+          try {
+            const sym = chartRef.current?.symbol?.();
+            if (sym) localStorage.setItem(LS_SYMBOL, sym);
+          } catch (e) {}
+        });
+
+        // Instantiate trade line manager
+        managerRef.current = new TradeLineManager(
+          chartRef,
+          (...args) => latestOnTradeModifyRef.current?.(...args)
+        );
         managerRef.current.initialize(widget);
-        
-        // Initial sync
         managerRef.current.syncTrades(latestTradesRef.current, latestSymbolRef.current);
 
         isInitializingRef.current = false;
@@ -144,21 +136,19 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         if (widgetRef.current) {
           widgetRef.current.remove();
           widgetRef.current = null;
-          chartRef.current = null;
+          chartRef.current  = null;
           chartReadyRef.current = false;
           setIsChartReady(false);
         }
       };
     } catch (err) {
       isInitializingRef.current = false;
-      console.error('[Trading] Chart Init error:', err);
+      console.error('[v7.55] Chart init error:', err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * Switch symbol without recreating widget.
-   */
+  // ─── Switch symbol without recreating widget ───────────────────────────────
   useEffect(() => {
     if (!widgetRef.current || !chartReadyRef.current || !symbol) return;
     try {
@@ -166,51 +156,50 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       if (typeof current === 'string' && canonicalSymbol(current) === canonicalSymbol(symbol)) return;
     } catch (e) {}
 
+    // v7.55: Use saved interval when switching symbols (not hardcoded "1")
+    const savedInterval = localStorage.getItem(LS_INTERVAL) || "1";
+
     try {
-      widgetRef.current.setSymbol(symbol, "1", () => {
+      widgetRef.current.setSymbol(symbol, savedInterval, () => {
+        console.log(`[v7.55] Symbol switched → ${symbol} @ ${savedInterval}`);
         if (managerRef.current) {
           managerRef.current.syncTrades(latestTradesRef.current, symbol);
         }
       });
     } catch (e) {
-      console.error('[Trading] setSymbol error:', e);
+      console.error('[v7.55] setSymbol error:', e);
     }
   }, [symbol, isChartReady]);
 
-  /**
-   * Sync trades to TradeLineManager whenever they change
-   */
+  // ─── Sync trades whenever they change ─────────────────────────────────────
   useEffect(() => {
     if (managerRef.current) {
       managerRef.current.syncTrades(trades, symbol);
     }
   }, [trades, symbol]);
 
-  /**
-   * Live Price stream listener for continuous DOM updates or tracking
-   */
+  // ─── Live price stream listener ───────────────────────────────────────────
   useEffect(() => {
-    const handlePriceUpdate = (e) => { // Renamed from handlePrice to handlePriceUpdate
+    const handlePriceUpdate = (e) => {
       if (e.detail?.symbol === symbol) {
         currentPriceRef.current = e.detail.bid;
       }
     };
-    const priceEvents = getPriceEvents(); // Changed from getMetaApiPriceEvents to getPriceEvents
-    priceEvents.addEventListener('priceUpdate', handlePriceUpdate); // Changed from priceStream to priceEvents and handlePrice to handlePriceUpdate
-    
+    const priceEvents = getPriceEvents();
+    priceEvents.addEventListener('priceUpdate', handlePriceUpdate);
     return () => {
-      priceEvents.removeEventListener("priceUpdate", handlePriceUpdate); // Changed from priceStream to priceEvents and handlePrice to handlePriceUpdate
+      priceEvents.removeEventListener("priceUpdate", handlePriceUpdate);
     };
   }, [symbol]);
 
   return (
-    <div 
-      ref={containerRef} 
-      style={{ 
-        width: "100%", 
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
         height: "100%",
         backgroundColor: "#0d0d0d"
-      }} 
+      }}
     />
   );
 };

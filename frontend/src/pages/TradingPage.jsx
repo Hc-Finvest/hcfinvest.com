@@ -3091,7 +3091,16 @@ const TradingPage = () => {
   const [challengeRules, setChallengeRules] = useState(null)
   const [loading, setLoading] = useState(true)
   const [chartLoading, setChartLoading] = useState(false)
-  const [selectedInstrument, setSelectedInstrument] = useState({ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 })
+  const [selectedInstrument, setSelectedInstrument] = useState(() => {
+    try {
+      const savedActiveTab = localStorage.getItem('activeTab') || 'XAUUSD.i'
+      const savedOpenTabs = JSON.parse(localStorage.getItem('openTabs') || '[]')
+      const activeTabData = savedOpenTabs.find(t => t.symbol === savedActiveTab)
+      return activeTabData || { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
+    } catch {
+      return { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
+    }
+  })
   const [showInstruments, setShowInstruments] = useState(window.innerWidth >= 768)
   const [showOrderPanel, setShowOrderPanel] = useState(window.innerWidth >= 768)
   const [orderTab, setOrderTab] = useState('Market')
@@ -3105,7 +3114,10 @@ const TradingPage = () => {
   const [openTabs, setOpenTabs] = useState(() => {
     try {
       const saved = localStorage.getItem('openTabs')
-      return saved ? JSON.parse(saved) : [{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }]
+      return saved ? JSON.parse(saved) : [
+        { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 },
+        { symbol: 'EURUSD.i', name: 'Euro vs US Dollar', bid: 0, ask: 0, spread: 0 }
+      ]
     } catch { return [{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }] }
   })
   const [activeTab, setActiveTab] = useState(() => {
