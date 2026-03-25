@@ -4885,6 +4885,12 @@ const TradingPage = () => {
               symbol={selectedInstrument?.symbol} 
               trades={openTrades} 
               onTradeModify={handleTradeModify}
+              isDarkMode={isDarkMode}
+              onSymbolChange={(newSym) => {
+                // 🔄 Sync chart's internal search with parent tabs
+                const inst = instruments.find(i => i.symbol === newSym) || { symbol: newSym, name: newSym };
+                handleInstrumentClick(inst);
+              }}
             />
             {/* Live Price Status Indicator */}
             <div className="flex items-center justify-between px-2 py-1 text-xs">

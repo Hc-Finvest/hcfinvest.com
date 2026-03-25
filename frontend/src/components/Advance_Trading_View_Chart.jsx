@@ -23,7 +23,7 @@ const canonicalSymbol = (raw) => {
  * - Volume indicator and other indicators are saved/restored automatically.
  * - Active tab symbol is always what the chart loads on refresh.
  */
-const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeModify }) => {
+const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeModify, isDarkMode = false, onSymbolChange }) => {
   const containerRef  = useRef(null);
   const widgetRef     = useRef(null);
   const chartRef      = useRef(null);
@@ -71,7 +71,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         load_last_chart: true,
 
         locale: "en",
-        theme: "light",
+        theme: isDarkMode ? "dark" : "light", // ✅ v7.55: Sync with app theme
         autosize: true,
         datafeed: Datafeed,
         symbol_search_request_delay: 1000,
@@ -89,7 +89,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         ],
 
         overrides: {
-          "paneProperties.background": "#ffffff",
+          "paneProperties.background": isDarkMode ? "#0d0d0d" : "#ffffff", // ✅ v7.55: Dynamic background
           "mainSeriesProperties.style": 1,
         }
       });
@@ -97,7 +97,7 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
       widget.onChartReady(() => {
         chartReadyRef.current = true;
         setIsChartReady(true);
-        console.log(`[v7.55] Chart ready | symbol=${initSymbol} | interval=${savedInterval}`);
+        console.log(`[v7.55] Chart ready | symbol=${initSymbol} | interval=${savedInterval} | theme=${isDarkMode ? 'dark' : 'light'}`);
 
         widgetRef.current = widget;
         chartRef.current  = widget.activeChart();
@@ -109,10 +109,15 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         });
 
         // ✅ FIX #3: Save symbol whenever chart changes it (e.g. via search bar)
+        // AND notify parent TradingPage to sync tabs
         chartRef.current.onSymbolChanged().subscribe(null, () => {
           try {
             const sym = chartRef.current?.symbol?.();
-            if (sym) localStorage.setItem(LS_SYMBOL, sym);
+            if (sym) {
+              console.log(`[v7.55] Internal symbol changed → ${sym}`);
+              localStorage.setItem(LS_SYMBOL, sym);
+              if (onSymbolChange) onSymbolChange(sym); // 🔄 Sync with parent tabs
+            }
           } catch (e) {}
         });
 
@@ -148,12 +153,36 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ─── Dynamic Theme Switch ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!widgetRef.current || !chartReadyRef.current) return;
+    
+    try {
+      const theme = isDarkMode ? "dark" : "light";
+      const bg = isDarkMode ? "#0d0d0d" : "#ffffff";
+      
+      // Update overrides for background
+      widgetRef.current.applyOverrides({
+        "paneProperties.background": bg,
+      });
+
+      // ✅ v7.55: Use changeTheme for a full aesthetic transition
+      if (typeof widgetRef.current.changeTheme === 'function') {
+        widgetRef.current.changeTheme(theme);
+        console.log(`[v7.55] Target theme switched → ${theme}`);
+      }
+    } catch (e) {
+      console.error('[v7.55] Theme update error:', e);
+    }
+  }, [isDarkMode, isChartReady]);
+
   // ─── Switch symbol without recreating widget ───────────────────────────────
   useEffect(() => {
     if (!widgetRef.current || !chartReadyRef.current || !symbol) return;
     try {
       const current = chartRef.current?.symbol?.();
-      if (typeof current === 'string' && canonicalSymbol(current) === canonicalSymbol(symbol)) return;
+      // 🛡️ v7.55: Use more strict comparison to avoid skipping necessary updates
+      if (typeof current === 'string' && current.trim().toUpperCase() === symbol.trim().toUpperCase()) return;
     } catch (e) {}
 
     // v7.55: Use saved interval when switching symbols (not hardcoded "1")
