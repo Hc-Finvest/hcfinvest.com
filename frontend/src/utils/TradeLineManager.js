@@ -204,12 +204,16 @@ export class TradeLineManager {
 
           console.log(`[TradeManager] Confirming EXACT SPAWN: ${t.toUpperCase()} -> ${price} (Targeted)`);
           
-          // ✨ OPTIMISTIC RAW PLOT: Immediately draw solid line so user doesn't wait 2.5s for API fallback
-          const color = t === 'tp' ? '#4caf50' : '#f44336';
-          const shapeRef = await this._createShape(tid, t, price, {
-              color, style: 1, width: 1, text: `${t.toUpperCase()}`
-          });
-          this.lines[tid][t] = shapeRef;
+          // ✨ OPTIMISTIC RAW PLOT
+          if (this.lines[tid][t]) {
+              this._updateShape(this.lines[tid][t].tvId, price);
+          } else {
+              const color = t === 'tp' ? '#4caf50' : '#f44336';
+              const shapeRef = await this._createShape(tid, t, price, {
+                  color, style: 1, width: 1, text: `${t.toUpperCase()}`
+              });
+              this.lines[tid][t] = shapeRef;
+          }
 
           await this._commitTrade(tid, t, price); // Network execution
       }
