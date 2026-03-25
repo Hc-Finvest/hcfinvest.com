@@ -380,10 +380,29 @@ export class TradeLineManager {
         }
     } catch {}
 
-    // Preserve existing value if not the one being modified
+    // 🛡️ v7.36 Ultimate State Integrity
+    // Use physical TV shapes as the primary fallback to prevent asynchronous Redux lag from overwriting new lines with zeros!
+    let fallbackSL = trade.stopLoss || trade.sl || 0;
+    if (this.lines[tid]?.sl?.tvId) {
+        try {
+            const slShape = this.widget.chart().getShapeById(this.lines[tid].sl.tvId);
+            const p = slShape?.getPoints?.()?.[0]?.price;
+            if (Number.isFinite(p)) fallbackSL = p;
+        } catch {}
+    }
+
+    let fallbackTP = trade.takeProfit || trade.tp || 0;
+    if (this.lines[tid]?.tp?.tvId) {
+        try {
+            const tpShape = this.widget.chart().getShapeById(this.lines[tid].tp.tvId);
+            const p = tpShape?.getPoints?.()?.[0]?.price;
+            if (Number.isFinite(p)) fallbackTP = p;
+        } catch {}
+    }
+
     const roundedPrice = parseFloat(price.toFixed(decimals));
-    const currentSL = type === 'sl' ? roundedPrice : parseFloat(Number(trade.stopLoss || trade.sl || 0).toFixed(decimals));
-    const currentTP = type === 'tp' ? roundedPrice : parseFloat(Number(trade.takeProfit || trade.tp || 0).toFixed(decimals));
+    const currentSL = type === 'sl' ? roundedPrice : parseFloat(Number(fallbackSL).toFixed(decimals));
+    const currentTP = type === 'tp' ? roundedPrice : parseFloat(Number(fallbackTP).toFixed(decimals));
 
     console.log('%c [TradeManager] 🎯 ZERO-SLIPPAGE PAYLOAD ', 'background: #4caf50; color: white; padding: 2px 4px;', { 
         action: type.toUpperCase(), 
