@@ -2,9 +2,10 @@ import { API_URL } from '../config/api';
 
 /**
  * ============================================================
- * TradeLineManager v7.28 — Phase 66: THE PERFECTIONIST
+ * TradeLineManager v7.51 — Phase 67: THE PINNED ENTRY
  * ============================================================
- * v7.28 Perfectionist:
+ * v7.51 Pinned Entry:
+ * - Immediate Snap-Back (Pin entry line during drag)
  * - Sync Lock (2.5s guard after commit to prevent flicker)
  * - Dynamic Precision (Instrument-aware decimal places)
  * - Absolute Entry Pinning (Snap-back refinement)
@@ -12,8 +13,8 @@ import { API_URL } from '../config/api';
  * ============================================================
  */
 // ─── Auth ────────────────────────────────────────────────────
-window.TRADE_ENGINE_VERSION = '7.28-PERFECT';
-console.log('%c [TradeManager v7.50] PRODUCTION READY ENGINE ACTIVE ', 'background: #222; color: #4caf50; font-size: 20px;');
+window.TRADE_ENGINE_VERSION = '7.51-PINNED';
+console.log('%c [TradeManager v7.60] PRODUCTION READY ENGINE ACTIVE ', 'background: #222; color: #4caf50; font-size: 20px;');
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -147,9 +148,16 @@ export class TradeLineManager {
         const trade = this.getTradeById(meta.tradeId);
         if (!trade) return;
 
+        // 🛡️ v7.51 IMMEDIATE PINNING: Force the entry line back to its original price 
+        // DURING the move event so it never visually leaves its position.
+        const realEntry = Number(trade.openPrice || trade.price);
+        if (realEntry && Math.abs(price - realEntry) > 0.00001) {
+            this._updateShape(tvId, realEntry);
+        }
+
         const side = String(trade.side || trade.type || '').toLowerCase();
         const isBuy = side.includes('buy') || side.includes('long');
-        const entry = Number(trade.openPrice || trade.price);
+        const entry = realEntry;
         
         let ghostType = isBuy ? (price > entry ? 'tp' : 'sl') : (price > entry ? 'sl' : 'tp');
 
