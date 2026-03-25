@@ -163,7 +163,7 @@ const Datafeed = {
       volume_precision: 2,
       data_status: "streaming"
     };
-    console.log(`[sanket] resolveSymbol: ${symbolName} using pricescale ${pricescale}`);
+    console.log(`[v7.42] resolveSymbol: ${symbolName} using pricescale ${pricescale}`);
     setTimeout(() => onSymbolResolvedCallback(symbolInfo), 0);
   },
 
