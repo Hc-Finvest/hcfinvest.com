@@ -254,7 +254,7 @@ const InstructionsPage = () => {
       )} */}
                     <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-3 sm:px-6 text-white">
                       <div className="font-semibold text-sm sm:text-base">
-                        Support
+                        Instructions
                       </div>
             
                       <div className="flex items-center gap-4 sm:gap-5">

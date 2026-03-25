@@ -225,9 +225,8 @@ const totalPnl = openTrades.reduce(
 );
 
 
-
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen  bg-[#fafafa]">
       {/* Sidebar */}
       <Sidebar />
 
@@ -257,7 +256,7 @@ const totalPnl = openTrades.reduce(
             {banners.map((banner, index) => (
               <div
                 key={index}
-                className={`min-w-full p-6 text-white bg-gradient-to-r ${banner.bg} relative`}
+                className={`min-w-full h-80 p-6 text-white bg-gradient-to-r ${banner.bg} relative`}
               >
                 <span className="text-xs bg-white/10 px-3 py-1 rounded-full">
                   Limited Time
