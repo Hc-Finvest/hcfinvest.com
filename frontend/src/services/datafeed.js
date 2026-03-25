@@ -70,11 +70,63 @@ const normalizeBars = (candles = []) => {
   return [...barsByTime.values()].sort((a, b) => a.time - b.time);
 };
 
+// All supported symbols for the built-in TV symbol search
+const ALL_SYMBOLS = [
+  // Forex
+  { symbol: 'EURUSD.i', description: 'Euro / US Dollar', type: 'forex' },
+  { symbol: 'GBPUSD.i', description: 'Great British Pound / US Dollar', type: 'forex' },
+  { symbol: 'USDJPY.i', description: 'US Dollar / Japanese Yen', type: 'forex' },
+  { symbol: 'USDCHF.i', description: 'US Dollar / Swiss Franc', type: 'forex' },
+  { symbol: 'AUDUSD.i', description: 'Australian Dollar / US Dollar', type: 'forex' },
+  { symbol: 'NZDUSD.i', description: 'New Zealand Dollar / US Dollar', type: 'forex' },
+  { symbol: 'USDCAD.i', description: 'US Dollar / Canadian Dollar', type: 'forex' },
+  { symbol: 'EURGBP.i', description: 'Euro / Great British Pound', type: 'forex' },
+  { symbol: 'EURJPY.i', description: 'Euro / Japanese Yen', type: 'forex' },
+  { symbol: 'GBPJPY.i', description: 'Great British Pound / Japanese Yen', type: 'forex' },
+  { symbol: 'EURAUD.i', description: 'Euro / Australian Dollar', type: 'forex' },
+  { symbol: 'EURCAD.i', description: 'Euro / Canadian Dollar', type: 'forex' },
+  { symbol: 'EURCHF.i', description: 'Euro / Swiss Franc', type: 'forex' },
+  { symbol: 'AUDJPY.i', description: 'Australian Dollar / Japanese Yen', type: 'forex' },
+  { symbol: 'CADJPY.i', description: 'Canadian Dollar / Japanese Yen', type: 'forex' },
+  { symbol: 'CHFJPY.i', description: 'Swiss Franc / Japanese Yen', type: 'forex' },
+  { symbol: 'GBPAUD.i', description: 'Great British Pound / Australian Dollar', type: 'forex' },
+  { symbol: 'GBPCAD.i', description: 'Great British Pound / Canadian Dollar', type: 'forex' },
+  { symbol: 'AUDCAD.i', description: 'Australian Dollar / Canadian Dollar', type: 'forex' },
+  { symbol: 'NZDJPY.i', description: 'New Zealand Dollar / Japanese Yen', type: 'forex' },
+  // Metals
+  { symbol: 'XAUUSD.i', description: 'CFDs on Gold (US$ / OZ)', type: 'commodity' },
+  { symbol: 'XAGUSD.i', description: 'CFDs on Silver (US$ / OZ)', type: 'commodity' },
+  // Indices
+  { symbol: 'US30.i',  description: 'US Wall Street 30', type: 'index' },
+  { symbol: 'US500.i', description: 'US S&P 500', type: 'index' },
+  { symbol: 'US100.i', description: 'US NASDAQ 100', type: 'index' },
+  { symbol: 'UK100.i', description: 'UK FTSE 100', type: 'index' },
+  // Crypto
+  { symbol: 'BTCUSD.i', description: 'Bitcoin / US Dollar', type: 'crypto' },
+  { symbol: 'ETHUSD.i', description: 'Ethereum / US Dollar', type: 'crypto' },
+];
+
 const Datafeed = {
   interval: null,
 
   onReady: (callback) => {
     setTimeout(() => callback(configurationData));
+  },
+
+  // Required by TradingView — powers the built-in symbol search dialog
+  searchSymbols: (userInput, _exchange, _symbolType, onResult) => {
+    const query = (userInput || '').toUpperCase();
+    const results = ALL_SYMBOLS
+      .filter(s => s.symbol.toUpperCase().includes(query) || s.description.toUpperCase().includes(query))
+      .map(s => ({
+        symbol: s.symbol,
+        full_name: s.symbol,
+        description: s.description,
+        exchange: 'AllTick',
+        type: s.type,
+        ticker: s.symbol,
+      }));
+    onResult(results);
   },
 
   resolveSymbol: async (symbolName, onSymbolResolvedCallback) => {

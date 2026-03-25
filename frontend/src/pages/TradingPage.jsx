@@ -3102,8 +3102,17 @@ const TradingPage = () => {
   const [activePositionTab, setActivePositionTab] = useState('Positions')
   const [oneClickTrading, setOneClickTrading] = useState(false)
   const [selectedSide, setSelectedSide] = useState('BUY') // BUY or SELL
-  const [openTabs, setOpenTabs] = useState([{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }])
-  const [activeTab, setActiveTab] = useState('XAUUSD.i')
+  const [openTabs, setOpenTabs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('openTabs')
+      return saved ? JSON.parse(saved) : [{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }]
+    } catch { return [{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }] }
+  })
+  const [activeTab, setActiveTab] = useState(() => {
+    try { return localStorage.getItem('activeTab') || 'XAUUSD.i' } catch { return 'XAUUSD.i' }
+  })
+  const [showSymbolPicker, setShowSymbolPicker] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
   const [showTakeProfit, setShowTakeProfit] = useState(false)
   const [showStopLoss, setShowStopLoss] = useState(false)
   const [takeProfit, setTakeProfit] = useState('')
@@ -3229,6 +3238,22 @@ const TradingPage = () => {
       marketDataApiService.disconnect()
     }
   }, [accountId])
+
+  // Persist open tabs + active tab to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('openTabs', JSON.stringify(openTabs.map(t => ({ 
+        symbol: t.symbol, 
+        name: t.name || t.symbol, 
+        bid: 0, 
+        ask: 0, 
+        spread: 0 
+      }))))
+      localStorage.setItem('activeTab', activeTab)
+    } catch (err) {
+      console.error('[TradingPage] Failed to save tabs to localStorage:', err)
+    }
+  }, [openTabs, activeTab])
 
   // Fetch all supported symbols from backend
   const fetchSymbolsFromBackend = async () => {
@@ -4783,9 +4808,50 @@ const TradingPage = () => {
                 )}
               </div>
             ))}
-            <button className={`ml-1 p-1.5 rounded ${isDarkMode ? 'text-gray-500 hover:text-white hover:bg-[#1a1a1a]' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}>
+            <button 
+              onClick={() => { setShowSymbolPicker(v => !v); setPickerSearch('') }}
+              className={`ml-1 p-1.5 rounded transition-colors ${isDarkMode ? 'text-gray-500 hover:text-white hover:bg-[#1a1a1a]' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
+              title="Add chart tab"
+            >
               <Plus size={16} />
             </button>
+            {/* Symbol Picker Dropdown */}
+            {showSymbolPicker && (
+              <div className={`absolute top-10 left-2 z-50 w-72 rounded-lg shadow-2xl border overflow-hidden ${
+                isDarkMode ? 'bg-[#151515] border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <div className="px-3 py-2 border-b border-gray-700">
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search symbol..."
+                    value={pickerSearch}
+                    onChange={e => setPickerSearch(e.target.value)}
+                    onKeyDown={e => e.key === 'Escape' && setShowSymbolPicker(false)}
+                    className={`w-full text-sm rounded px-2 py-1.5 focus:outline-none border ${
+                      isDarkMode ? 'bg-[#1a1a1a] border-gray-600 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900'
+                    }`}
+                  />
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {instruments
+                    .filter(i => i.symbol.toLowerCase().includes(pickerSearch.toLowerCase()))
+                    .map(i => (
+                      <button
+                        key={i.symbol}
+                        onClick={() => { handleInstrumentClick(i); setShowSymbolPicker(false); setPickerSearch('') }}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                          isDarkMode ? 'hover:bg-[#1a1a1a] text-gray-200' : 'hover:bg-gray-50 text-gray-800'
+                        } ${openTabs.find(t => t.symbol === i.symbol) ? 'opacity-40 cursor-default' : ''}`}
+                      >
+                        <span className="font-medium">{i.symbol}</span>
+                        <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{i.category}</span>
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Chart - Lightweight Charts with real-time updates */}
