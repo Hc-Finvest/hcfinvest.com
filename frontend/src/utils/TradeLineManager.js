@@ -191,10 +191,18 @@ export class TradeLineManager {
       
       const ghost = this.lines[tid]?.ghost;
       if (ghost) {
-          console.log(`[TradeManager] Confirming SPAWN: ${ghost.type} -> ${price} (Optimistic Local Plot)`);
-          const t = ghost.type;
           this._destroyShape(ghost.tvId);
           this.lines[tid].ghost = null;
+          
+          // 🛡️ v7.35 Absolute Final Target Verification
+          // Recalculating the drop classification here completely bypasses any visual lag or frame-drops 
+          // that might have caused the temporary Ghost shape to misread the ultimate destination.
+          const side = String(trade.side || trade.type || '').toLowerCase();
+          const isBuy = side.includes('buy') || side.includes('long');
+          const entryPrice = Number(trade.openPrice || trade.price);
+          const t = isBuy ? (price > entryPrice ? 'tp' : 'sl') : (price < entryPrice ? 'tp' : 'sl');
+
+          console.log(`[TradeManager] Confirming EXACT SPAWN: ${t.toUpperCase()} -> ${price} (Targeted)`);
           
           // ✨ OPTIMISTIC RAW PLOT: Immediately draw solid line so user doesn't wait 2.5s for API fallback
           const color = t === 'tp' ? '#4caf50' : '#f44336';
@@ -317,13 +325,13 @@ export class TradeLineManager {
     } catch (e) { return null; }
   }
 
-  _updateShape(tvId, price, text) {
+  _updateShape(tvId, price, text = null) {
     const shape = this.widget.chart().getShapeById(tvId);
     if (!shape) return;
     this.isCommitBlocked = true;
     try {
         shape.setPoints([{ price }]);
-        shape.setProperties({ overrides: { text } });
+        if (text) shape.setProperties({ overrides: { text } });
     } finally { 
         // 50ms suffocation for stray TV points_changed echoes
         setTimeout(() => { this.isCommitBlocked = false; }, 50);
