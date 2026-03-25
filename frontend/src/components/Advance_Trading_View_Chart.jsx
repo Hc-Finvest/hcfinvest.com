@@ -181,8 +181,8 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
     if (!widgetRef.current || !chartReadyRef.current || !symbol) return;
     try {
       const current = chartRef.current?.symbol?.();
-      // 🛡️ v7.55: Use more strict comparison to avoid skipping necessary updates
-      if (typeof current === 'string' && current.trim().toUpperCase() === symbol.trim().toUpperCase()) return;
+      // 🛡️ v7.57: Revert strict comparison to use canonicalSymbol to prevent bouncing loops with .i datafeeds
+      if (typeof current === 'string' && canonicalSymbol(current) === canonicalSymbol(symbol)) return;
     } catch (e) {}
 
     // v7.55: Use saved interval when switching symbols (not hardcoded "1")
