@@ -87,13 +87,19 @@ export class TradeLineManager {
   // ─── Events ──────────────────────────────────────────────────
 
   _attachEvents(widget) {
+    this.commitTimers = {};
+
     this._handler = (id, status) => {
       const tvId = String(id);
       const meta = this.tvIdMap[tvId];
       if (!meta || this.isCommitBlocked) return;
 
       const action = String(status?.status || status || '').toLowerCase();
-      console.log(`[TradeManager] EVENT: ${tvId} (${meta.type}) status="${action}"`);
+      
+      // Stop logging spammy points_changed events
+      if (action !== 'points_changed') {
+          console.log(`[TradeManager] EVENT: ${tvId} (${meta.type}) status="${action}"`);
+      }
 
       if (action === 'started') {
         this.activeDragId = meta.tradeId;
@@ -101,14 +107,15 @@ export class TradeLineManager {
         this.dragStartPrice = shape?.getPoints?.()?.[0]?.price || 0;
       }
 
-      if (action === 'move') {
-        this._onNativeMove(tvId, meta);
-      }
+      // 🛡️ v7.30 Debounced Real-Time Drag Parsing
+      // Never use properties_changed, it triggers infinite snap-back loops when labels update
+      if (action === 'points_changed') {
+          if (meta.type === 'entry') this._onNativeMove(tvId, meta); // spawn ghost
 
-      // 🛡️ v7.27 Universal Compatibility Mapping
-      // Some TV versions use 'properties_changed' as the final drag release event.
-      if (action === 'stopped' || action === 'finished' || action === 'properties_changed') {
-        this._onNativeStop(tvId, meta);
+          if (this.commitTimers[tvId]) clearTimeout(this.commitTimers[tvId]);
+          this.commitTimers[tvId] = setTimeout(() => {
+              this._onNativeStop(tvId, meta);
+          }, 750);
       }
     };
     widget.subscribe('drawing_event', this._handler);
@@ -119,10 +126,6 @@ export class TradeLineManager {
     const shape = chart.getShapeById(tvId);
     const price = shape?.getPoints?.()?.[0]?.price;
     if (!price || this.isUpdatingGhost) return;
-
-    // ─── Label Update ──────────────────────────────────────────
-    const labelText = `${meta.type.toUpperCase()}  ${fmt(price)}`;
-    shape.setProperties({ overrides: { text: labelText } });
 
     // ─── MT5 Ghosting (Spawn Logic) ─────────────────────────────
     if (meta.type === 'entry') {
@@ -176,7 +179,7 @@ export class TradeLineManager {
     const shape = chart.getShapeById(tvId);
     const price = shape?.getPoints?.()?.[0]?.price;
     
-    console.log(`[TradeManager] Drag Stop: ${meta.type} (TV:${tvId}) price=${price}`);
+    console.log(`[TradeManager] Drag Stop [750ms final]: ${meta.type} (TV:${tvId}) price=${price}`);
 
     if (!price || !meta.tradeId) {
         this.activeDragId = null;
@@ -200,8 +203,7 @@ export class TradeLineManager {
       // 🛡️ v7.25 Forced Snap-Back: The Entry line never moves on the chart.
       const realEntry = Number(trade?.openPrice || trade?.price);
       if (shape && realEntry) {
-          shape.setPoints([{ price: realEntry }]);
-          shape.setProperties({ overrides: { text: `ENTRY  ${fmt(realEntry)}` } });
+          this._updateShape(tvId, realEntry, `ENTRY  ${fmt(realEntry)}`);
       }
       
       setTimeout(() => { this.activeDragId = null; }, 100); 
@@ -209,8 +211,9 @@ export class TradeLineManager {
     }
 
     if (meta.type === 'sl' || meta.type === 'tp') {
-        console.log(`[TradeManager] Confirming MOVE: ${meta.type} -> ${price}`);
+        console.log(`[TradeManager] Confirming ${meta.type.toUpperCase()} DROP -> ${price}`);
         await this._commitTrade(meta.tradeId, meta.type, price);
+        this._updateShape(tvId, price, `${meta.type.toUpperCase()}  ${fmt(price)}`);
     }
     
     setTimeout(() => { this.activeDragId = null; }, 500);
@@ -333,7 +336,10 @@ export class TradeLineManager {
     try {
         shape.setPoints([{ price }]);
         shape.setProperties({ overrides: { text } });
-    } finally { this.isCommitBlocked = false; }
+    } finally { 
+        // 50ms suffocation for stray TV points_changed echoes
+        setTimeout(() => { this.isCommitBlocked = false; }, 50);
+    }
   }
 
   _destroyShape(tvId) {
