@@ -13,7 +13,7 @@ import { API_URL } from '../config/api';
  */
 // ─── Auth ────────────────────────────────────────────────────
 window.TRADE_ENGINE_VERSION = '7.28-PERFECT';
-console.log('%c [TradeManager v7.43] PERFECTIONIST ENGINE ACTIVE ', 'background: #222; color: #e91e63; font-size: 20px;');
+console.log('%c [TradeManager v7.44] PERFECTIONIST ENGINE ACTIVE ', 'background: #222; color: #e91e63; font-size: 20px;');
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -68,7 +68,7 @@ export class TradeLineManager {
     this.isUpdatingGhost = false;
     this.syncLockUntil = 0; // v7.28 Anti-Flicker lock
 
-    console.log('[TradeManager v7.43] Perfectionist Engine Initialized');
+    console.log('[TradeManager v7.44] Perfectionist Engine Initialized');
   }
 
   initialize(widget) {

@@ -163,7 +163,7 @@ const Datafeed = {
       volume_precision: 2,
       data_status: "streaming"
     };
-    console.log(`[v7.43] resolveSymbol: ${symbolName} using pricescale ${pricescale}`);
+    console.log(`[v7.44] resolveSymbol: ${symbolName} using pricescale ${pricescale}`);
     setTimeout(() => onSymbolResolvedCallback(symbolInfo), 0);
   },
 
@@ -259,7 +259,7 @@ const Datafeed = {
     let lastUpdateTime = 0;
     let tickCount = 0;
     let lastTickTime = 0;
-    const throttleMs = 300;
+    const throttleMs = 200;
     let isActive = true;
 
     // Seed real-time aggregation from the last historical bar so refresh during a forming
