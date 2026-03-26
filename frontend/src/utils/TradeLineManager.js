@@ -1,4 +1,4 @@
-﻿import { API_URL } from '../config/api';
+import { API_URL } from '../config/api';
 
 const DEBUG_TRADE_LINES = true; // ≡ƒÅü Diagnostics Activated for Phase 32
 
@@ -43,12 +43,18 @@ export class TradeLineManager {
     this._drawingEventHandler = null;
     this.isInternalUpdate = false; // ≡ƒ¢í∩╕Å Safety: Recursion guard
     this.entryAnchors = {}; // ≡ƒ¢í∩╕Å Phase 33: track stationary visual anchors { tradeId: tvId }
+    this._adminSpreads = {};
   }
 
   //Sanket v2.0 - Small debug logger (off by default) for quick runtime checks.
   _log(...args) {
     if (!DEBUG_TRADE_LINES) return;
     console.log('[TradeLineManager]', ...args);
+  }
+
+  setAdminSpreads(spreads) {
+    this._adminSpreads = spreads || {};
+    this._log('Admin spreads updated', Object.keys(this._adminSpreads).length);
   }
 
   _canonicalSymbol(raw) {
