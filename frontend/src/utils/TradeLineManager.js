@@ -23,7 +23,7 @@ export class TradeLineManager {
     this.chart = null;
     this.trades = [];
     this.syncLockUntil = 0;
-    this.syncLockDuration = 1200; // v7.69: Reduced to 1.2s for snappier UI
+    this.syncLockDuration = 3000; // 🛡️ Phase 34: 3s lock to prevent jitter
     this.activeDragId = null;
     this.dragStartPrice = 0;
     this.isUpdatingGhost = false;
@@ -44,7 +44,8 @@ export class TradeLineManager {
     this.lastCommitTime = 0;           // Track response speeds
     this.avgResponseTime = 0;          // Rolling average
 
-    console.log('[TradeManager v7.70] Retail Lens Synchronization Active');
+    this.isInternalUpdate = false; // 🛡️ Safety: Recursion guard
+    this.entryAnchors = {}; // 🏗️ Phase 33: track stationary visual anchors { tradeId: tvId }
     this._adminSpreads = {};
   }
 
@@ -234,36 +235,47 @@ export class TradeLineManager {
         this.dragMarkupCache = getAdminMarkupValue(trade.symbol, this._adminSpreads);
     }
 
+    // 🏗️ Phase 34: Crosshair Precision - Check if we can get the actual chart crosshair price
+    const crosshairPrice = this.widget?.chart?.().crosshairPrice() || null;
+    const effectivePrice = Number(crosshairPrice ?? price);
+
     const tid = String(meta.tradeId);
 
     if (meta.type === 'entry') {
         const realEntry = Number(trade.openPrice || trade.price);
 
-        if (!this.lines[tid].entryGhost) {
-            const ghostId = await this._createShape(meta.tradeId, `entry-ghost`, realEntry, {
-                color: '#2196F3',
-                style: 2,
-                width: 1,
-                text: 'ENTRY'
-            });
-            if (ghostId) this.lines[tid].entryGhost = { tvId: ghostId.tvId, price: realEntry };
+        // 🏗️ Phase 33: Stationary Anchor System (Replaces Continuous Snapback)
+        if (!this.entryAnchors[tid]) {
+            console.log(`[TradeManager] Creating stationary anchor for ${tid}`);
+            this.isInternalUpdate = true;
+            try {
+                const anchorHeight = await this._createShape(tid, 'entry-ghost', realEntry, {
+                    color: '#2196F3',
+                    style: 3, // Dotted
+                    width: 1,
+                    text: 'ORIGINAL ENTRY'
+                });
+                if (anchorHeight) this.entryAnchors[tid] = anchorHeight.tvId;
+            } finally {
+                this.isInternalUpdate = false;
+            }
         }
 
-        const ghostType = this._determineLineType(trade, price, realEntry);
-        const pnlData = this._calculateDragPnL(trade, price, ghostType);
+        const ghostType = this._determineLineType(trade, effectivePrice, realEntry);
+        const pnlData = this._calculateDragPnL(trade, effectivePrice, ghostType);
         
-        this._updateShape(tvId, price, `NEW ${ghostType.toUpperCase()}`, pnlData);
+        this._updateShape(tvId, effectivePrice, `NEW ${ghostType.toUpperCase()}`, pnlData);
 
         this.isUpdatingGhost = true;
         try {
-            await this._updateSpawnGhost(meta.tradeId, ghostType, price);
+            await this._updateSpawnGhost(meta.tradeId, ghostType, effectivePrice);
         } finally {
             this.isUpdatingGhost = false;
         }
     } else if (meta.type === 'sl' || meta.type === 'tp') {
-        const pnlData = this._calculateDragPnL(trade, price, meta.type);
+        const pnlData = this._calculateDragPnL(trade, effectivePrice, meta.type);
         const label = `${meta.type.toUpperCase()}: ${pnlData.pnl.toFixed(2)} USD`;
-        this._updateShape(tvId, price, label, pnlData);
+        this._updateShape(tvId, effectivePrice, label, pnlData);
     }
   }
 
@@ -310,6 +322,12 @@ export class TradeLineManager {
 
     try {
         if (!price || !meta.tradeId) return;
+
+        // 🏗️ Phase 33: Cleanup Stationary Anchor
+        if (this.entryAnchors[tid]) {
+            this._destroyShape(this.entryAnchors[tid]);
+            delete this.entryAnchors[tid];
+        }
 
         if (meta.type === 'entry') {
             const trade = this.getTradeById(meta.tradeId);
@@ -448,6 +466,7 @@ export class TradeLineManager {
 
   async _createShape(tradeId, type, price, cfg) {
     const chart = this.widget.chart();
+    this.isInternalUpdate = true;
     try {
         const tvId = await chart.createShape(
             { price, time: Math.floor((Date.now() - 60000) / 1000) },
@@ -469,8 +488,12 @@ export class TradeLineManager {
             }
         );
         this.tvIdMap[tvId] = { tradeId, type };
+        this.isInternalUpdate = false;
         return { tvId, price };
-    } catch (e) { return null; }
+    } catch (e) { 
+        this.isInternalUpdate = false;
+        return null; 
+    }
   }
 
   _updateShape(tvId, price, text = null, pnlData = null) {
@@ -501,8 +524,10 @@ export class TradeLineManager {
   }
 
   _destroyShape(tvId) {
+    this.isInternalUpdate = true;
     try { this.widget.chart().removeEntity(tvId); } catch {}
     delete this.tvIdMap[tvId];
+    this.isInternalUpdate = false;
   }
 
   removeTradeLines(tradeId) {
