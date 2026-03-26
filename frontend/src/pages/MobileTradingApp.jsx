@@ -75,7 +75,25 @@ const MobileTradingApp = () => {
   const isCryptoSymbol = (symbol = '') => cryptoSymbols.has(getBaseSymbol(symbol))
   const getSpreadConfig = (symbol = '') => adminSpreads[symbol] || adminSpreads[getBaseSymbol(symbol)] || null
 
-  const categories = ['All', 'Starred', 'Forex', 'Metals', 'Crypto']
+  const getSymbolCategory = (symbol) => {
+    if (isMetalSymbol(symbol)) return 'Metals'
+    if (isCryptoSymbol(symbol)) return 'Crypto'
+    
+    const s = normalizeSymbol(symbol).replace(/\.I$/i, '');
+    const indicesAndCommodities = ['US30', 'US100', 'US500', 'UK100', 'GER40', 'JP225', 'HK50', 'AUS200', 'FRA40', 'ESP35', 'EUSTX50', 'WTI', 'BRENT', 'NGAS', 'OIL'];
+    if (indicesAndCommodities.some(idx => s.includes(idx))) return 'Indices';
+    
+    if (s.length === 6) {
+      const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'NZD', 'CAD'];
+      if (currencies.includes(s.substring(0, 3)) || currencies.includes(s.substring(3, 6))) {
+        return 'Forex';
+      }
+    }
+    
+    return s.length === 6 ? 'Forex' : 'Indices';
+  }
+
+  const categories = ['All', 'Starred', 'Forex', 'Metals', 'Crypto', 'Indices']
 
   // Same instruments as TradingPage
   const defaultInstruments = [
@@ -253,7 +271,7 @@ const MobileTradingApp = () => {
                 bid: 0,
                 ask: 0,
                 spread: 0,
-                category: isMetalSymbol(symbol) ? 'Metals' : (isCryptoSymbol(symbol) ? 'Crypto' : 'Forex'),
+                category: getSymbolCategory(symbol),
                 starred: false
               })
             }
@@ -1558,7 +1576,7 @@ const MobileTradingApp = () => {
           <div className="text-center">
             <p className="text-gray-500 text-[10px]">Spread</p>
             <p className="text-white text-xs">
-              {((getPrice(activeChartTab).ask - getPrice(activeChartTab).bid) * spreadMultiplier).toFixed(1)}
+              {getSpreadConfig(activeChartTab)?.spread > 0 ? (getSpreadConfig(activeChartTab).spread * spreadMultiplier).toFixed(1) : '0.0'}
             </p>
           </div>
           <div className="text-center">
@@ -1714,7 +1732,7 @@ const MobileTradingApp = () => {
               <div className="flex items-center justify-center mb-4 text-xs">
                 <span className="text-gray-500">Spread: </span>
                 <span className="text-white ml-1">
-                  {((getPrice(selectedInstrument.symbol).ask - getPrice(selectedInstrument.symbol).bid) * (selectedInstrument.category === 'Forex' ? 10000 : 1)).toFixed(1)} pips
+                  {getSpreadConfig(selectedInstrument.symbol)?.spread > 0 ? (getSpreadConfig(selectedInstrument.symbol).spread * (selectedInstrument.category === 'Forex' ? 10000 : 1)).toFixed(1) : '0.0'} pips
                 </span>
               </div>
 
