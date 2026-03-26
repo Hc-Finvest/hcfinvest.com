@@ -14,7 +14,14 @@ const NavbarClient = ({title , subtitle}) => {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       
       const navigate = useNavigate();
-      const initial = user?.name?.charAt(0)?.toUpperCase() || "U";
+      // const initial = user?.name?.charAt(0)?.toUpperCase() || "U";
+      const initial = `${user?.firstName || ''} ${user?.lastName || ''}`
+        .trim()
+        .split(' ')
+        .map(n => n.charAt(0))
+        .slice(0, 2)
+        .join('')
+        .toUpperCase() || 'U';
 
     return(
             <div className="flex items-center justify-between mb-6 relative border-b border-gray-300 pb-4">
@@ -35,24 +42,36 @@ const NavbarClient = ({title , subtitle}) => {
               {/* RIGHT - PROFILE */}
                   <div className="relative" >
                     {/* PROFILE BUTTON */}
-                    <div
-                      onClick={() => setOpen(!open)}
-                      className="flex items-center gap-4 cursor-pointer px-5 py-3 rounded-xl bg-white shadow-sm transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:scale-[1.02] active:scale-95 group">
-                      {/* Avatar */}
-                     <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white flex items-center justify-center font-semibold shadow-sm transition-transform duration-200 group-hover:scale-110">
-                        {initial}
-                      </div>
-        
-                      {/* Name */}
-                      <div className="text-right leading-tight">
-                        <p className="text-lg font-semibold text-gray-800">
-                          {user?.firstName || "User"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Pro Trader
-                        </p>
-                      </div>
-                    </div>
+<div
+  onClick={() => setOpen(!open)}
+  className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded-md transition"
+>
+  {/* Avatar */}
+  <div className="w-9 h-9 rounded-full bg-[#22c55e] text-white flex items-center justify-center font-semibold text-sm">
+    {initial}
+  </div>
+
+  {/* Name + Role */}
+  <div className="leading-tight">
+    <p className="text-sm font-semibold text-gray-900">
+      {user?.firstName || "User"}
+    </p>
+    <p className="text-xs text-gray-500">
+      Pro Trader
+    </p>
+  </div>
+
+  {/* Arrow */}
+  <svg
+    className="w-4 h-4 text-gray-500 ml-1"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+</div>
         
           {/* DROPDOWN */}
           {open && (
@@ -79,15 +98,15 @@ const NavbarClient = ({title , subtitle}) => {
                   <span className="font-medium">Profile</span>
                 </li>
         
-                <li className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer transition group">
+                {/* <li className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer transition group">
                   <BadgeCheck size={18} className="text-gray-500 group-hover:text-black" />
                   <span className="font-medium">KYC Verification</span>
-                </li>
+                </li> */}
         
-                <li className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer transition group">
+                {/* <li className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer transition group">
                   <Moon size={18} className="text-gray-500 group-hover:text-black" />
                   <span className="font-medium">Theme Settings</span>
-                </li>
+                </li> */}
 
                 <li
                   onClick={handleLogout}
