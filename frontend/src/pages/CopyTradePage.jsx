@@ -1,614 +1,3 @@
-// Copy Trade. jsx
-
-// import { API_URL } from '../config/api'
-// import { useState, useEffect } from 'react'
-// import { useNavigate } from 'react-router-dom'
-// import { 
-//   LayoutDashboard, User, Wallet, Users, Copy, UserCircle, HelpCircle, FileText, LogOut,
-//   TrendingUp, Star, UserPlus, Pause, Play, X, Search, Filter, ChevronRight, Trophy, Crown, DollarSign,
-//   ArrowLeft, Home, Sun, Moon
-// } from 'lucide-react'
-// import { useTheme } from '../context/ThemeContext'
-// import Sidebar from '../components/Sidebar'
-
-// const CopyTradePage = () => {
-//   const navigate = useNavigate()
-//   const { isDarkMode, toggleDarkMode } = useTheme()
-//   const [activeTab, setActiveTab] = useState('discover')
-//   const [masters, setMasters] = useState([])
-//   const [mySubscriptions, setMySubscriptions] = useState([])
-//   const [myCopyTrades, setMyCopyTrades] = useState([])
-//   const [myFollowers, setMyFollowers] = useState([])
-//   const [loading, setLoading] = useState(true)
-//   const [showFollowModal, setShowFollowModal] = useState(false)
-//   const [selectedMaster, setSelectedMaster] = useState(null)
-//   const [copyMode, setCopyMode] = useState('FIXED_LOT')
-//   const [copyValue, setCopyValue] = useState('0.01')
-//   const [accounts, setAccounts] = useState([])
-//   const [selectedAccount, setSelectedAccount] = useState('')
-//   const [searchTerm, setSearchTerm] = useState('')
-//   const [challengeModeEnabled, setChallengeModeEnabled] = useState(false)
-  
-//   // Master trader states
-//   const [myMasterProfile, setMyMasterProfile] = useState(null)
-//   const [showMasterModal, setShowMasterModal] = useState(false)
-//   const [masterForm, setMasterForm] = useState({
-//     displayName: '',
-//     description: '',
-//     tradingAccountId: '',
-//     requestedCommissionPercentage: 10
-//   })
-//   const [applyingMaster, setApplyingMaster] = useState(false)
-//   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  
-//   // Edit subscription states
-//   const [showEditModal, setShowEditModal] = useState(false)
-//   const [editingSubscription, setEditingSubscription] = useState(null)
-//   const [editAccount, setEditAccount] = useState('')
-//   const [editCopyMode, setEditCopyMode] = useState('FIXED_LOT')
-//   const [editCopyValue, setEditCopyValue] = useState('0.01')
-  
-//   // Commission transfer states
-//   const [showTransferModal, setShowTransferModal] = useState(false)
-//   const [transferAmount, setTransferAmount] = useState('')
-//   const [transferring, setTransferring] = useState(false)
-
-//   const user = JSON.parse(localStorage.getItem('user') || '{}')
-
-//   useEffect(() => {
-//     const handleResize = () => setIsMobile(window.innerWidth < 768)
-//     window.addEventListener('resize', handleResize)
-//     return () => window.removeEventListener('resize', handleResize)
-//   }, [])
-
-//   useEffect(() => {
-//     fetchChallengeStatus()
-//     fetchMasters()
-//     fetchMySubscriptions()
-//     fetchMyCopyTrades()
-//     fetchAccounts()
-//     fetchMyMasterProfile()
-//   }, [])
-
-//   // Fetch my followers when master profile is loaded
-//   useEffect(() => {
-//     if (myMasterProfile?._id) {
-//       fetchMyFollowers()
-//     }
-//   }, [myMasterProfile])
-
-//   const fetchMyFollowers = async () => {
-//     if (!myMasterProfile?._id) return
-//     try {
-//       const res = await fetch(`${API_URL}/copy/my-followers/${myMasterProfile._id}`)
-//       const data = await res.json()
-//       setMyFollowers(data.followers || [])
-//     } catch (error) {
-//       console.error('Error fetching my followers:', error)
-//     }
-//   }
-
-//   const fetchChallengeStatus = async () => {
-//     try {
-//       const res = await fetch(`${API_URL}/prop/status`)
-//       const data = await res.json()
-//       if (data.success) setChallengeModeEnabled(data.enabled)
-//     } catch (error) {
-//       console.error('Error:', error)
-//     }
-//   }
-
-//   const fetchMasters = async () => {
-//     try {
-//       const res = await fetch(`${API_URL}/copy/masters`)
-//       const data = await res.json()
-//       setMasters(data.masters || [])
-//     } catch (error) {
-//       console.error('Error fetching masters:', error)
-//     }
-//     setLoading(false)
-//   }
-
-//   const fetchMySubscriptions = async () => {
-//     try {
-//       const res = await fetch(`${API_URL}/copy/my-subscriptions/${user._id}`)
-//       const data = await res.json()
-//       setMySubscriptions(data.subscriptions || [])
-//     } catch (error) {
-//       console.error('Error fetching subscriptions:', error)
-//     }
-//   }
-
-//   const fetchMyCopyTrades = async () => {
-//     try {
-//       const res = await fetch(`${API_URL}/copy/my-copy-trades/${user._id}?limit=50`)
-//       const data = await res.json()
-//       setMyCopyTrades(data.copyTrades || [])
-//     } catch (error) {
-//       console.error('Error fetching copy trades:', error)
-//     }
-//   }
-
-//   const fetchAccounts = async () => {
-//     try {
-//       const res = await fetch(`${API_URL}/trading-accounts/user/${user._id}`)
-//       const data = await res.json()
-//       setAccounts(data.accounts || [])
-//       if (data.accounts?.length > 0) {
-//         setSelectedAccount(data.accounts[0]._id)
-//         setMasterForm(prev => ({ ...prev, tradingAccountId: data.accounts[0]._id }))
-//       }
-//     } catch (error) {
-//       console.error('Error fetching accounts:', error)
-//     }
-//   }
-
-//   const fetchMyMasterProfile = async () => {
-//     try {
-//       const res = await fetch(`${API_URL}/copy/master/my-profile/${user._id}`)
-//       const data = await res.json()
-//       if (data.master) {
-//         setMyMasterProfile(data.master)
-//       }
-//     } catch (error) {
-//       // User is not a master - that's okay
-//       console.log('No master profile found')
-//     }
-//   }
-
-//   const handleApplyMaster = async () => {
-//     const accountId = masterForm.tradingAccountId || (accounts.length > 0 ? accounts[0]._id : '')
-    
-//     if (!masterForm.displayName.trim()) {
-//       alert('Please enter a display name')
-//       return
-//     }
-//     if (!accountId) {
-//       alert('Please select a trading account')
-//       return
-//     }
-    
-//     // Update form with selected account if not set
-//     const formData = {
-//       ...masterForm,
-//       tradingAccountId: accountId
-//     }
-
-//     setApplyingMaster(true)
-//     try {
-//       const res = await fetch(`${API_URL}/copy/master/apply`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           userId: user._id,
-//           ...formData
-//         })
-//       })
-
-//       const data = await res.json()
-//       if (data.master) {
-//         alert('Application submitted successfully! Please wait for admin approval.')
-//         setShowMasterModal(false)
-//         fetchMyMasterProfile()
-//       } else {
-//         alert(data.message || 'Failed to submit application')
-//       }
-//     } catch (error) {
-//       console.error('Error applying as master:', error)
-//       alert('Failed to submit application')
-//     }
-//     setApplyingMaster(false)
-//   }
-
-//   // Transfer pending commission to trading account
-//   const handleTransferCommission = async () => {
-//     if (!transferAmount || parseFloat(transferAmount) <= 0) {
-//       alert('Please enter a valid amount')
-//       return
-//     }
-
-//     const amount = parseFloat(transferAmount)
-//     if (amount > (myMasterProfile?.pendingCommission || 0)) {
-//       alert('Amount exceeds available pending commission')
-//       return
-//     }
-
-//     setTransferring(true)
-//     try {
-//       const res = await fetch(`${API_URL}/copy/master/${user._id}/transfer-commission`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ amount })
-//       })
-
-//       const data = await res.json()
-//       if (data.success) {
-//         alert(data.message)
-//         setShowTransferModal(false)
-//         setTransferAmount('')
-//         fetchMyMasterProfile() // Refresh to show updated balance
-//       } else {
-//         alert(data.message || 'Transfer failed')
-//       }
-//     } catch (error) {
-//       console.error('Error transferring commission:', error)
-//       alert('Failed to transfer commission')
-//     }
-//     setTransferring(false)
-//   }
-
-//   const handleFollow = async () => {
-//     if (!selectedMaster || !selectedAccount) return
-
-//     try {
-//       const res = await fetch(`${API_URL}/copy/follow`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           followerUserId: user._id,
-//           masterId: selectedMaster._id,
-//           followerAccountId: selectedAccount,
-//           copyMode,
-//           copyValue: parseFloat(copyValue)
-//         })
-//       })
-
-//       const data = await res.json()
-//       if (data.follower) {
-//         alert('Successfully following master!')
-//         setShowFollowModal(false)
-//         fetchMySubscriptions()
-//       } else {
-//         alert(data.message || 'Failed to follow')
-//       }
-//     } catch (error) {
-//       console.error('Error following master:', error)
-//       alert('Failed to follow master')
-//     }
-//   }
-
-//   const handlePauseResume = async (subscriptionId, currentStatus) => {
-//     const action = currentStatus === 'ACTIVE' ? 'pause' : 'resume'
-//     try {
-//       const res = await fetch(`${API_URL}/copy/follow/${subscriptionId}/${action}`, {
-//         method: 'PUT'
-//       })
-//       const data = await res.json()
-//       if (data.follower) {
-//         fetchMySubscriptions()
-//       }
-//     } catch (error) {
-//       console.error('Error updating subscription:', error)
-//     }
-//   }
-
-//   const handleStop = async (subscriptionId) => {
-//     if (!confirm('Are you sure you want to stop following this master?')) return
-
-//     try {
-//       const res = await fetch(`${API_URL}/copy/follow/${subscriptionId}/stop`, {
-//         method: 'PUT'
-//       })
-//       const data = await res.json()
-//       if (data.follower) {
-//         fetchMySubscriptions()
-//       }
-//     } catch (error) {
-//       console.error('Error stopping subscription:', error)
-//     }
-//   }
-
-//   const handleEditSubscription = (sub) => {
-//     setEditingSubscription(sub)
-//     setEditAccount(sub.followerAccountId?._id || sub.followerAccountId || '')
-//     setEditCopyMode(sub.copyMode || 'FIXED_LOT')
-//     setEditCopyValue(sub.copyValue?.toString() || '0.01')
-//     setShowEditModal(true)
-//   }
-
-//   const handleSaveSubscription = async () => {
-//     if (!editingSubscription) return
-
-//     try {
-//       const res = await fetch(`${API_URL}/copy/follow/${editingSubscription._id}/update`, {
-//         method: 'PUT',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           followerAccountId: editAccount,
-//           copyMode: editCopyMode,
-//           copyValue: parseFloat(editCopyValue)
-//         })
-//       })
-//       const data = await res.json()
-//       if (data.success || data.follower) {
-//         alert('Subscription updated successfully!')
-//         setShowEditModal(false)
-//         setEditingSubscription(null)
-//         fetchMySubscriptions()
-//       } else {
-//         alert(data.message || 'Failed to update subscription')
-//       }
-//     } catch (error) {
-//       console.error('Error updating subscription:', error)
-//       alert('Failed to update subscription')
-//     }
-//   }
-
-//   const handleUnfollow = async (subscriptionId) => {
-//     if (!confirm('Are you sure you want to unfollow this master? This will stop all future copy trades.')) return
-
-//     try {
-//       const res = await fetch(`${API_URL}/copy/follow/${subscriptionId}/unfollow`, {
-//         method: 'DELETE'
-//       })
-//       const data = await res.json()
-//       if (data.success) {
-//         alert('Successfully unfollowed master')
-//         fetchMySubscriptions()
-//       } else {
-//         alert(data.message || 'Failed to unfollow')
-//       }
-//     } catch (error) {
-//       console.error('Error unfollowing:', error)
-//       alert('Failed to unfollow master')
-//     }
-//   }
-
-//   const handleLogout = () => {
-//     localStorage.removeItem('token')
-//     localStorage.removeItem('user')
-//     navigate('/user/login')
-//   }
-
-//   const filteredMasters = masters.filter(m => 
-//     m.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
-//   )
-
-//     return (
-//   <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
-
-//     {/* Sidebar */}
-//     {!isMobile && <Sidebar activeMenu="Copytrade" />}
-
-//     {/* Main Content */}
-//     <div className="flex-1 flex flex-col">
-
-//       {/* Top Header */}
-//       <div className="h-14 bg-[#2f3f74] flex items-center justify-between px-4 sm:px-6 text-white">
-//         <h1 className="text-lg font-semibold">Copy Trading</h1>
-//       </div>
-
-//       {/* Page Content */}
-//       <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
-
-//         {/* Become Master Banner */}
-//         {!myMasterProfile && (
-//           <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm">
-
-//             <div className="flex items-center gap-3">
-//               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-//                 <Crown size={22} className="text-yellow-500" />
-//               </div>
-
-//               <div>
-//                 <h3 className="font-semibold text-gray-800">
-//                   Become a Master Trader
-//                 </h3>
-
-//                 <p className="text-gray-500 text-sm">
-//                   Share your trades and earn commission
-//                 </p>
-//               </div>
-//             </div>
-
-//             <button
-//               onClick={() => setShowMasterModal(true)}
-//               className="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-600 flex items-center gap-2"
-//             >
-//               <Crown size={16} />
-//               Apply Now
-//             </button>
-
-//           </div>
-//         )}
-
-//         {/* Tabs */}
-//         <div className="flex flex-wrap gap-2">
-
-//           {[
-//             "discover",
-//             "subscriptions",
-//             "trades",
-//             ...(myMasterProfile?.status === "ACTIVE" ? ["my-followers"] : [])
-//           ].map(tab => (
-
-//             <button
-//               key={tab}
-//               onClick={() => setActiveTab(tab)}
-//               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-//                 activeTab === tab
-//                   ? "bg-blue-500 text-white"
-//                   : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
-//               }`}
-//             >
-//               {tab === "discover"
-//                 ? "Discover"
-//                 : tab === "subscriptions"
-//                 ? "Subscriptions"
-//                 : tab === "trades"
-//                 ? "Trades"
-//                 : "Followers"}
-//             </button>
-
-//           ))}
-
-//         </div>
-
-//         {/* Discover Masters */}
-//         {activeTab === "discover" && (
-
-//           <div className="space-y-4">
-
-//             {/* Search */}
-//             <div className="relative max-w-md">
-
-//               <Search
-//                 size={16}
-//                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-//               />
-
-//               <input
-//                 type="text"
-//                 placeholder="Search masters..."
-//                 value={searchTerm}
-//                 onChange={(e) => setSearchTerm(e.target.value)}
-//                 className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 bg-white text-gray-900"
-//               />
-
-//             </div>
-
-//             {/* Masters Grid */}
-
-//             {loading ? (
-//               <div className="text-center py-12 text-gray-500">
-//                 Loading masters...
-//               </div>
-//             ) : filteredMasters.length === 0 ? (
-
-//               <div className="text-center py-12">
-
-//                 <Copy size={48} className="mx-auto text-gray-400 mb-3" />
-
-//                 <p className="text-gray-500">
-//                   No master traders available
-//                 </p>
-
-//               </div>
-
-//             ) : (
-
-//               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-//                 {filteredMasters.map(master => {
-
-//                   const isFollowing = mySubscriptions.some(
-//                     sub =>
-//                       sub.masterId?._id === master._id ||
-//                       sub.masterId === master._id
-//                   )
-
-//                   return (
-
-//                     <div
-//                       key={master._id}
-//                       className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"
-//                     >
-
-//                       <div className="flex items-center gap-3 mb-4">
-
-//                         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-//                           <span className="text-blue-500 font-bold">
-//                             {master.displayName?.charAt(0)}
-//                           </span>
-//                         </div>
-
-//                         <div className="flex-1">
-
-//                           <h3 className="font-semibold text-gray-800">
-//                             {master.displayName}
-//                           </h3>
-
-//                           <p className="text-gray-500 text-sm">
-//                             {master.stats?.activeFollowers || 0} followers
-//                           </p>
-
-//                         </div>
-
-//                       </div>
-
-//                       <div className="grid grid-cols-2 gap-3 mb-4">
-
-//                         <div className="bg-gray-100 rounded-lg p-3">
-//                           <p className="text-xs text-gray-500">Win Rate</p>
-//                           <p className="font-semibold text-gray-800">
-//                             {master.stats?.winRate?.toFixed(1) || 0}%
-//                           </p>
-//                         </div>
-
-//                         <div className="bg-gray-100 rounded-lg p-3">
-//                           <p className="text-xs text-gray-500">Trades</p>
-//                           <p className="font-semibold text-gray-800">
-//                             {master.stats?.totalTrades || 0}
-//                           </p>
-//                         </div>
-
-//                         <div className="bg-gray-100 rounded-lg p-3">
-//                           <p className="text-xs text-gray-500">Commission</p>
-//                           <p className="font-semibold text-gray-800">
-//                             {master.approvedCommissionPercentage || 0}%
-//                           </p>
-//                         </div>
-
-//                         <div className="bg-gray-100 rounded-lg p-3">
-//                           <p className="text-xs text-gray-500">Profit</p>
-//                           <p className="text-green-600 font-semibold">
-//                             $
-//                             {master.stats?.totalProfitGenerated?.toFixed(2) ||
-//                               "0.00"}
-//                           </p>
-//                         </div>
-
-//                       </div>
-
-//                       {isFollowing ? (
-
-//                         <button
-//                           onClick={() => setActiveTab("subscriptions")}
-//                           className="w-full bg-green-100 text-green-600 py-2 rounded-lg font-medium"
-//                         >
-//                           ✓ Following
-//                         </button>
-
-//                       ) : (
-
-//                         <button
-//                           onClick={() => {
-//                             setSelectedMaster(master)
-//                             setShowFollowModal(true)
-//                           }}
-//                           className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600"
-//                         >
-//                           Follow
-//                         </button>
-
-//                       )}
-
-//                     </div>
-
-//                   )
-
-//                 })}
-
-//               </div>
-
-//             )}
-
-//           </div>
-
-//         )}
-
-//       </div>
-
-//     </div>
-
-//   </div>
-// )
-// }
-
-// export default CopyTradePage
-
-
-
 import { API_URL } from '../config/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -1171,103 +560,167 @@ const CopyTradePage = () => {
           {/* Tabs - Scrollable on mobile */}
           <div className={`flex ${isMobile ? 'gap-2 overflow-x-auto pb-2' : 'gap-4'} mb-4`}>
             {['discover', 'subscriptions', 'trades', ...(myMasterProfile?.status === 'ACTIVE' ? ['my-followers'] : [])].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`${isMobile ? 'px-3 py-1.5 text-xs whitespace-nowrap' : 'px-4 py-2'} rounded-lg font-medium transition-colors ${
-                  activeTab === tab ? 'bg-accent-green text-black' : isDarkMode ? 'bg-dark-800 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
-                }`}
-              >
-                {tab === 'discover' ? 'Discover' : 
-                 tab === 'subscriptions' ? 'Subscriptions' : 
-                 tab === 'trades' ? 'Trades' : 'Followers'}
-              </button>
+<button
+  key={tab}
+  onClick={() => setActiveTab(tab)}
+  className={`${
+    isMobile ? 'px-3 py-1.5 text-xs whitespace-nowrap' : 'px-4 py-2'
+  } rounded-lg font-medium transition-colors ${
+    activeTab === tab
+      ? 'bg-blue-500 text-white'
+      : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50'
+  }`}
+>
+  {tab === 'discover'
+    ? 'Discover'
+    : tab === 'subscriptions'
+    ? 'Subscriptions'
+    : tab === 'trades'
+    ? 'Trades'
+    : 'Followers'}
+</button>
             ))}
           </div>
 
           {/* Discover Masters */}
           {activeTab === 'discover' && (
-            <div>
-              <div className={`flex ${isMobile ? 'gap-2' : 'gap-4'} mb-4`}>
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Search masters..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`w-full rounded-lg pl-9 pr-3 ${isMobile ? 'py-2 text-sm' : 'py-2'} ${isDarkMode ? 'bg-dark-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border`}
-                  />
-                </div>
+<div>
+  <div className={`flex ${isMobile ? 'gap-2' : 'gap-4'} mb-4`}>
+    
+    {/* SEARCH */}
+    <div className="flex-1 relative">
+      <Search
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+        size={16}
+      />
+      <input
+        type="text"
+        placeholder="Search masters..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className={`w-full rounded-lg pl-9 pr-3 ${
+          isMobile ? 'py-2 text-sm' : 'py-2'
+        } bg-white border border-gray-300 text-gray-900`}
+      />
+    </div>
+  </div>
+
+  {/* LOADING */}
+  {loading ? (
+    <div className="text-center py-12 text-gray-500">
+      Loading masters...
+    </div>
+  ) : filteredMasters.length === 0 ? (
+    
+    /* EMPTY STATE */
+    <div className="text-center py-12">
+      <Copy size={48} className="mx-auto text-gray-400 mb-4" />
+      <p className="text-gray-500">
+        No master traders available yet
+      </p>
+      <p className="text-gray-400 text-sm mt-2">
+        Check back later for trading experts to follow
+      </p>
+    </div>
+    
+  ) : (
+    
+    /* MASTER GRID */
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {filteredMasters.map((master) => {
+        const isFollowing = mySubscriptions.some(
+          (sub) =>
+            sub.masterId?._id === master._id ||
+            sub.masterId === master._id
+        )
+
+        return (
+          <div
+            key={master._id}
+            className="bg-white border border-gray-200 shadow-sm rounded-xl p-5"
+          >
+            
+            {/* HEADER */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-accent-green/20 rounded-full flex items-center justify-center">
+                <span className="text-accent-green font-bold">
+                  {master.displayName?.charAt(0)}
+                </span>
               </div>
 
-              {loading ? (
-                <div className="text-center py-12 text-gray-500">Loading masters...</div>
-              ) : filteredMasters.length === 0 ? (
-                <div className="text-center py-12">
-                  <Copy size={48} className="mx-auto text-gray-600 mb-4" />
-                  <p className="text-gray-500">No master traders available yet</p>
-                  <p className="text-gray-600 text-sm mt-2">Check back later for trading experts to follow</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredMasters.map(master => {
-                    const isFollowing = mySubscriptions.some(sub => sub.masterId?._id === master._id || sub.masterId === master._id)
-                    return (
-                      <div key={master._id} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-5 border`}>
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-12 h-12 bg-accent-green/20 rounded-full flex items-center justify-center">
-                            <span className="text-accent-green font-bold">{master.displayName?.charAt(0)}</span>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.displayName}</h3>
-                            <p className="text-gray-500 text-sm">{master.stats?.activeFollowers || 0} followers</p>
-                          </div>
-                          {isFollowing && (
-                            <span className="px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full font-medium">
-                              Following
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
-                            <p className="text-gray-500 text-xs">Win Rate</p>
-                            <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.stats?.winRate?.toFixed(1) || 0}%</p>
-                          </div>
-                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
-                            <p className="text-gray-500 text-xs">Total Trades</p>
-                            <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.stats?.totalTrades || 0}</p>
-                          </div>
-                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
-                            <p className="text-gray-500 text-xs">Commission</p>
-                            <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.approvedCommissionPercentage || 0}%</p>
-                          </div>
-                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
-                            <p className="text-gray-500 text-xs">Profit</p>
-                            <p className="text-accent-green font-semibold">${master.stats?.totalProfitGenerated?.toFixed(2) || '0.00'}</p>
-                          </div>
-                        </div>
-                        {isFollowing ? (
-                          <button
-                            onClick={() => setActiveTab('subscriptions')}
-                            className="w-full bg-green-500/20 text-green-500 py-2 rounded-lg font-medium border border-green-500/50 hover:bg-green-500/30"
-                          >
-                            ✓ Following
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => { setSelectedMaster(master); setShowFollowModal(true) }}
-                            className="w-full bg-accent-green text-black py-2 rounded-lg font-medium hover:bg-accent-green/90"
-                          >
-                            Follow
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">
+                  {master.displayName}
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  {master.stats?.activeFollowers || 0} followers
+                </p>
+              </div>
+
+              {isFollowing && (
+                <span className="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full font-medium">
+                  Following
+                </span>
               )}
             </div>
+
+            {/* STATS */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-gray-500 text-xs">Win Rate</p>
+                <p className="font-semibold text-gray-900">
+                  {master.stats?.winRate?.toFixed(1) || 0}%
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-gray-500 text-xs">Total Trades</p>
+                <p className="font-semibold text-gray-900">
+                  {master.stats?.totalTrades || 0}
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-gray-500 text-xs">Commission</p>
+                <p className="font-semibold text-gray-900">
+                  {master.approvedCommissionPercentage || 0}%
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-gray-500 text-xs">Profit</p>
+                <p className="text-green-500 font-semibold">
+                  ${master.stats?.totalProfitGenerated?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+            </div>
+
+            {/* ACTION BUTTON */}
+            {isFollowing ? (
+              <button
+                onClick={() => setActiveTab('subscriptions')}
+                className="w-full bg-green-100 text-green-600 py-2 rounded-lg font-medium border border-green-200 hover:bg-green-200"
+              >
+                ✓ Following
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSelectedMaster(master)
+                  setShowFollowModal(true)
+                }}
+                className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600"
+              >
+                Follow
+              </button>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )}
+</div>
           )}
 
           {/* My Subscriptions */}
@@ -1485,92 +938,122 @@ const CopyTradePage = () => {
 
       {/* Follow Modal */}
       {showFollowModal && selectedMaster && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`bg-dark-800 rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto`}>
-            <h2 className="text-xl font-semibold text-white mb-4">Follow {selectedMaster.displayName}</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">Trading Account</label>
-                <select
-                  value={selectedAccount}
-                  onChange={(e) => setSelectedAccount(e.target.value)}
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                >
-                  {accounts.map(acc => (
-                    <option key={acc._id} value={acc._id}>{acc.accountId} - ${acc.balance?.toFixed(2)}</option>
-                  ))}
-                </select>
-              </div>
+<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div className={`bg-white rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto`}>
+    
+    <h2 className="text-xl font-semibold text-gray-900 mb-4">
+      Follow {selectedMaster.displayName}
+    </h2>
 
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">Copy Mode</label>
-                <select
-                  value={copyMode}
-                  onChange={(e) => {
-                    setCopyMode(e.target.value)
-                    // Set appropriate default value based on mode
-                    if (e.target.value === 'FIXED_LOT') setCopyValue('0.01')
-                    else if (e.target.value === 'MULTIPLIER') setCopyValue('1')
-                    else setCopyValue('10') // Max lot size for balance/equity based
-                  }}
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                >
-                  <option value="FIXED_LOT">Fixed Lot Size</option>
-                  <option value="BALANCE_BASED">Balance Based (Proportional)</option>
-                  <option value="EQUITY_BASED">Equity Based (Proportional)</option>
-                  <option value="MULTIPLIER">Multiplier</option>
-                </select>
-                <p className="text-gray-500 text-xs mt-1">
-                  {copyMode === 'FIXED_LOT' && 'Use a fixed lot size for every copied trade'}
-                  {copyMode === 'BALANCE_BASED' && 'Lot = Master Lot × (Your Balance / Master Balance)'}
-                  {copyMode === 'EQUITY_BASED' && 'Lot = Master Lot × (Your Equity / Master Equity)'}
-                  {copyMode === 'MULTIPLIER' && 'Lot = Master Lot × Your Multiplier'}
-                </p>
-              </div>
+    <div className="space-y-4">
 
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">
-                  {copyMode === 'FIXED_LOT' ? 'Lot Size' : 
-                   copyMode === 'MULTIPLIER' ? 'Multiplier Value' : 'Max Lot Size'}
-                </label>
-                <input
-                  type="number"
-                  value={copyValue}
-                  onChange={(e) => setCopyValue(e.target.value)}
-                  min={copyMode === 'MULTIPLIER' ? '0.1' : '0.01'}
-                  step={copyMode === 'MULTIPLIER' ? '0.1' : '0.01'}
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                />
-                <p className="text-gray-500 text-xs mt-1">
-                  {copyMode === 'FIXED_LOT' && 'Each copied trade will use this fixed lot size'}
-                  {copyMode === 'BALANCE_BASED' && 'Maximum lot size limit (e.g., Master $1000 trades 1 lot, you have $500 → you get 0.5 lot)'}
-                  {copyMode === 'EQUITY_BASED' && 'Maximum lot size limit (e.g., Master $1000 equity trades 1 lot, you have $1500 → you get 1.5 lot)'}
-                  {copyMode === 'MULTIPLIER' && 'Multiply master lot by this value (e.g., 2 = double the lot size)'}
-                </p>
-              </div>
+      {/* ACCOUNT */}
+      <div>
+        <label className="text-gray-600 text-sm mb-1 block">
+          Trading Account
+        </label>
+        <select
+          value={selectedAccount}
+          onChange={(e) => setSelectedAccount(e.target.value)}
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+        >
+          {accounts.map(acc => (
+            <option key={acc._id} value={acc._id}>
+              {acc.accountId} - ${acc.balance?.toFixed(2)}
+            </option>
+          ))}
+        </select>
+      </div>
 
-              <div className="bg-dark-700 rounded-lg p-3">
-                <p className="text-gray-400 text-sm">Commission: <span className="text-white">{selectedMaster.approvedCommissionPercentage}%</span> of daily profit</p>
-              </div>
-            </div>
+      {/* COPY MODE */}
+      <div>
+        <label className="text-gray-600 text-sm mb-1 block">
+          Copy Mode
+        </label>
+        <select
+          value={copyMode}
+          onChange={(e) => {
+            setCopyMode(e.target.value)
+            if (e.target.value === 'FIXED_LOT') setCopyValue('0.01')
+            else if (e.target.value === 'MULTIPLIER') setCopyValue('1')
+            else setCopyValue('10')
+          }}
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+        >
+          <option value="FIXED_LOT">Fixed Lot Size</option>
+          <option value="BALANCE_BASED">Balance Based (Proportional)</option>
+          <option value="EQUITY_BASED">Equity Based (Proportional)</option>
+          <option value="MULTIPLIER">Multiplier</option>
+        </select>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowFollowModal(false)}
-                className="flex-1 bg-dark-700 text-white py-2 rounded-lg hover:bg-dark-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleFollow}
-                className="flex-1 bg-accent-green text-black py-2 rounded-lg font-medium hover:bg-accent-green/90"
-              >
-                Start Following
-              </button>
-            </div>
-          </div>
-        </div>
+        <p className="text-gray-500 text-xs mt-1">
+          {copyMode === 'FIXED_LOT' && 'Use a fixed lot size for every copied trade'}
+          {copyMode === 'BALANCE_BASED' && 'Lot = Master Lot × (Your Balance / Master Balance)'}
+          {copyMode === 'EQUITY_BASED' && 'Lot = Master Lot × (Your Equity / Master Equity)'}
+          {copyMode === 'MULTIPLIER' && 'Lot = Master Lot × Your Multiplier'}
+        </p>
+      </div>
+
+      {/* VALUE */}
+      <div>
+        <label className="text-gray-600 text-sm mb-1 block">
+          {copyMode === 'FIXED_LOT'
+            ? 'Lot Size'
+            : copyMode === 'MULTIPLIER'
+            ? 'Multiplier Value'
+            : 'Max Lot Size'}
+        </label>
+
+        <input
+          type="number"
+          value={copyValue}
+          onChange={(e) => setCopyValue(e.target.value)}
+          min={copyMode === 'MULTIPLIER' ? '0.1' : '0.01'}
+          step={copyMode === 'MULTIPLIER' ? '0.1' : '0.01'}
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+        />
+
+        <p className="text-gray-500 text-xs mt-1">
+          {copyMode === 'FIXED_LOT' && 'Each copied trade will use this fixed lot size'}
+          {copyMode === 'BALANCE_BASED' && 'Maximum lot size limit (e.g., Master $1000 trades 1 lot, you have $500 → you get 0.5 lot)'}
+          {copyMode === 'EQUITY_BASED' && 'Maximum lot size limit (e.g., Master $1000 equity trades 1 lot, you have $1500 → you get 1.5 lot)'}
+          {copyMode === 'MULTIPLIER' && 'Multiply master lot by this value (e.g., 2 = double the lot size)'}
+        </p>
+      </div>
+
+      {/* COMMISSION */}
+      <div className="bg-gray-50 rounded-lg p-3">
+        <p className="text-gray-600 text-sm">
+          Commission:
+          <span className="text-gray-900 font-medium ml-1">
+            {selectedMaster.approvedCommissionPercentage}%
+          </span>
+          {' '}of daily profit
+        </p>
+      </div>
+
+    </div>
+
+    {/* ACTIONS */}
+    <div className="flex gap-3 mt-6">
+      
+      <button
+        onClick={() => setShowFollowModal(false)}
+        className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+      >
+        Cancel
+      </button>
+
+      <button
+        onClick={handleFollow}
+        className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600"
+      >
+        Start Following
+      </button>
+
+    </div>
+  </div>
+</div>
       )}
 
       {/* Master Application Modal */}

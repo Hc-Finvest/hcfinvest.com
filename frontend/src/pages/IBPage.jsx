@@ -538,12 +538,11 @@ const IBPage = () => {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`${isMobile ? "px-3 py-1.5 text-xs whitespace-nowrap" : "px-4 py-2"} rounded-lg font-medium capitalize transition-colors ${
+                    className={`${isMobile ? "px-3 py-1.5 text-xs whitespace-nowrap" : "px-4 py-2"} 
+                    rounded-lg font-medium capitalize transition-colors ${
                       activeTab === tab
-                        ? "bg-accent-green text-black"
-                        : isDarkMode
-                          ? "bg-dark-800 text-gray-400 hover:text-white"
-                          : "bg-white text-gray-600 hover:text-gray-900 border border-gray-200"
+                        ? "bg-blue-500 text-white"
+                        : "bg-white text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50"
                     }`}
                   >
                     {tab}
