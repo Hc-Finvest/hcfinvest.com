@@ -3702,20 +3702,16 @@ const TradingPage = () => {
     if (isMetalSymbol(symbol)) return 'Metals'
     if (isCryptoSymbol(symbol)) return 'Crypto'
     const s = normalizeSymbol(symbol).replace(/\.I$/i, '');
-    
-    // Explicit list of known indices/commodities
-    const indicesAndCommodities = ['US30', 'US100', 'US500', 'UK100', 'GER40', 'JP225', 'HK50', 'AUS200', 'FRA40', 'ESP35', 'EUSTX50', 'WTI', 'BRENT', 'NGAS', 'OIL', 'USOJ', 'UKO'];
+    const indicesAndCommodities = ['US30', 'US100', 'US500', 'UK100', 'GER40', 'JP225', 'HK50', 'AUS200', 'FRA40', 'ESP35', 'EUSTX50', 'WTI', 'BRENT', 'NGAS', 'OIL'];
     if (indicesAndCommodities.some(idx => s.includes(idx))) return 'Indices';
     
-    // Improved Forex detection: 6 chars and contains at least one major currency code
     if (s.length === 6) {
-      const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'NZD', 'CAD', 'SGD', 'HKD', 'ZAR', 'MXN', 'INR', 'TRY', 'CNH', 'CNY'];
+      const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'NZD', 'CAD'];
       if (currencies.includes(s.substring(0, 3)) || currencies.includes(s.substring(3, 6))) {
         return 'Forex';
       }
     }
     
-    // Defaults for anything else
     return s.length === 6 ? 'Forex' : 'Indices';
   }
 
@@ -4782,18 +4778,13 @@ const TradingPage = () => {
                         <div className="text-gray-600 text-[9px]">Bid</div>
                       </div>
                       <div className="bg-[#2a2a2a] px-1.5 py-0.5 rounded text-cyan-400 text-[10px] font-medium min-w-[28px] text-center mx-2">
-                        {/* Show admin-set spread if available, otherwise show market spread */}
+                        {/* Show admin-set spread if available, otherwise 0 */}
                         {getSpreadConfig(inst.symbol)?.spread > 0 ? (
                           // Convert admin spread to pips for display
                           isJpyPair(inst.symbol) ? (getSpreadConfig(inst.symbol).spread * 100).toFixed(1) :
                           inst.bid > 100 ? getSpreadConfig(inst.symbol).spread.toFixed(2) :
                           (getSpreadConfig(inst.symbol).spread * 10000).toFixed(1)
-                        ) : inst.spread > 0 ? (
-                          // Convert market spread to pips
-                          isJpyPair(inst.symbol) ? (inst.spread * 100).toFixed(1) :
-                          inst.bid > 100 ? inst.spread.toFixed(2) :
-                          (inst.spread * 10000).toFixed(1)
-                        ) : '-'}
+                        ) : '0.0'}
                       </div>
                       <div className="text-right w-14">
                         <div className="text-green-500 text-xs font-mono">
