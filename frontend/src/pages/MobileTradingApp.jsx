@@ -186,7 +186,7 @@ const MobileTradingApp = () => {
         if (priceData && priceData.bid && priceData.bid > 0) {
           const bid = priceData.bid
           const ask = priceData.ask || priceData.bid
-          const spread = Math.abs(ask - bid) || (bid * 0.0001)
+          const spread = Math.abs(ask - bid) 
           return { ...inst, bid, ask, spread }
         }
         return inst
@@ -221,7 +221,7 @@ const MobileTradingApp = () => {
           if (priceData && priceData.bid) {
             const bid = priceData.bid
             const ask = priceData.ask || priceData.bid
-            const spread = Math.abs(ask - bid) || (bid * 0.0001)
+            const spread = Math.abs(ask - bid) 
             return { ...inst, bid, ask, spread }
           }
           return inst
