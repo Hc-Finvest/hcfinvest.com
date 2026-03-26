@@ -138,12 +138,12 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
       } bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}
     >
       {/* TOP SECTION */}
-      <div className="flex items-center justify-between p-4 border-b h-28">
+      <div className="flex items-center justify-between p-4 border-b h-24">
         <button
           onClick={toggleSidebar}
           className="p-2 hover:bg-gray-100 rounded "
         >
-          <Menu size={30} />
+          <Menu size={25} />
         </button>
 
         
@@ -153,7 +153,7 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
       <img
         src="/sidebarlogo.jpeg"
         alt="logo"
-        className="h-10 object-contain mr-5 ml-3"
+        className="h-8 object-contain "
       />
     )}
       </div>
