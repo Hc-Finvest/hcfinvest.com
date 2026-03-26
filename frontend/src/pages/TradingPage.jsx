@@ -4693,53 +4693,48 @@ const TradingPage = () => {
         <div className="flex-1 flex overflow-hidden">
           {/* Instruments Panel */}
           {showInstruments && (
-            <div className={`${isMobile ? 'absolute inset-0 z-20' : 'w-[280px] sm:w-[300px]'} border-r flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0b0c10] border-gray-800' : 'bg-white border-gray-200 shadow-lg'}`}>
+            <div className={`${isMobile ? 'absolute inset-0 z-20' : 'w-[280px]'} border-r flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
               {/* Header */}
-              <div className={`px-4 py-3 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800/50' : 'border-gray-100'}`}>
-                <span className={`text-sm font-bold tracking-tight uppercase ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Market Watch</span>
-                <button onClick={() => setShowInstruments(false)} className={`${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'} transition-colors`}>
-                  <X size={18} />
+              <div className={`px-3 py-3 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Instruments</span>
+                <button onClick={() => setShowInstruments(false)} className={isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}>
+                  <X size={16} />
                 </button>
               </div>
-
               {/* Search */}
-              <div className="px-3 py-3">
-                <div className="relative group">
-                  <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isDarkMode ? 'text-gray-600 group-focus-within:text-blue-500' : 'text-gray-400 group-focus-within:text-blue-600'}`} />
+              <div className="px-3 py-2">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
-                    placeholder="Search market..."
+                    placeholder="Search instruments"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`w-full rounded-md pl-9 pr-3 py-1.5 text-xs transition-all border ${
-                      isDarkMode 
-                        ? 'bg-[#1a1b1e] border-gray-800 text-gray-200 placeholder-gray-600 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20' 
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-100'
-                    }`}
+                    className={`w-full rounded pl-9 pr-3 py-2 text-sm placeholder-gray-500 focus:outline-none border ${isDarkMode ? 'bg-[#1a1a1a] border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-gray-400'}`}
                   />
                 </div>
               </div>
               
               {/* Category Tabs */}
-              <div className={`flex items-center gap-0.5 px-2 pb-1 border-b overflow-x-auto scrollbar-hide ${isDarkMode ? 'border-gray-800/50' : 'border-gray-100'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className={`flex items-center gap-1 px-3 py-2 border-b overflow-x-auto scrollbar-hide ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 <button 
                   onClick={() => setActiveCategory('Starred')} 
-                  className={`p-2 transition-all shrink-0 border-b-2 ${
+                  className={`px-2 py-1 rounded text-xs font-medium transition-colors shrink-0 ${
                     activeCategory === 'Starred' 
-                      ? 'border-yellow-500 text-yellow-500' 
-                      : 'border-transparent text-gray-500 hover:text-yellow-500 hover:bg-yellow-500/5'
+                      ? 'bg-yellow-500 text-white' 
+                      : 'text-gray-400 hover:text-yellow-500'
                   }`}
                 >
-                  <Star size={14} className={activeCategory === 'Starred' ? 'fill-yellow-500' : ''} />
+                  <Star size={14} className={activeCategory === 'Starred' ? 'fill-white' : ''} />
                 </button>
-                {['All', 'Forex', 'Metals', 'Crypto', 'Indices'].map(cat => (
+                {categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-3 py-2 text-[11px] font-semibold transition-all shrink-0 border-b-2 uppercase tracking-wider ${
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors shrink-0 ${
                       activeCategory === cat 
-                        ? 'border-blue-500 text-blue-500' 
-                        : 'border-transparent text-gray-500 hover:text-blue-400 hover:bg-blue-500/5'
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-gray-400 hover:text-white'
                     }`}
                   >
                     {cat}
@@ -4748,90 +4743,72 @@ const TradingPage = () => {
               </div>
 
               {/* Instruments List */}
-              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800">
+              <div className="flex-1 overflow-y-auto px-2">
                 {loadingInstruments ? (
-                  <div className="flex flex-col items-center justify-center py-12 opacity-50">
-                    <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-rotate mb-3"></div>
-                    <div className="text-[11px] font-medium tracking-widest uppercase">Syncing Prices...</div>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-gray-500 text-sm">Loading instruments...</div>
                   </div>
                 ) : filteredInstruments.length === 0 ? (
-                  <div className="flex items-center justify-center py-12 opacity-40">
-                    <div className="text-[11px] font-medium uppercase tracking-tighter">No assets matching search</div>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-gray-500 text-sm">No instruments found</div>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-800/20">
-                    {filteredInstruments.map(inst => (
-                      <div
-                        key={inst.symbol}
-                        onClick={() => handleInstrumentClick(inst)}
-                        className={`group relative w-full px-3 py-2.5 flex items-center cursor-pointer transition-all ${
-                          selectedInstrument.symbol === inst.symbol 
-                            ? (isDarkMode ? 'bg-blue-600/10' : 'bg-blue-50')
-                            : (isDarkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50')
-                        }`}
-                      >
-                        {/* Selector Indicator */}
-                        {selectedInstrument.symbol === inst.symbol && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 rounded-r-full" />
-                        )}
-
-                        <div onClick={(e) => { e.stopPropagation(); toggleStar(e, inst.symbol) }} className="mr-2 opacity-30 hover:opacity-100 transition-opacity">
-                          <Star size={13} className={`${inst.starred ? 'text-yellow-500 fill-yellow-500 opacity-100' : 'text-gray-500 hover:text-yellow-400'}`} />
-                        </div>
-
-                        <div className="flex-1 min-w-0 mr-3">
-                          <div className="flex items-center gap-1.5 leading-none mb-1">
-                            <span className={`text-[13px] font-bold truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>{inst.symbol}</span>
-                            <span className={`text-[10px] font-bold ${inst.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {inst.change >= 0 ? '▲' : '▼'} {Math.abs(inst.change || 0).toFixed(2)}%
-                            </span>
-                          </div>
-                          <div className={`text-[10px] uppercase tracking-wider font-semibold opacity-40 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {getSymbolCategory(inst.symbol)}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <div className={`text-[13px] font-mono font-bold leading-none mb-1 ${inst.bid > 0 ? (isDarkMode ? 'text-gray-200' : 'text-gray-900') : 'text-gray-600 animate-pulse'}`}>
-                              {inst.bid > 0 ? inst.bid.toFixed(inst.bid > 100 ? 2 : 5) : '0.00000'}
-                            </div>
-                            <div className="text-[9px] uppercase tracking-tighter font-bold opacity-30">Bid</div>
-                          </div>
-
-                          <div className="flex flex-col items-center">
-                            <div className={`px-1.5 py-0.5 rounded text-[10px] font-black border ${
-                              isDarkMode ? 'bg-gray-900/50 border-gray-800 text-blue-400' : 'bg-gray-100 border-gray-200 text-blue-600'
-                            }`}>
-                              {getSpreadConfig(inst.symbol)?.spread > 0 ? (
-                                isJpyPair(inst.symbol) ? (getSpreadConfig(inst.symbol).spread * 100).toFixed(1) :
-                                inst.bid > 100 ? getSpreadConfig(inst.symbol).spread.toFixed(2) :
-                                (getSpreadConfig(inst.symbol).spread * 10000).toFixed(1)
-                              ) : '0.0'}
-                            </div>
-                            <div className="text-[8px] uppercase font-bold mt-0.5 opacity-30">Sprd</div>
-                          </div>
-
-                          <div className="text-right">
-                            <div className={`text-[13px] font-mono font-bold leading-none mb-1 ${inst.ask > 0 ? (isDarkMode ? 'text-gray-200' : 'text-gray-900') : 'text-gray-600 animate-pulse'}`}>
-                              {inst.ask > 0 ? inst.ask.toFixed(inst.ask > 100 ? 2 : 5) : '0.00000'}
-                            </div>
-                            <div className="text-[9px] uppercase tracking-tighter font-bold opacity-30">Ask</div>
-                          </div>
-                        </div>
+                  filteredInstruments.map(inst => (
+                    <button
+                      key={inst.symbol}
+                      onClick={() => handleInstrumentClick(inst)}
+                      className={`w-full px-3 py-2.5 my-1 flex items-center rounded-lg border transition-colors ${
+                        selectedInstrument.symbol === inst.symbol 
+                          ? (isDarkMode ? 'bg-[#1a1a1a] border-blue-500' : 'bg-blue-50 border-blue-500')
+                          : (isDarkMode ? 'border-gray-700 hover:border-gray-600 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50')
+                      }`}
+                    >
+                      <div onClick={(e) => toggleStar(e, inst.symbol)} className="cursor-pointer hover:scale-110 transition-transform">
+                        <Star size={12} className={`shrink-0 mr-2 ${inst.starred ? 'text-yellow-500 fill-yellow-500' : 'text-gray-500 hover:text-yellow-400'}`} />
                       </div>
-                    ))}
-                  </div>
+                      <div className="text-left min-w-[55px]">
+                        <div className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{inst.symbol}</div>
+                        <div className="text-green-500 text-[10px]">+{inst.change?.toFixed(2) || '0.00'}%</div>
+                      </div>
+                      <div className="flex-1" />
+                      <div className="text-right w-16">
+                        <div className="text-red-500 text-xs font-mono">
+                          {inst.bid > 0 ? inst.bid.toFixed(inst.bid > 100 ? 2 : 5) : '...'}
+                        </div>
+                        <div className="text-gray-600 text-[9px]">Bid</div>
+                      </div>
+                      <div className="bg-[#2a2a2a] px-1.5 py-0.5 rounded text-cyan-400 text-[10px] font-medium min-w-[28px] text-center mx-2">
+                        {/* Show admin-set spread if available, otherwise show market spread */}
+                        {getSpreadConfig(inst.symbol)?.spread > 0 ? (
+                          // Convert admin spread to pips for display
+                          isJpyPair(inst.symbol) ? (getSpreadConfig(inst.symbol).spread * 100).toFixed(1) :
+                          inst.bid > 100 ? getSpreadConfig(inst.symbol).spread.toFixed(2) :
+                          (getSpreadConfig(inst.symbol).spread * 10000).toFixed(1)
+                        ) : inst.spread > 0 ? (
+                          // Convert market spread to pips
+                          isJpyPair(inst.symbol) ? (inst.spread * 100).toFixed(1) :
+                          inst.bid > 100 ? inst.spread.toFixed(2) :
+                          (inst.spread * 10000).toFixed(1)
+                        ) : '-'}
+                      </div>
+                      <div className="text-right w-14">
+                        <div className="text-green-500 text-xs font-mono">
+                          {inst.ask > 0 ? inst.ask.toFixed(inst.ask > 100 ? 2 : 5) : '...'}
+                        </div>
+                        <div className="text-gray-600 text-[9px]">Ask</div>
+                      </div>
+                    </button>
+                  ))
                 )}
               </div>
               
               {/* Footer */}
-              <div className={`px-4 py-2 border-t flex items-center justify-between shrink-0 bg-opacity-50 ${isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-100 bg-gray-50'}`}>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Market Active</span>
+              <div className="px-3 py-2 border-t border-gray-800 flex items-center justify-between shrink-0">
+                <span className="text-gray-500 text-xs">{filteredInstruments.length} instruments</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-500 text-xs">Live</span>
                 </div>
-                <span className={`text-[10px] font-black ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>{filteredInstruments.length} ASSETS</span>
               </div>
             </div>
           )}
