@@ -375,6 +375,57 @@ router.post("/createParticipant", async (req, res) => {
   }
 });
 
+// ✅ GET TOTAL WINNINGS OF USER
+router.get("/total-winnings/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // 🔒 Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+
+    const result = await CompetitionParticipant.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          prize: { $ne: null } // only users who actually won
+        }
+      },
+
+      // ⚠️ Convert string → number (only if prize is string in DB)
+      {
+        $addFields: {
+          prizeAmount: { $toDouble: "$prize" }
+        }
+      },
+
+      {
+        $group: {
+          _id: "$userId",
+          totalWinnings: { $sum: "$prizeAmount" }
+        }
+      }
+    ]);
+
+    const totalWinnings =
+      result.length > 0 ? result[0].totalWinnings : 0;
+
+    res.status(200).json({
+      success: true,
+      totalWinnings
+    });
+
+  } catch (error) {
+    console.error("Total Winnings Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+});
+
+
 
 
 export default router;
