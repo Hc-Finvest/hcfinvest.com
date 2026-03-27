@@ -544,8 +544,8 @@ const [tab, setTab] = useState("active");
         <NavbarClient title="Trading Competitions" subtitle="Compete with other traders and win amazing prizes." />
 
         {/* MAIN BANNER */}
-<div className="border rounded-2xl p-6 mb-6 bg-white border-gray-200 text-gray-700">
-  <div className="flex justify-between items-start flex-wrap gap-4">
+  <div className="border rounded-2xl p-6 mb-6 bg-white border-gray-200 text-gray-700">
+    <div className="flex justify-between items-start flex-wrap gap-4">
 
     {/* LEFT */}
     <div>
@@ -588,17 +588,33 @@ const [tab, setTab] = useState("active");
     </div>
 
     {/* RIGHT */}
-    <div className="text-right">
-      <p className="text-gray-400 text-sm">Your Current Rank</p>
-      <h2 className="text-3xl font-bold">
-        #{selectedBannerComp?.yourRank || "-"}
-      </h2>
+<div className="text-right">
 
-      <p className="text-gray-400 text-sm mt-3">Your Profit</p>
-      <p className="text-blue-600 text-lg font-semibold">
-        ${selectedBannerComp?.yourProfit || "0.00"}
-      </p>
-    </div>
+  <div className="flex items-center justify-end gap-5 mb-1">
+    
+    <button
+      onClick={() => {
+        console.log("Know More clicked");
+      }}
+      className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition"
+    >
+      Know More
+    </button>
+
+    <p className="text-gray-400 text-sm">Your Current Rank</p>
+  </div>
+
+  <h2 className="text-3xl font-bold">
+    #{selectedBannerComp?.yourRank || "-"}
+  </h2>
+
+  <p className="text-gray-400 text-sm mt-3">Your Profit</p>
+  <p className="text-blue-600 text-lg font-semibold">
+    ${selectedBannerComp?.yourProfit || "0.00"}
+  </p>
+
+</div>
+
   </div>
 </div>
 
@@ -826,7 +842,7 @@ const [tab, setTab] = useState("active");
             <div className="border  shadow-sm  rounded-2xl p-5 bg-white border-gray-200">
               <p className="text-xs text-gray-400 mb-4">ELITE PODIUM</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                 {/* 🥈 2nd Winner - ADVANCED UI */}
                 <div className="group relative min-h-[300px] overflow-hidden rounded-2xl border px-4 pb-6 pt-5 text-center transition-all duration-500 bg-[linear-gradient(135deg,#ecfdf5,#ffffff,#d1fae5)] border border-green-200 border-[#29466c]">
                   {/* BOTTOM CARD */}

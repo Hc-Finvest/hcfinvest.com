@@ -575,34 +575,60 @@ const OrderBook = () => {
                           const pnl = calculateFloatingPnl(trade)
                           const currentPrice = livePrices[trade.symbol]?.[trade.side === 'BUY' ? 'bid' : 'ask']
                           return (
-                            <tr key={trade._id} className="border-b border-gray-200 hover:bg-gray-50">
-                              <td className="py-3 px-4 text-gray-400 text-sm">{trade.accountName}</td>
-                              <td className="py-3 px-4 text-white font-medium">{trade.symbol}</td>
-                              <td className="py-3 px-4">
-                                <span className={`flex items-center gap-1 ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                                  {trade.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                  {trade.side}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-white">{trade.quantity}</td>
-                              <td className="py-3 px-4 text-gray-400">{trade.openPrice?.toFixed(5)}</td>
-                              <td className="py-3 px-4 text-white">{currentPrice?.toFixed(5) || '-'}</td>
-                              <td className={`py-3 px-4 font-medium ${pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
-                              </td>
-                              <td className="py-3 px-4 text-gray-400 text-xs">
-                                <div>SL: {trade.stopLoss || '-'}</div>
-                                <div>TP: {trade.takeProfit || '-'}</div>
-                              </td>
-                              <td className="py-3 px-4">
-                                <button
-                                  onClick={() => handleCloseTrade(trade)}
-                                  className="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                                >
-                                  Close
-                                </button>
-                              </td>
-                            </tr>
+                              <tr key={trade._id} className="border-b border-gray-200 hover:bg-gray-50">
+
+                                <td className="py-3 px-4 text-gray-600 text-sm">
+                                  {trade.accountName}
+                                </td>
+
+                                <td className="py-3 px-4 text-gray-900 font-medium">
+                                  {trade.symbol}
+                                </td>
+
+                                <td className="py-3 px-4">
+                                  <span className={`flex items-center gap-1 ${
+                                    trade.side === 'BUY' ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {trade.side === 'BUY'
+                                      ? <TrendingUp size={14} />
+                                      : <TrendingDown size={14} />}
+                                    {trade.side}
+                                  </span>
+                                </td>
+
+                                <td className="py-3 px-4 text-gray-900">
+                                  {trade.quantity}
+                                </td>
+
+                                <td className="py-3 px-4 text-gray-600">
+                                  {trade.openPrice?.toFixed(5)}
+                                </td>
+
+                                <td className="py-3 px-4 text-gray-900">
+                                  {currentPrice?.toFixed(5) || '-'}
+                                </td>
+
+                                <td className={`py-3 px-4 font-medium ${
+                                  pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
+                                </td>
+
+                                <td className="py-3 px-4 text-gray-600 text-xs">
+                                  <div>SL: {trade.stopLoss || '-'}</div>
+                                  <div>TP: {trade.takeProfit || '-'}</div>
+                                </td>
+
+                                <td className="py-3 px-4">
+                                  <button
+                                    onClick={() => handleCloseTrade(trade)}
+                                    className="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                                  >
+                                    Close
+                                  </button>
+                                </td>
+
+                              </tr>
                           )
                         })}
                       </tbody>
@@ -622,17 +648,17 @@ const OrderBook = () => {
                           { key: 'trades', label: 'Trades' },
                           { key: 'transactions', label: 'Transactions' }
                         ].map(type => (
-                          <button
-                            key={type.key}
-                            onClick={() => { setHistoryType(type.key); setCurrentPage(1) }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                              historyType === type.key 
-                                ? 'bg-blue-500 text-white' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {type.label}
-                          </button>
+                              <button
+                                key={type.key}
+                                onClick={() => { setHistoryType(type.key); setCurrentPage(1) }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                                  historyType === type.key 
+                                    ? 'bg-blue-100 text-blue-600 border border-blue-300' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                {type.label}
+                              </button>
                         ))}
                       </div>
 
@@ -644,17 +670,17 @@ const OrderBook = () => {
                         { key: 'month', label: 'This Month' },
                         { key: 'year', label: 'This Year' }
                       ].map(filter => (
-                        <button
-                          key={filter.key}
-                          onClick={() => { setHistoryFilter(filter.key); setCurrentPage(1) }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            historyFilter === filter.key 
-                              ? 'bg-accent-green text-black' 
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {filter.label}
-                        </button>
+                          <button
+                            key={filter.key}
+                            onClick={() => { setHistoryFilter(filter.key); setCurrentPage(1) }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                              historyFilter === filter.key 
+                                ? 'bg-green-100 text-green-600 border border-green-300' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {filter.label}
+                          </button>
                       ))}
                       
                       {/* Custom Date Picker */}
@@ -711,57 +737,92 @@ const OrderBook = () => {
                           <tbody>
                             {getPaginatedHistory().map((item) => (
                               <tr key={item._id} className="border-b border-gray-200 hover:bg-gray-50">
-                                <td className="py-3 px-4 text-gray-400 text-xs">{formatDate(item.closedAt || item.createdAt)}</td>
+
+                                <td className="py-3 px-4 text-gray-600 text-xs">
+                                  {formatDate(item.closedAt || item.createdAt)}
+                                </td>
+
                                 <td className="py-3 px-4">
                                   {item.historyType === 'trade' ? (
-                                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">Trade</span>
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs">
+                                      Trade
+                                    </span>
                                   ) : (
                                     <span className={`px-2 py-1 rounded text-xs ${
-                                      item.type === 'Deposit' ? 'bg-green-500/20 text-green-400' :
-                                      item.type === 'Withdrawal' ? 'bg-red-500/20 text-red-400' :
-                                      'bg-blue-500/20 text-blue-400'
-                                    }`}>{item.type}</span>
+                                      item.type === 'Deposit' ? 'bg-green-100 text-green-600' :
+                                      item.type === 'Withdrawal' ? 'bg-red-100 text-red-600' :
+                                      'bg-blue-100 text-blue-600'
+                                    }`}>
+                                      {item.type}
+                                    </span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-white font-medium">
-                                  {item.historyType === 'trade' ? item.symbol : (item.paymentMethod || 'Wallet')}
+
+                                <td className="py-3 px-4 text-gray-900 font-medium">
+                                  {item.historyType === 'trade'
+                                    ? item.symbol
+                                    : (item.paymentMethod || 'Wallet')}
                                 </td>
+
                                 <td className="py-3 px-4">
                                   {item.historyType === 'trade' ? (
-                                    <span className={`flex items-center gap-1 ${item.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                                      {item.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                    <span className={`flex items-center gap-1 ${
+                                      item.side === 'BUY' ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {item.side === 'BUY'
+                                        ? <TrendingUp size={14} />
+                                        : <TrendingDown size={14} />}
                                       {item.side}
                                     </span>
                                   ) : (
-                                    <span className="text-gray-400">{item.paymentMethod || '-'}</span>
+                                    <span className="text-gray-600">
+                                      {item.paymentMethod || '-'}
+                                    </span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-white">
-                                  {item.historyType === 'trade' ? item.quantity : `$${item.amount?.toFixed(2)}`}
+
+                                <td className="py-3 px-4 text-gray-900">
+                                  {item.historyType === 'trade'
+                                    ? item.quantity
+                                    : `$${item.amount?.toFixed(2)}`}
                                 </td>
-                                <td className="py-3 px-4 text-gray-400">
-                                  {item.historyType === 'trade' ? item.openPrice?.toFixed(5) : (
+
+                                <td className="py-3 px-4 text-gray-600">
+                                  {item.historyType === 'trade' ? (
+                                    item.openPrice?.toFixed(5)
+                                  ) : (
                                     <span className={`px-2 py-0.5 rounded text-xs ${
-                                      item.status === 'Approved' || item.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
-                                      item.status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
-                                      'bg-yellow-500/20 text-yellow-400'
-                                    }`}>{item.status}</span>
+                                      item.status === 'Approved' || item.status === 'Completed'
+                                        ? 'bg-green-100 text-green-600'
+                                        : item.status === 'Rejected'
+                                        ? 'bg-red-100 text-red-600'
+                                        : 'bg-yellow-100 text-yellow-600'
+                                    }`}>
+                                      {item.status}
+                                    </span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-gray-400">
-                                  {item.historyType === 'trade' ? item.closePrice?.toFixed(5) : '-'}
+
+                                <td className="py-3 px-4 text-gray-600">
+                                  {item.historyType === 'trade'
+                                    ? item.closePrice?.toFixed(5)
+                                    : '-'}
                                 </td>
+
                                 <td className={`py-3 px-4 font-medium ${
-                                  item.historyType === 'trade' 
-                                    ? ((item.realizedPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500')
-                                    : (item.type === 'Deposit' || item.type === 'Transfer_From_Account' ? 'text-green-500' : 'text-red-500')
+                                  item.historyType === 'trade'
+                                    ? ((item.realizedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600')
+                                    : (item.type === 'Deposit' || item.type === 'Transfer_From_Account'
+                                        ? 'text-green-600'
+                                        : 'text-red-600')
                                 }`}>
-                                  {item.historyType === 'trade' 
+                                  {item.historyType === 'trade'
                                     ? `${(item.realizedPnl || 0) >= 0 ? '+' : ''}$${(item.realizedPnl || 0).toFixed(2)}`
                                     : `${item.type === 'Deposit' || item.type === 'Transfer_From_Account' ? '+' : '-'}$${item.amount?.toFixed(2)}`
                                   }
                                 </td>
-                              </tr>
+
+</tr>
                             ))}
                           </tbody>
                         </table>

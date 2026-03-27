@@ -233,18 +233,13 @@ const upload = multer({ storage });
 // ===============================
 
 router.post("/create", upload.single("image"), async (req, res) => {
-
   try {
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Image is required"
-      });
-    }
+    const { title, desc, highlight } = req.body;
 
     const banner = new Banner({
-      title: req.body.title,
+      title,
+      desc,
+      highlight,
       image: req.file.filename
     });
 
@@ -252,19 +247,12 @@ router.post("/create", upload.single("image"), async (req, res) => {
 
     res.json({
       success: true,
-      message: "Banner created successfully",
       data: banner
     });
 
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
 });
 
 
@@ -274,25 +262,17 @@ router.post("/create", upload.single("image"), async (req, res) => {
 // ===============================
 
 router.get("/getall", async (req, res) => {
-
   try {
-
-    const banners = await Banner.find().sort({ createdAt: -1 });
+    const banners = await Banner.find({ active: true }).sort({ createdAt: -1 });
 
     res.json({
       success: true,
       data: banners
     });
 
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
 });
 
 

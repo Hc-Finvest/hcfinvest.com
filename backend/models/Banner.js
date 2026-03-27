@@ -77,35 +77,31 @@
 //       { startDate: { $lte: now }, endDate: { $gte: now } }
 //     ]
 //   }
-  
+
 //   if (position) {
 //     query.position = position
 //   }
-  
+
 //   return this.find(query).sort({ priority: -1, createdAt: -1 })
 // }
 
 // export default mongoose.model('Banner', bannerSchema)
 
+// Banner.js
 
 import mongoose from "mongoose";
 
+// Banner.js
+
 const bannerSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      required: true
-    },
-    image: {
-      type: String,
-      required: true
-    },
-    active: {
-      type: Boolean,
-      default: true
-    }
+    title: { type: String, required: true },
+    desc: { type: String },
+    highlight: { type: String },
+    image: { type: String, required: true },
+    active: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("Banner", bannerSchema);

@@ -1,14 +1,17 @@
+// AdminBannerManagement.jsx
+
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../components/AdminLayout";
 import axios from "axios";
 import { API_URL } from "../config/api";
 
 const AdminBannerManagement = () => {
-
   const [banners, setBanners] = useState([]);
   const [openUpload, setOpenUpload] = useState(false);
   const [title, setTitle] = useState("");
   const [image, setImage] = useState(null);
+  const [desc, setDesc] = useState("");
+  const [highlight, setHighlight] = useState("");
 
   // Remove /api from API_URL for loading images
   const BASE_URL = API_URL.replace("/api", "");
@@ -27,33 +30,33 @@ const AdminBannerManagement = () => {
   };
 
   const uploadBanner = async () => {
+  if (!title || !image) {
+    alert("Please provide banner title and image");
+    return;
+  }
 
-    if (!title || !image) {
-      alert("Please provide banner title and image");
-      return;
-    }
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("desc", desc);        // ✅ ensure this
+  formData.append("highlight", highlight); // ✅ ensure this
+  formData.append("image", image);
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("image", image);
+  try {
+    await axios.post(`${API_URL}/banners/create`, formData);
 
-    try {
+    setOpenUpload(false);
+    setTitle("");
+    setDesc("");         // ✅ FIX
+    setHighlight("");    // ✅ FIX
+    setImage(null);
 
-      await axios.post(`${API_URL}/banners/create`, formData);
-
-      setOpenUpload(false);
-      setTitle("");
-      setImage(null);
-
-      fetchBanners();
-
-    } catch (err) {
-      console.log(err);
-    }
-  };
+    fetchBanners();
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   const deleteBanner = async (id) => {
-
     if (!window.confirm("Delete this banner?")) return;
 
     try {
@@ -69,16 +72,14 @@ const AdminBannerManagement = () => {
       title="Banner Management"
       subtitle="Manage promotional banners for client dashboard"
     >
-
       <div
         style={{
           padding: "30px",
           background: "#f8fafc",
           minHeight: "100vh",
-          color: "#1e293b"
+          color: "#1e293b",
         }}
       >
-
         {/* Banner Card */}
         <div
           style={{
@@ -86,26 +87,36 @@ const AdminBannerManagement = () => {
             padding: "25px",
             borderRadius: "10px",
             border: "1px solid #e2e8f0",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+            boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
           }}
         >
-
           {/* Header */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "20px"
+              marginBottom: "20px",
             }}
           >
-
             <div>
               <h3 style={{ margin: 0 }}>Banner Management</h3>
               <span style={{ color: "#64748b" }}>
                 {banners.length} banners configured
               </span>
             </div>
+
+            <input
+              placeholder="Description"
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+            />
+
+            <input
+              placeholder="Highlight text (ex: 20% Bonus)"
+              value={highlight}
+              onChange={(e) => setHighlight(e.target.value)}
+            />
 
             <button
               onClick={() => setOpenUpload(true)}
@@ -116,17 +127,15 @@ const AdminBannerManagement = () => {
                 padding: "10px 18px",
                 borderRadius: "8px",
                 cursor: "pointer",
-                fontWeight: "600"
+                fontWeight: "600",
               }}
             >
               + Add Banner
             </button>
-
           </div>
 
           {/* Empty State */}
           {banners.length === 0 && (
-
             <div
               style={{
                 border: "1px dashed #cbd5f5",
@@ -134,10 +143,9 @@ const AdminBannerManagement = () => {
                 padding: "70px",
                 textAlign: "center",
                 background: "#ffffff",
-                color: "#64748b"
+                color: "#64748b",
               }}
             >
-
               <div style={{ fontSize: "45px", marginBottom: "10px" }}>🖼</div>
 
               <p>No banners created yet</p>
@@ -146,15 +154,13 @@ const AdminBannerManagement = () => {
                 style={{
                   color: "#6366f1",
                   cursor: "pointer",
-                  fontWeight: "500"
+                  fontWeight: "500",
                 }}
                 onClick={() => setOpenUpload(true)}
               >
                 Create your first banner
               </span>
-
             </div>
-
           )}
 
           {/* Banner Grid */}
@@ -163,12 +169,10 @@ const AdminBannerManagement = () => {
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
               gap: "20px",
-              marginTop: "20px"
+              marginTop: "20px",
             }}
           >
-
             {banners.map((banner) => (
-
               <div
                 key={banner._id}
                 style={{
@@ -176,22 +180,20 @@ const AdminBannerManagement = () => {
                   borderRadius: "10px",
                   overflow: "hidden",
                   border: "1px solid #e2e8f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
                 }}
               >
-
                 <img
                   src={`${BASE_URL}/uploads/banners/${banner.image}`}
                   alt={banner.title}
                   style={{
                     width: "100%",
                     height: "160px",
-                    objectFit: "cover"
+                    objectFit: "cover",
                   }}
                 />
 
                 <div style={{ padding: "15px" }}>
-
                   <h4 style={{ marginBottom: "10px", color: "#1e293b" }}>
                     {banner.title}
                   </h4>
@@ -205,25 +207,19 @@ const AdminBannerManagement = () => {
                       padding: "6px 14px",
                       borderRadius: "6px",
                       cursor: "pointer",
-                      fontWeight: "500"
+                      fontWeight: "500",
                     }}
                   >
                     Delete
                   </button>
-
                 </div>
-
               </div>
-
             ))}
-
           </div>
-
         </div>
 
         {/* Upload Modal */}
         {openUpload && (
-
           <div
             style={{
               position: "fixed",
@@ -235,112 +231,105 @@ const AdminBannerManagement = () => {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              zIndex: 999
+              zIndex: 999,
             }}
           >
+            <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
+              <h2 className="text-xl font-semibold mb-5 text-gray-800">
+                Add Banner
+              </h2>
 
-            <div
-              style={{
-                background: "#ffffff",
-                padding: "30px",
-                borderRadius: "12px",
-                width: "420px",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.25)"
-              }}
-            >
-
-              <h2 style={{ marginBottom: "20px" }}>Add Banner</h2>
-
-              <div style={{ marginBottom: "15px" }}>
-                <label style={{ fontWeight: "500" }}>Banner Title</label>
-
+              {/* Title */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-600">
+                  Banner Title
+                </label>
                 <input
                   type="text"
                   placeholder="Enter banner title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    marginTop: "6px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc"
-                  }}
+                  className="w-full mt-2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ fontWeight: "500" }}>Upload Image</label>
+              {/* Description */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-600">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter description"
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  className="w-full mt-2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Highlight */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-600">
+                  Highlight Text
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 20% Bonus"
+                  value={highlight}
+                  onChange={(e) => setHighlight(e.target.value)}
+                  className="w-full mt-2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-600">
+                  Upload Image
+                </label>
 
                 <input
                   type="file"
                   onChange={(e) => setImage(e.target.files[0])}
-                  style={{ marginTop: "6px" }}
+                  className="mt-2 block w-full text-sm text-gray-500
+        file:mr-4 file:py-2 file:px-4
+        file:rounded-lg file:border-0
+        file:text-sm file:font-semibold
+        file:bg-indigo-50 file:text-indigo-600
+        hover:file:bg-indigo-100"
                 />
               </div>
 
+              {/* Preview */}
               {image && (
-                <div style={{ marginBottom: "20px" }}>
+                <div className="mb-4">
                   <img
                     src={URL.createObjectURL(image)}
                     alt="preview"
-                    style={{
-                      width: "100%",
-                      height: "160px",
-                      objectFit: "cover",
-                      borderRadius: "8px",
-                      border: "1px solid #ddd"
-                    }}
+                    className="w-full h-40 object-cover rounded-lg border"
                   />
                 </div>
               )}
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "10px"
-                }}
-              >
-
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setOpenUpload(false)}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    background: "#f5f5f5",
-                    cursor: "pointer"
-                  }}
+                  className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-100"
                 >
                   Cancel
                 </button>
 
                 <button
                   onClick={uploadBanner}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "6px",
-                    border: "none",
-                    background: "#6366f1",
-                    color: "white",
-                    fontWeight: "500",
-                    cursor: "pointer"
-                  }}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
                 >
                   Upload Banner
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
         )}
-
       </div>
-
     </AdminLayout>
   );
 };

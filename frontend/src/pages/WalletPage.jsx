@@ -1490,7 +1490,7 @@ const WalletPage = () => {
                       setOxapayAmount("");
                       setError("");
                     }}
-                    className="flex-1 bg-white text-gray-900 py-3 rounded-lg hover:bg-dark-600 transition-colors"
+                    className="flex-1 bg-light-700 text-gray-900 py-3 rounded-lg hover:bg-dark-600 transition-colors"
                   >
                     Cancel
                   </button>
