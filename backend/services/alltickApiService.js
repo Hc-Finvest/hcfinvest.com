@@ -109,7 +109,8 @@ class AllTickApiService {
    */
   normalizeSymbol(symbol) {
     if (!symbol) return '';
-    return this.symbolMap[symbol] || symbol;
+    const cleanSymbol = String(symbol).toUpperCase();
+    return this.symbolMap[cleanSymbol] || cleanSymbol;
   }
 
   async connect() {
@@ -530,7 +531,8 @@ class AllTickApiService {
   }
 
   isSymbolSupported(symbol) {
-    return !!(this.symbolMap[symbol]);
+    if (!symbol) return false;
+    return !!(this.symbolMap[String(symbol).toUpperCase()]);
   }
 
   async getPrice(symbol) {
@@ -573,6 +575,7 @@ class AllTickApiService {
    */
   async syncLivePriceToTiers(symbol, tick) {
     if (!symbol || !tick || !tick.price) return;
+    const cleanSymbol = String(symbol).toUpperCase();
 
     // 🚀 PERFORMANCE: Only sync high-frequency timeframes (1m, 5m) to Redis.
     // Syncing 4h or 1d on every tick at 50ms latency is excessive and blocks the event loop.
@@ -586,8 +589,8 @@ class AllTickApiService {
       for (const { tf, mins } of timeframes) {
         // Build the same cache key pattern used in prices.js
         // hist:${symbol}:${timeframe}:start:latest:1000:std
-        const cacheKey = `hist:${symbol}:${tf}:start:latest:1000:std`;
-        const liveCacheKey = `hist:${symbol}:${tf}:start:latest:1000:live`;
+        const cacheKey = `hist:${cleanSymbol}:${tf}:start:latest:1000:std`;
+        const liveCacheKey = `hist:${cleanSymbol}:${tf}:start:latest:1000:live`;
 
         // We try both because the history route might have cached it with either
         const keys = [cacheKey, liveCacheKey];

@@ -79,12 +79,23 @@ let syncInterval = null
 let slTpCheckInterval = null
 
 function refreshPrioritySymbols() {
-    const activeChartSymbols = [...io.sockets.adapter.rooms.get('chartUpdates') || []]
-    console.log(`[Server] Refreshing priority symbols for ${activeChartSymbols.length} active charts`)
-    if (activeChartSymbols.length > 0) {
-      alltickApiService.setPrioritySymbols(activeChartSymbols)
+    // ≡ƒ¢í∩╕Å Senior Dev Fix: Extract all unique symbols from rooms that users are CURRENTLY watching
+    const rooms = io.sockets.adapter.rooms;
+    const activeChartSymbols = [];
+    
+    for (const [roomName, users] of rooms.entries()) {
+      if (roomName.startsWith('candles:') && users.size > 0) {
+        const symbol = roomName.split(':')[1];
+        if (symbol) activeChartSymbols.push(symbol.toUpperCase());
+      }
     }
-  }
+
+    if (activeChartSymbols.length > 0) {
+       const uniqueSymbols = [...new Set(activeChartSymbols)];
+       console.log(`[Server] Resyncing priority symbols for ${uniqueSymbols.length} active charts: ${uniqueSymbols.join(', ')}`);
+       alltickApiService.setPrioritySymbols(uniqueSymbols);
+    }
+}
 
 const ENABLE_LIVE_PERSIST = (process.env.ENABLE_LIVE_PERSIST || 'true').toLowerCase() !== 'false'
 const ENABLE_PERIODIC_HISTORY_SYNC = (process.env.ENABLE_PERIODIC_HISTORY_SYNC || 'true').toLowerCase() !== 'false'
@@ -135,12 +146,15 @@ redisSubscriber.on('message', (channel, message) => {
       const now = Date.now();
       
       const activeChartSymbols = new Set(
-        [...socketPrioritySymbols.values()].flatMap(syms => syms || [])
+        [...socketPrioritySymbols.values()]
+          .flatMap(syms => syms || [])
+          .map(s => String(s).toUpperCase())
       );
       
-      const isBeingWatched = activeChartSymbols.has(symbol);
+      const isBeingWatched = activeChartSymbols.has(String(symbol).toUpperCase());
       
-      if (isBeingWatched && priceSubscribers.size > 0) {
+      // ≡ƒ¢í∩╕Å ELITE: Emit to 'prices' room for BOTH active charts AND table updates (always emit if priceSubscribers exist)
+      if (priceSubscribers.size > 0) {
         const payload = {
           symbol,
           bid: priceData.bid,

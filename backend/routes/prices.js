@@ -260,6 +260,8 @@ router.get('/history', async (req, res) => {
     'M': 43200, '1M': 43200, '1m': 1
   };
 
+  // 🛡️ ELITE: Always normalize symbol to UPPERCASE for internal consistency
+  const cleanSymbol = String(symbol).toUpperCase();
   const timeframe = resolutionMap[resolution] || '1m';
   const targetMinutes = resolutionToMinutes[resolution] || parseInt(resolution) || 1;
   const isPreferLive = preferLive === '1' || preferLive === 'true';
@@ -270,17 +272,17 @@ router.get('/history', async (req, res) => {
   const startTime = from ? parseInt(from) : undefined;
   const endTime = to ? parseInt(to) : (isPreferLive ? serverNow : undefined);
 
-  console.log(`[History] Elite Request: ${symbol} (${resolution} → ${timeframe}) from=${from} to=${endTime} limit=${requestLimit}`);
+  console.log(`[History] Elite Request: ${cleanSymbol} (${resolution} → ${timeframe}) from=${from} to=${endTime} limit=${requestLimit}`);
 
-  if (!alltickApiService.isSymbolSupported(symbol)) {
-    return res.status(404).json({ success: false, message: `Symbol ${symbol} is not supported` });
+  if (!alltickApiService.isSymbolSupported(cleanSymbol)) {
+    return res.status(404).json({ success: false, message: `Symbol ${cleanSymbol} is not supported` });
   }
 
   // 🛡️ ELITE: Caching Key optimized for timeframe and range
   // Always use 'latest' for the end if not specified, to match live tier-sync
   const cacheSuffix = isPreferLive ? 'live' : 'std';
   const effectiveEnd = (isPreferLive && !to) ? 'latest' : (endTime || 'latest');
-  const cacheKey = `hist:${symbol}:${timeframe}:start:${effectiveEnd}:1000:${cacheSuffix}`;
+  const cacheKey = `hist:${cleanSymbol}:${timeframe}:start:${effectiveEnd}:1000:${cacheSuffix}`;
   
   try {
     const cached = await redisClient.get(cacheKey);
