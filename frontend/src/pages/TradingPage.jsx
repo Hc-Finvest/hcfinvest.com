@@ -3544,22 +3544,30 @@ const TradingPage = () => {
     
     if (openTrades.length > 0) {
       openTrades.forEach(trade => {
-        // Use livePrices first, fallback to instruments
-        const livePrice = livePrices[trade.symbol]
+        // ✅ ELITE: Robust case-insensitive lookup (matching the positions table)
+        const targetSym = trade.symbol;
+        const livePrice = livePrices[targetSym] || 
+                        livePrices[targetSym.toUpperCase()] || 
+                        livePrices[targetSym.toLowerCase()] ||
+                        livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()];
+
         const inst = instruments.find(i => i.symbol === trade.symbol)
+        
+        // Normalize side for safety (e.g. 'buy' -> 'BUY')
+        const side = String(trade.side || '').toUpperCase();
         
         // Only calculate if we have a valid price
         const currentPrice = livePrice?.bid 
-          ? (trade.side === 'BUY' ? (livePrice.rawBid || livePrice.bid) : (livePrice.rawAsk || livePrice.ask))
-          : (inst?.bid ? (trade.side === 'BUY' ? (inst.rawBid || inst.bid) : (inst.rawAsk || inst.ask)) : null)
+          ? (side === 'BUY' ? (livePrice.rawBid || livePrice.bid) : (livePrice.rawAsk || livePrice.ask))
+          : (inst?.bid ? (side === 'BUY' ? (inst.rawBid || inst.bid) : (inst.rawAsk || inst.ask)) : null)
         
         if (currentPrice && currentPrice > 0) {
           hasValidPrices = true
-          const pnl = trade.side === 'BUY'
+          const pnl = side === 'BUY'
             ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
             : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize
-          // Commission is already deducted from account balance on trade open in backend.
-          // Subtract only swap here to avoid double-counting commission in equity display.
+          
+          // Deduct commission from floating PnL if not already deducted
           totalFloatingPnl += pnl - (trade.swap || 0)
         }
         totalUsedMargin += trade.marginUsed || 0
@@ -4999,7 +5007,7 @@ const TradingPage = () => {
                     )}
                   </>
                 )}
-                <span className="text-xs sm:text-sm text-gray-500 flex items-center gap-1">P/L: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{accountSummary.floatingPnl >= 0 ? '+' : ''}${Math.abs(accountSummary.floatingPnl || 0).toFixed(2)}</span></span>
+                <span className="text-xs sm:text-sm text-gray-500 flex items-center gap-1">P/L: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{accountSummary.floatingPnl >= 0 ? '+' : ''}${(accountSummary.floatingPnl || 0).toFixed(2)}</span></span>
                 <button
                   onClick={() => setIsBottomPanelMinimized(!isBottomPanelMinimized)}
                   className={`ml-1 p-1 rounded-md transition-all duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'} ${isBottomPanelMinimized ? 'rotate-180' : ''}`}
@@ -5044,10 +5052,14 @@ const TradingPage = () => {
                                       livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()];
 
                       const inst = instruments.find(i => i.symbol === trade.symbol) || selectedInstrument
+                      
+                      // Normalize side for safety (matching calculateEquity)
+                      const side = String(trade.side || '').toUpperCase();
+
                       const currentPrice = livePrice 
-                        ? (trade.side === 'BUY' ? (livePrice.rawBid || livePrice.bid) : (livePrice.rawAsk || livePrice.ask))
-                        : (trade.side === 'BUY' ? (inst.rawBid || inst.bid) : (inst.rawAsk || inst.ask))
-                      const pnl = trade.side === 'BUY' 
+                        ? (side === 'BUY' ? (livePrice.rawBid || livePrice.bid) : (livePrice.rawAsk || livePrice.ask))
+                        : (side === 'BUY' ? (inst.rawBid || inst.bid) : (inst.rawAsk || inst.ask))
+                      const pnl = side === 'BUY' 
                         ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
                         : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize
                       
