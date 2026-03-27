@@ -67,7 +67,12 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         autosize: true,
         datafeed: Datafeed,
         symbol_search_request_delay: 1000,
-
+        
+        // ✅ FIX #4 (v7.79): Native Local Storage Persistence Hooks
+        client_id: 'hcf_trading_v1',
+        user_id: 'hcf_production_user',
+        auto_save_delay: 2, // Auto-save all properties and drawings every 2 seconds
+        
         // ── Feature flags ─────────────────────────────────────────────────
         disabled_features: [
           "header_saveload"
