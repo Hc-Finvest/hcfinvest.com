@@ -133,8 +133,19 @@ const Advance_Trading_View_Chart = ({ symbol = "XAUUSD", trades = [], onTradeMod
         // Initial sync
         managerRef.current.syncTrades(latestTradesRef.current, latestSymbolRef.current);
 
-        // ≡ƒ¢í∩╕Å Persistence Guard: Some TradingView versions need a moment for the price axis 
-        // to stabilize after the first draw. We fire a second sync after 1.5s as a safety.
+        // ≡ƒ¢í∩╕Å v7.49 Aggressive Volume Cleanup: Forcefully remove the Volume indicator 
+        // if it managed to sneak past the disabled_features flags.
+        try {
+            const chart = widget.activeChart();
+            chart.getAllStudies().forEach(s => {
+                if (s.name.toLowerCase().includes('volume')) {
+                    console.log(`[Trading] Pruning persistent Volume study: ${s.id}`);
+                    chart.removeEntity(s.id);
+                }
+            });
+        } catch (e) {}
+
+        // ≡ƒ¢í∩╕Å Persistence Guard
         setTimeout(() => {
           if (managerRef.current && chartReadyRef.current) {
             console.log(`[Trading] Persistence re-sync for ${latestSymbolRef.current}`);
