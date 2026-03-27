@@ -330,16 +330,20 @@ export class TradeLineManager {
     const set = this.lines[tid];
 
     // ENTRY (Fixed position, but draggable to spawn ghosts)
+    const side = String(trade.side || trade.type || '').toLowerCase();
+    const isBuy = side.includes('buy') || side.includes('long');
+    const labelText = `${isBuy ? 'BUY' : 'SELL'} ${fmt(entry)}`;
+
     if (!set.entry) {
       set.entry = await this._createShape(tid, 'entry', entry, { 
         color: '#2196F3', 
         style: 1, 
         width: 2, 
-        text: `ENTRY`,
+        text: labelText,
         selectable: false // ≡ƒ¢í∩╕Å v7.46 Stationary Anchor: Entry lines cannot be selected/deleted.
       });
     } else {
-      this._updateShape(set.entry.tvId, entry);
+      this._updateShape(set.entry.tvId, entry, labelText);
     }
 
     // SL
