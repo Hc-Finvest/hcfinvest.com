@@ -10,7 +10,7 @@ class EmailService {
 
   // Load config
   _loadConfig() {
-    this.provider = process.env.EMAIL_PROVIDER || 'smtp'
+    this.provider = process.env.EMAIL_PROVIDER || 'smtp' // Default to SMTP (Zoho)
     this.appName = process.env.APP_NAME || 'HC Finvest'
     this.fromEmail = process.env.SMTP_FROM_EMAIL || "support@heddgecapitals.com"
     this.fromName = process.env.SMTP_FROM_NAME || 'HC Finvest Support'
@@ -31,7 +31,7 @@ class EmailService {
         secure: isSecure,
         auth: {
           user: process.env.SMTP_USER || "support@heddgecapitals.com",
-          pass: process.env.SMTP_PASS || "Jf0DLgxCEptT"
+          pass: process.env.SMTP_PASS || "NKhnKpY2Q5tQ" // ✅ Zoho App Password
         },
         tls: {
           rejectUnauthorized: false
