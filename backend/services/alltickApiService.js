@@ -22,6 +22,9 @@ class AllTickApiService {
     this.seqId = 1; // 32-bit sequence counter
     this.maxReconnectAttempts = 20; 
     
+    // ✅ ELITE Resilience: Initialize memory cache (v7.77)
+    this.prices = {};
+    
     // Comprehensive mapping for all instruments defined in frontend
     this.symbolMap = {
       // Forex
