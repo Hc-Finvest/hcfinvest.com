@@ -80,6 +80,29 @@ export class TradeLineManager {
   initialize(widget) {
     this.widget = widget;
     this._attachEvents(widget);
+    
+    // ≡ƒ¢í∩╕Å v7.80 Fossil Cleanup: Purge baked-in lines from localStorage
+    // Because auto_save_delay saves programmatic lines, they load as dead "fossil" shapes on refresh.
+    // We must scan and destroy them before syncing live trades.
+    setTimeout(() => {
+        try {
+            const chart = widget.chart();
+            const shapes = chart.getAllShapes();
+            shapes.forEach(shape => {
+                const entity = chart.getShapeById(shape.id);
+                const props = entity?.getProperties?.();
+                if (props && props.text) {
+                    const text = String(props.text).toUpperCase();
+                    if (text === 'TP' || text === 'SL' || text.includes('BUY ') || text.includes('SELL ') || text.includes('NEW TP') || text.includes('NEW SL')) {
+                        console.log(`[TradeManager] Purging fossilized trade line ${shape.id} from cache.`);
+                        chart.removeEntity(shape.id);
+                    }
+                }
+            });
+        } catch (e) {
+            console.error('[TradeManager] Fossil cleanup error:', e);
+        }
+    }, 1500); // 1.5s delay ensures layout is fully restored before sweeping
   }
 
   destroy() {
