@@ -448,7 +448,7 @@ class AllTickApiService {
   async setLivePrice(symbol, data) {
     try {
       if (!symbol || !data) return;
-      const cleanSymbol = String(symbol).toUpperCase().replace(/\.I$/i, '');
+      const cleanSymbol = String(symbol).toUpperCase();
       const payloadString = JSON.stringify({ ...data, symbol: cleanSymbol });
       
       // 1. Store the newest price in Redis HSET (Always use clean symbol)
@@ -463,7 +463,7 @@ class AllTickApiService {
 
   async getLivePrice(symbol) {
     try {
-      const cleanSymbol = String(symbol).toUpperCase().replace(/\.I$/i, '');
+      const cleanSymbol = String(symbol).toUpperCase();
       const data = await redisClient.hget('live_prices', cleanSymbol);
       return data ? JSON.parse(data) : null;
     } catch (err) {
