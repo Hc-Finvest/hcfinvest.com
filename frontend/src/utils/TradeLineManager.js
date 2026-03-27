@@ -111,6 +111,18 @@ export class TradeLineManager {
         const shape = widget.chart().getShapeById(tvId);
         const p = shape?.getPoints?.()?.[0]?.price;
         this.dragStartPrice = Number.isFinite(p) ? p : 0;
+        
+        // ≡ƒ¢í∩╕Å v7.46 Selection Guard: Immediately clear selection to hide floating toolbox
+        // This prevents the "Delete/Trash" and "Settings" icons from appearing while dragging.
+        setTimeout(() => {
+          try { widget.chart().clearSelection(); } catch(e) {}
+        }, 10);
+      }
+
+      // ≡ƒ¢í∩╕Å v7.46 Deletion Guard: If the user bypasses UI and deletes a line, re-sync to restore it.
+      if (action === 'remove' && !this.isCommitBlocked) {
+          console.log(`[TradeManager] UI deletion detected for ${meta.type}. Triggering restoration sync.`);
+          setTimeout(() => this.syncTrades(this.trades), 100);
       }
 
       // ≡ƒ¢í∩╕Å v7.32 Track BOTH move and points_changed to guarantee we never miss a final drag endpoint!
@@ -245,7 +257,13 @@ export class TradeLineManager {
 
   async syncTrades(trades, symbol = null) {
     if (this.activeDragId) return; // Locked during interaction
-    if (Date.now() < this.syncLockUntil) return; // v7.28 Sync Lock (Prevent flickering during commit)
+    
+    // ≡ƒ¢í∩╕Å v7.46 Instant Cleanup Bypass
+    // If trade count decreased, someone closed a trade. We MUST bypass the 2.5s sync-lock
+    // to remove the lines immediately, otherwise they linger until the timer expires.
+    const hasClosures = (trades || []).length < this.trades.length;
+
+    if (Date.now() < this.syncLockUntil && !hasClosures) return; 
 
     this.trades = trades || [];
     const curSym = canonicalSymbol(symbol);
@@ -284,7 +302,13 @@ export class TradeLineManager {
 
     // ENTRY (Fixed position, but draggable to spawn ghosts)
     if (!set.entry) {
-      set.entry = await this._createShape(tid, 'entry', entry, { color: '#2196F3', style: 1, width: 2, text: `ENTRY` });
+      set.entry = await this._createShape(tid, 'entry', entry, { 
+        color: '#2196F3', 
+        style: 1, 
+        width: 2, 
+        text: `ENTRY`,
+        selectable: false // ≡ƒ¢í∩╕Å v7.46 Stationary Anchor: Entry lines cannot be selected/deleted.
+      });
     } else {
       this._updateShape(set.entry.tvId, entry);
     }
@@ -316,7 +340,7 @@ export class TradeLineManager {
             {
                 shape: 'horizontal_line',
                 lock: false,
-                disableSelection: false,
+                disableSelection: cfg.selectable === false, // ≡ƒ¢í∩╕Å v7.46 UI Guard
                 disableSave: true,
                 disableUndo: true,
                 overrides: {
@@ -326,7 +350,7 @@ export class TradeLineManager {
                     linestyle: cfg.style,
                     showLabel: true,
                     text: cfg.text,
-                    horzLabelsAlign: 'left', // v7.33 Draw text on opposite side of Y-Axis
+                    horzLabelsAlign: 'left',
                 }
             }
         );
