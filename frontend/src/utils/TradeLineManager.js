@@ -84,9 +84,9 @@ export class TradeLineManager {
 
   destroy() {
     if (this.widget && this._handler) {
-      this.widget.unsubscribe('drawing_event', this._handler);
+      try { this.widget.unsubscribe('drawing_event', this._handler); } catch(e) {}
     }
-    Object.keys(this.lines).forEach(tid => this.removeTradeLines(tid));
+    this.clearAllManagedDrawings();
   }
 
   // ΓöÇΓöÇΓöÇ Events ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -267,12 +267,10 @@ export class TradeLineManager {
 
     this.trades = trades || [];
     
-    // ≡ƒ¢í∩╕Å v7.47 Emergency: If trade list is empty, Nuke everything immediately.
+    // ≡ƒ¢í∩╕Å v7.48 Emergency: If trade list is empty, Nuke everything immediately.
     if (this.trades.length === 0) {
         console.log('[TradeManager] Trade list empty. Clearing all chart entities.');
-        Object.keys(this.lines).forEach(tid => this.removeTradeLines(tid));
-        // Deep scan for stray tvIdMap entries just in case
-        Object.keys(this.tvIdMap).forEach(tvId => this._destroyShape(tvId));
+        this.clearAllManagedDrawings();
         return;
     }
 
@@ -309,6 +307,15 @@ export class TradeLineManager {
     for (const trade of visible) {
       await this._syncTradeShapes(chart, trade);
     }
+  }
+
+  clearAllManagedDrawings() {
+      console.log('[TradeManager] Executing Alpha-Level ClearAll...');
+      Object.keys(this.lines).forEach(tid => this.removeTradeLines(tid));
+      // Safeguard for anything missed by removeTradeLines
+      Object.keys(this.tvIdMap).forEach(tvId => this._destroyShape(tvId));
+      this.lines = {};
+      this.tvIdMap = {};
   }
 
   async _syncTradeShapes(chart, trade) {
@@ -395,7 +402,16 @@ export class TradeLineManager {
   }
 
   _destroyShape(tvId) {
-    try { this.widget.chart().removeEntity(tvId); } catch {}
+    if (!tvId) return;
+    try { 
+        const chart = this.widget.chart();
+        chart.removeEntity(tvId); 
+        // ≡ƒ¢í∩╕Å v7.48 Double-Tap Deletion: Some shapes linger if deleted during a render cycle.
+        // We fire a second cleanup 100ms later to ensure the entity is gone.
+        setTimeout(() => {
+            try { chart.removeEntity(tvId); } catch(e) {}
+        }, 100);
+    } catch (e) {}
     delete this.tvIdMap[tvId];
   }
 
