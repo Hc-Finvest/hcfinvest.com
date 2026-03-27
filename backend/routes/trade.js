@@ -9,6 +9,7 @@ import copyTradingEngine from '../services/copyTradingEngine.js'
 import ibEngine from '../services/ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
 import redisClient from '../services/redisClient.js'
+import { isMarketOpen, isPriceFresh } from '../utils/marketHours.js'
 
 const router = express.Router()
 
@@ -39,13 +40,47 @@ router.post('/open', async (req, res) => {
       })
     }
 
+    // ≡ƒ¢í∩╕Å Market Open Guard
+    if (!isMarketOpen(symbol)) {
+      return res.status(400).json({
+        success: false,
+        message: `Market is currently closed for ${symbol}. Please try again when market is open.`,
+        code: 'MARKET_CLOSED'
+      })
+    }
+
     // Check if market data is available (bid/ask must be valid numbers > 0)
     if (!bid || !ask || parseFloat(bid) <= 0 || parseFloat(ask) <= 0 || isNaN(parseFloat(bid)) || isNaN(parseFloat(ask))) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Market is closed or no price data available. Please try again when market is open.',
-        code: 'MARKET_CLOSED'
+        message: 'No price data available. Please try again later.',
+        code: 'NO_PRICE_DATA'
       })
+    }
+
+    // ≡ƒ¢í∩╕Å Price Freshness Guard (60s Rule)
+    try {
+      const priceStr = await redisClient.hget('live_prices', symbol);
+      if (priceStr) {
+        const cachedPrice = JSON.parse(priceStr);
+        if (!isPriceFresh(cachedPrice.time, 60)) {
+          console.warn(`[Trade Route] Stale price detected for ${symbol}: ${cachedPrice.time}`);
+          return res.status(400).json({
+            success: false,
+            message: 'Market data is stale or delayed. Please wait for a live price update.',
+            code: 'STALE_PRICE'
+          });
+        }
+      } else {
+        // No price in Redis at all
+        return res.status(400).json({
+          success: false,
+          message: 'Market data not yet available for this instrument.',
+          code: 'NO_DATA_FEED'
+        });
+      }
+    } catch (redisErr) {
+      console.error('[Trade Route] Redis price check error:', redisErr);
     }
 
     // Check for stale prices (if bid equals ask exactly, likely no real data)
@@ -193,10 +228,28 @@ router.post('/close', async (req, res) => {
     if (!bid || !ask || parseFloat(bid) <= 0 || parseFloat(ask) <= 0 || isNaN(parseFloat(bid)) || isNaN(parseFloat(ask))) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Market is closed or no price data available. Cannot close trade.',
-        code: 'MARKET_CLOSED'
+        message: 'No price data available. Cannot close trade.',
+        code: 'NO_PRICE_DATA'
       })
     }
+
+    // ≡ƒ¢í∩╕Å Closing Price Freshness Guard
+    try {
+      const tradeObj = await Trade.findById(tradeId);
+      if (tradeObj) {
+        const priceStr = await redisClient.hget('live_prices', tradeObj.symbol);
+        if (priceStr) {
+          const cachedPrice = JSON.parse(priceStr);
+          if (!isPriceFresh(cachedPrice.time, 120)) { // Slightly more lenient 120s for closing
+            return res.status(400).json({
+              success: false,
+              message: 'Cannot close trade: Market data is too old/stale.',
+              code: 'STALE_PRICE'
+            });
+          }
+        }
+      }
+    } catch (e) {}
 
     // Get trade first to check if it's a challenge or master trade
     const tradeToClose = await Trade.findById(tradeId)

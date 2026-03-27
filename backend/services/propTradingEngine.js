@@ -2,6 +2,7 @@ import Challenge from '../models/Challenge.js'
 import ChallengeAccount from '../models/ChallengeAccount.js'
 import PropSettings from '../models/PropSettings.js'
 import Trade from '../models/Trade.js'
+import { isMarketOpen } from '../utils/marketHours.js'
 
 class PropTradingEngine {
   constructor() {
@@ -81,6 +82,15 @@ class PropTradingEngine {
 
     const challenge = account.challengeId
     const rules = challenge.rules
+
+    // ≡ƒ¢í∩╕Å Market Open Guard
+    if (!isMarketOpen(tradeParams.symbol)) {
+      return { 
+        valid: false, 
+        error: `Market is currently closed for ${tradeParams.symbol}. Challenge accounts must respect market hours.`, 
+        code: 'MARKET_CLOSED' 
+      }
+    }
 
     // Check account status
     if (account.status === 'FAILED') {
@@ -218,6 +228,12 @@ class PropTradingEngine {
 
     // Calculate execution price with spread
     const { symbol, segment, side, orderType, quantity, bid, ask, sl, tp } = tradeParams
+    
+    // ≡ƒ¢í∩╕Å Absolute Final Market Guard
+    if (!isMarketOpen(symbol)) {
+      throw new Error(`Market is currently closed for ${symbol}.`)
+    }
+
     const openPrice = side === 'BUY' ? ask : bid
 
     // Get contract size based on symbol

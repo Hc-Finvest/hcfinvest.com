@@ -5,6 +5,7 @@ import TradeSettings from '../models/TradeSettings.js'
 import AdminLog from '../models/AdminLog.js'
 import ibEngine from './ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
+import { isMarketOpen, isPriceFresh } from '../utils/marketHours.js'
 
 class TradeEngine {
   constructor() {
@@ -180,27 +181,9 @@ class TradeEngine {
     return { valid: true, marginRequired, freeMargin, usedMargin, equity }
   }
 
-  // Check if market is open for a symbol
+  // Market open check is now handled via unified utility
   isMarketOpen(symbol) {
-    const normalizedSymbol = this.normalizeSymbol(symbol)
-    const now = new Date()
-    const utcDay = now.getUTCDay() // 0 = Sunday, 6 = Saturday
-    const utcHour = now.getUTCHours()
-    
-    // Crypto markets are always open
-    if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(normalizedSymbol)) {
-      return true
-    }
-    
-    // Forex and Metals: Closed from Friday 22:00 UTC to Sunday 22:00 UTC
-    // Saturday (day 6) - fully closed
-    if (utcDay === 6) return false
-    // Sunday before 22:00 UTC - closed
-    if (utcDay === 0 && utcHour < 22) return false
-    // Friday after 22:00 UTC - closed
-    if (utcDay === 5 && utcHour >= 22) return false
-    
-    return true
+    return isMarketOpen(symbol);
   }
 
   // Open a new trade
@@ -208,14 +191,14 @@ class TradeEngine {
     const account = await TradingAccount.findById(tradingAccountId).populate('accountTypeId')
     if (!account) throw new Error('Trading account not found')
 
-    // Check if market is open
-    if (!this.isMarketOpen(symbol)) {
-      throw new Error(`Market is closed for ${symbol}. Forex and metals trade Mon-Fri only.`)
+    // Check if market is open using unified utility
+    if (!isMarketOpen(symbol)) {
+      throw new Error(`Market is currently closed for ${symbol}. Please try again when market opens.`)
     }
 
-    // Validate bid/ask prices are valid
+    // Validate bid/ask prices are valid AND fresh
     if (!bid || !ask || bid <= 0 || ask <= 0) {
-      throw new Error('Invalid market prices. Please try again.')
+      throw new Error('Market is closed or no price data available. Please try again later.')
     }
 
     // Get charges for this trade

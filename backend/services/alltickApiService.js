@@ -63,6 +63,17 @@ class AllTickApiService {
     this.reverseSymbolMap = {};
     Object.entries(this.symbolMap).forEach(([key, value]) => {
       this.reverseSymbolMap[value] = key;
+      // Also map clean symbols to themselves if they differ from the .i key
+      const cleanKey = key.replace(/\.i$/i, '');
+      if (cleanKey !== key) {
+        this.symbolMap[cleanKey] = value;
+      }
+    });
+
+    // ≡ƒ¢í∩╕Å Senior Dev Fix: Ensure reverse map points to the CLEAN symbol for internal storage
+    Object.entries(this.symbolMap).forEach(([key, value]) => {
+        const cleanKey = key.replace(/\.i$/i, '');
+        this.reverseSymbolMap[value] = cleanKey;
     });
 
     this.subscribedSymbols = new Set(['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'ETHUSD', 'XAGUSD', 'EURJPY', 'USDJPY', 'GBPJPY']);
@@ -431,9 +442,11 @@ class AllTickApiService {
   async setLivePrice(symbol, data) {
     try {
       if (!symbol || !data) return;
-      const payloadString = JSON.stringify(data);
-      // 1. Store the newest price in Redis HSET
-      await redisClient.hset('live_prices', symbol, payloadString);
+      const cleanSymbol = String(symbol).toUpperCase().replace(/\.I$/i, '');
+      const payloadString = JSON.stringify({ ...data, symbol: cleanSymbol });
+      
+      // 1. Store the newest price in Redis HSET (Always use clean symbol)
+      await redisClient.hset('live_prices', cleanSymbol, payloadString);
       
       // 2. Publish to the Redis channel for real-time WebSocket broadcasting
       await redisClient.publish('price_updates', payloadString);
@@ -444,7 +457,8 @@ class AllTickApiService {
 
   async getLivePrice(symbol) {
     try {
-      const data = await redisClient.hget('live_prices', symbol);
+      const cleanSymbol = String(symbol).toUpperCase().replace(/\.I$/i, '');
+      const data = await redisClient.hget('live_prices', cleanSymbol);
       return data ? JSON.parse(data) : null;
     } catch (err) {
       console.error('[Redis] Failed to get live price:', err.message);
