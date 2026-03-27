@@ -111,15 +111,20 @@ class AllTickApiService {
    */
   normalizeSymbol(symbol) {
     if (!symbol) return '';
-    // Direct match first (covers exact keys like 'XAUUSD.i')
-    if (this.symbolMap[symbol]) return this.symbolMap[symbol];
-    // Lowercase .i suffix lookup: 'XAUUSD.I' -> 'XAUUSD.i'
-    const lower = symbol.toLowerCase();
-    if (this.symbolMap[lower]) return this.symbolMap[lower];
-    // Strip .i suffix and look up base symbol mapping
-    const base = lower.replace(/\.i$/, '');
+    const s = String(symbol).toUpperCase();
+    const base = s.replace(/\.I$/, '');
+    const targetWithSuffix = `${base}.i`;
+
+    // 1. Try with .i suffix (e.g. 'XAUUSD.i')
+    if (this.symbolMap[targetWithSuffix]) return this.symbolMap[targetWithSuffix];
+    
+    // 2. Try exact base (e.g. 'XAUUSD')
     if (this.symbolMap[base]) return this.symbolMap[base];
-    // Fallback: return original symbol unchanged
+    
+    // 3. Last resort fallbacks
+    if (this.symbolMap[symbol]) return this.symbolMap[symbol];
+    if (this.symbolMap[symbol.toLowerCase()]) return this.symbolMap[symbol.toLowerCase()];
+    
     return symbol;
   }
 
@@ -542,9 +547,12 @@ class AllTickApiService {
 
   isSymbolSupported(symbol) {
     if (!symbol) return false;
-    const s = String(symbol);
-    // Check exact, lowercase, and base-without-.i
-    return !!(this.symbolMap[s] || this.symbolMap[s.toLowerCase()] || this.symbolMap[s.toLowerCase().replace(/\.i$/, '')]);
+    const s = String(symbol).toUpperCase();
+    const base = s.replace(/\.I$/, '');
+    const targetWithSuffix = `${base}.i`;
+    
+    // Check with .i, then base, then original
+    return !!(this.symbolMap[targetWithSuffix] || this.symbolMap[base] || this.symbolMap[symbol] || this.symbolMap[symbol.toLowerCase()]);
   }
 
   async getPrice(symbol) {
