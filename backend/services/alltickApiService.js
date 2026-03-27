@@ -71,10 +71,14 @@ class AllTickApiService {
       }
     });
 
-    // ≡ƒ¢í∩╕Å Senior Dev Fix: Ensure reverse map points to the CLEAN symbol for internal storage
+    // ≡ƒ¢í∩╕Å Senior Dev Fix: Ensure reverse map points to the FULL instrument ID (e.g. XAUUSD.i)
+    // This ensures Redis lookups and frontend streaming stay consistent.
     Object.entries(this.symbolMap).forEach(([key, value]) => {
-        const cleanKey = key.replace(/\.i$/i, '');
-        this.reverseSymbolMap[value] = cleanKey;
+        if (key.includes('.i')) {
+           this.reverseSymbolMap[value] = key;
+        } else if (!this.reverseSymbolMap[value]) {
+           this.reverseSymbolMap[value] = key;
+        }
     });
 
     this.subscribedSymbols = new Set(['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'ETHUSD', 'XAGUSD', 'EURJPY', 'USDJPY', 'GBPJPY']);
