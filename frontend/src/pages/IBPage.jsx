@@ -380,37 +380,41 @@ const IBPage = () => {
                     </div>
 
                     {/* Referral Link */}
-                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 rounded-xl p-5 text-white">
-                      <p className="text-sm opacity-80 mb-1">
-                        Your Referral Link
-                      </p>
+                      <div className="bg-green-50 border border-green-300 rounded-xl p-5 text-gray-900">
+                        
+                        <p className="text-sm text-gray-600 mb-1">
+                          Your Referral Link
+                        </p>
 
-                      <p className="text-sm font-mono truncate mb-2">
-                        {window.location.origin}/user/signup?ref=
-                        {ibProfile.referralCode}
-                      </p>
-
-                      <p className="text-xs mb-3 opacity-80">
-                        Code:{" "}
-                        <span className="font-bold">
+                        <p className="text-sm font-mono truncate mb-2 text-gray-800">
+                          {window.location.origin}/user/signup?ref=
                           {ibProfile.referralCode}
-                        </span>
-                      </p>
+                        </p>
 
-                      <div className="flex gap-2">
-                        <button
-                          onClick={copyReferralLink}
-                          className="flex-1 bg-white/20 hover:bg-white/30 py-2 rounded-lg flex items-center justify-center gap-2"
-                        >
-                          <Copy size={16} />
-                          Copy
-                        </button>
+                        <p className="text-xs mb-3 text-gray-600">
+                          Code:{" "}
+                          <span className="font-bold text-gray-900">
+                            {ibProfile.referralCode}
+                          </span>
+                        </p>
 
-                        <button className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center">
-                          <Share2 size={18} />
-                        </button>
+                        <div className="flex gap-2">
+
+                          <button
+                            onClick={copyReferralLink}
+                            className="flex-1 bg-green-500 text-white hover:bg-green-600 py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                          >
+                            <Copy size={16} />
+                            Copy
+                          </button>
+
+                          {/* <button className="w-10 h-10 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg flex items-center justify-center transition">
+                            <Share2 size={18} />
+                          </button> */}
+
+                        </div>
+
                       </div>
-                    </div>
                   </div>
                 )}
 

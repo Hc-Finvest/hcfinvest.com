@@ -471,7 +471,7 @@ const CopyTradePage = () => {
                     <Crown size={isMobile ? 20 : 24} className="text-yellow-500" />
                   </div>
                   <div>
-                    <h3 className={`text-white font-semibold ${isMobile ? 'text-sm' : ''}`}>Become a Master Trader</h3>
+                    <h3 className={`text-black font-semibold ${isMobile ? 'text-sm' : ''}`}>Become a Master Trader</h3>
                     <p className="text-gray-400 text-xs">Share your trades and earn commission</p>
                   </div>
                 </div>
@@ -1058,96 +1058,125 @@ const CopyTradePage = () => {
 
       {/* Master Application Modal */}
       {showMasterModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`bg-dark-800 rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto`}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                <Crown size={20} className="text-yellow-500" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">Become a Master Trader</h2>
-                <p className="text-gray-500 text-sm">Share your trades with followers</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">Display Name *</label>
-                <input
-                  type="text"
-                  value={masterForm.displayName}
-                  onChange={(e) => setMasterForm(prev => ({ ...prev, displayName: e.target.value }))}
-                  placeholder="Your trading name"
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                />
-              </div>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div className={`bg-white rounded-xl ${isMobile ? 'p-4' : 'p-6'} w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto shadow-xl`}>
+    
+    {/* Header */}
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+        <Crown size={20} className="text-yellow-600" />
+      </div>
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900">Become a Master Trader</h2>
+        <p className="text-gray-500 text-sm">Share your trades with followers</p>
+      </div>
+    </div>
+    
+    <div className="space-y-4">
+      
+      {/* Display Name */}
+      <div>
+        <label className="text-gray-700 text-sm mb-1 block">Display Name *</label>
+        <input
+          type="text"
+          value={masterForm.displayName}
+          onChange={(e) => setMasterForm(prev => ({ ...prev, displayName: e.target.value }))}
+          placeholder="Your trading name"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-yellow-500"
+        />
+      </div>
 
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">Description</label>
-                <textarea
-                  value={masterForm.description}
-                  onChange={(e) => setMasterForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Tell followers about your trading strategy..."
-                  rows={3}
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white resize-none"
-                />
-              </div>
+      {/* Description */}
+      <div>
+        <label className="text-gray-700 text-sm mb-1 block">Description</label>
+        <textarea
+          value={masterForm.description}
+          onChange={(e) => setMasterForm(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Tell followers about your trading strategy..."
+          rows={3}
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-500 resize-none focus:outline-none focus:border-yellow-500"
+        />
+      </div>
 
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">Trading Account *</label>
-                <select
-                  value={masterForm.tradingAccountId || (accounts.length > 0 ? accounts[0]._id : '')}
-                  onChange={(e) => setMasterForm(prev => ({ ...prev, tradingAccountId: e.target.value }))}
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                >
-                  {accounts.length === 0 && <option value="">No accounts available</option>}
-                  {accounts.map(acc => (
-                    <option key={acc._id} value={acc._id}>{acc.accountId} - ${acc.balance?.toFixed(2)}</option>
-                  ))}
-                </select>
-                <p className="text-gray-500 text-xs mt-1">Trades from this account will be copied to followers</p>
-              </div>
+      {/* Trading Account */}
+      <div>
+        <label className="text-gray-700 text-sm mb-1 block">Trading Account *</label>
+        <select
+          value={masterForm.tradingAccountId || (accounts.length > 0 ? accounts[0]._id : '')}
+          onChange={(e) => setMasterForm(prev => ({ ...prev, tradingAccountId: e.target.value }))}
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:border-yellow-500"
+        >
+          {accounts.length === 0 && <option value="">No accounts available</option>}
+          {accounts.map(acc => (
+            <option key={acc._id} value={acc._id}>
+              {acc.accountId} - ${acc.balance?.toFixed(2)}
+            </option>
+          ))}
+        </select>
+        <p className="text-gray-500 text-xs mt-1">
+          Trades from this account will be copied to followers
+        </p>
+      </div>
 
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">Requested Commission (%)</label>
-                <input
-                  type="number"
-                  value={masterForm.requestedCommissionPercentage}
-                  onChange={(e) => setMasterForm(prev => ({ ...prev, requestedCommissionPercentage: parseFloat(e.target.value) || 0 }))}
-                  min="0"
-                  max="50"
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                />
-                <p className="text-gray-500 text-xs mt-1">Commission you'll earn from followers' daily profits (0-50%)</p>
-              </div>
+      {/* Commission */}
+      <div>
+        <label className="text-gray-700 text-sm mb-1 block">
+          Requested Commission (%)
+        </label>
+        <input
+          type="number"
+          value={masterForm.requestedCommissionPercentage}
+          onChange={(e) => {
+            let value = parseFloat(e.target.value);
 
-              <div className="bg-dark-700 rounded-lg p-4 space-y-2">
-                <p className="text-white text-sm font-medium">Requirements:</p>
-                <ul className="text-gray-400 text-xs space-y-1">
-                  <li>• Minimum account balance may be required</li>
-                  <li>• Trading history will be reviewed</li>
-                  <li>• Admin approval is required</li>
-                </ul>
-              </div>
-            </div>
+            if (isNaN(value)) value = 1;
+            if (value < 1) value = 1;
+            if (value > 50) value = 50;
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowMasterModal(false)}
-                className="flex-1 bg-dark-700 text-white py-2 rounded-lg hover:bg-dark-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleApplyMaster}
-                disabled={applyingMaster}
-                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-400 disabled:opacity-50"
-              >
-                {applyingMaster ? 'Submitting...' : 'Submit Application'}
-              </button>
-            </div>
-          </div>
-        </div>
+            setMasterForm(prev => ({
+              ...prev,
+              requestedCommissionPercentage: value
+            }));
+          }}
+          min="1"
+          max="50"
+          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:border-yellow-500"
+        />
+        <p className="text-gray-500 text-xs mt-1">
+          Commission you'll earn from followers' daily profits (0-50%)
+        </p>
+      </div>
+
+      {/* Requirements */}
+      <div className="bg-gray-100 rounded-lg p-4 space-y-2 border border-gray-200">
+        <p className="text-gray-900 text-sm font-medium">Requirements:</p>
+        <ul className="text-gray-600 text-xs space-y-1">
+          <li>• Minimum account balance may be required</li>
+          <li>• Trading history will be reviewed</li>
+          <li>• Admin approval is required</li>
+        </ul>
+      </div>
+    </div>
+
+    {/* Buttons */}
+    <div className="flex gap-3 mt-6">
+      <button
+        onClick={() => setShowMasterModal(false)}
+        className="flex-1 bg-gray-200 text-gray-900 py-2 rounded-lg hover:bg-gray-300 transition"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={handleApplyMaster}
+        disabled={applyingMaster}
+        className="flex-1 bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-400 disabled:opacity-50 transition"
+      >
+        {applyingMaster ? 'Submitting...' : 'Submit Application'}
+      </button>
+    </div>
+
+  </div>
+</div>
       )}
 
       {/* Edit Subscription Modal */}

@@ -542,7 +542,14 @@ class TradeEngine {
     const triggeredTrades = []
 
     for (const trade of openTrades) {
-      const prices = currentPrices[trade.symbol]
+      // ✅ ELITE: Robust price lookup (Sync with alltickApiService dual-key logic)
+      const targetSym = trade.symbol;
+      const prices = currentPrices[targetSym] || 
+                     currentPrices[targetSym.toUpperCase()] || 
+                     currentPrices[targetSym.toLowerCase()] ||
+                     currentPrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
+                     currentPrices[targetSym.replace(/\.i$/i, '').toLowerCase()];
+      
       if (!prices) continue
 
       const trigger = trade.checkSlTp(prices.bid, prices.ask)
@@ -572,7 +579,14 @@ class TradeEngine {
     const executedTrades = []
 
     for (const trade of pendingTrades) {
-      const prices = currentPrices[trade.symbol]
+      // ✅ ELITE: Robust price lookup
+      const targetSym = trade.symbol;
+      const prices = currentPrices[targetSym] || 
+                     currentPrices[targetSym.toUpperCase()] || 
+                     currentPrices[targetSym.toLowerCase()] ||
+                     currentPrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
+                     currentPrices[targetSym.replace(/\.i$/i, '').toLowerCase()];
+      
       if (!prices) continue
 
       let shouldExecute = false

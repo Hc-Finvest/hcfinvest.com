@@ -471,15 +471,30 @@ class AllTickApiService {
   async setLivePrice(symbol, data) {
     try {
       if (!symbol || !data) return;
-      // ✅ ELITE: Preserve exact casing (e.g. XAUUSD.i) for UI/DB matching
+      
       const targetSymbol = String(symbol);
-      const payloadString = JSON.stringify({ ...data, symbol: targetSymbol });
+      const baseSymbol = targetSymbol.replace(/\.i$/i, '').toUpperCase();
       
-      // 1. Store the newest price in Redis HSET
-      await redisClient.hset('live_prices', targetSymbol, payloadString);
-      
-      // 2. Publish to the Redis channel for real-time WebSocket broadcasting
-      await redisClient.publish('price_updates', payloadString);
+      // ✅ ELITE: Dual-Key Synchronization
+      // We update BOTH the canonical symbol (XAUUSD.i) and the base symbol (XAUUSD).
+      // This ensures all trades (regardless of suffix) stay 100% in sync with live ticks.
+      const symbolsToUpdate = [targetSymbol];
+      if (baseSymbol !== targetSymbol) {
+        symbolsToUpdate.push(baseSymbol);
+      }
+
+      for (const sym of symbolsToUpdate) {
+        const payloadString = JSON.stringify({ ...data, symbol: sym });
+        
+        // 1. Store the newest price in Redis HSET
+        await redisClient.hset('live_prices', sym, payloadString);
+        
+        // 2. Publish to the Redis channel for real-time WebSocket broadcasting
+        await redisClient.publish('price_updates', payloadString);
+        
+        // 3. Keep local memory cache updated too
+        this.prices[sym] = data;
+      }
     } catch (err) {
       console.error('[Redis] Failed to set live price:', err.message);
     }

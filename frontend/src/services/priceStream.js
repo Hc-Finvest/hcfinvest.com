@@ -177,12 +177,21 @@ class PriceStreamService {
       this._lastTickTsBySymbol.set(symbol, now)
       
       // ✅ BROADCAST to all price subscribers (P/L table, etc.)
-      this.prices[symbol] = { 
+      const priceObj = { 
         bid, 
         ask, 
         rawBid: rawBid || bid, 
         rawAsk: rawAsk || ask, 
         time: time || new Date().toISOString() 
+      }
+      
+      this.prices[symbol] = priceObj
+      
+      // ✅ ELITE Sync: Alias to base symbol (e.g. XAUUSD.i -> XAUUSD)
+      // This prevents the "stale price fallback" mess in the positions table.
+      const baseSymbol = symbol.replace(/\.i$/i, '').toUpperCase()
+      if (baseSymbol !== symbol) {
+        this.prices[baseSymbol] = priceObj
       }
       
       this.subscribers.forEach((callback) => {

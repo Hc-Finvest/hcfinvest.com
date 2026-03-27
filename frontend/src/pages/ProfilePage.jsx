@@ -723,24 +723,25 @@ const scaleIn = "animate-[scaleIn_0.3s_ease-out_forwards]";
                       </button>
                     ) : (
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditing(false);
-                            fetchUserData();
-                          }}
-                          className="flex items-center gap-2 bg-dark-700 text-white px-4 py-2 rounded-lg hover:bg-dark-600"
-                        >
-                          <X size={16} />
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSave}
-                          disabled={loading}
-                          className="flex items-center gap-2 bg-accent-green text-black px-4 py-2 rounded-lg font-medium hover:bg-accent-green/90 disabled:opacity-50"
-                        >
-                          <Save size={16} />
-                          {loading ? "Saving..." : "Save"}
-                        </button>
+                          <button
+                            onClick={() => {
+                              setEditing(false);
+                              fetchUserData();
+                            }}
+                            className="flex items-center gap-2 bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                          >
+                            <X size={16} />
+                            Cancel
+                          </button>
+
+                          <button
+                            onClick={handleSave}
+                            disabled={loading}
+                            className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 disabled:opacity-50 transition"
+                          >
+                            <Save size={16} />
+                            {loading ? "Saving..." : "Save"}
+                          </button>
                       </div>
                     )}
                   </div>
