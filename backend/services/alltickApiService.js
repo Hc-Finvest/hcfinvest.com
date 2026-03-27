@@ -474,16 +474,22 @@ class AllTickApiService {
       
       const targetSymbol = String(symbol);
       const baseSymbol = targetSymbol.replace(/\.i$/i, '').toUpperCase();
+      const upperCanonical = baseSymbol + '.I';
       
-      // ✅ ELITE: Dual-Key Synchronization
-      // We update BOTH the canonical symbol (XAUUSD.i) and the base symbol (XAUUSD).
-      // This ensures all trades (regardless of suffix) stay 100% in sync with live ticks.
-      const symbolsToUpdate = [targetSymbol];
-      if (baseSymbol !== targetSymbol) {
-        symbolsToUpdate.push(baseSymbol);
-      }
+      // ✅ ELITE: Universal Variant Synchronization (v7.74)
+      // We update ALL possible variants to ensure total UI/Engine consistency.
+      // 1. Original (XAUUSD.i)
+      // 2. Uppercase Canonical (XAUUSD.I)
+      // 3. Base Symbol (XAUUSD)
+      const variants = new Set([
+        targetSymbol, 
+        targetSymbol.toUpperCase(), 
+        targetSymbol.toLowerCase(),
+        baseSymbol,
+        upperCanonical
+      ]);
 
-      for (const sym of symbolsToUpdate) {
+      for (const sym of variants) {
         const payloadString = JSON.stringify({ ...data, symbol: sym });
         
         // 1. Store the newest price in Redis HSET

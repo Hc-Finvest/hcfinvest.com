@@ -187,12 +187,16 @@ class PriceStreamService {
       
       this.prices[symbol] = priceObj
       
-      // ✅ ELITE Sync: Alias to base symbol (e.g. XAUUSD.i -> XAUUSD)
-      // This prevents the "stale price fallback" mess in the positions table.
+      // ✅ ELITE Sync: Alias to ALL variants (v7.74)
+      // This ensures any trade or UI component using slightly different casing/suffix stays 100% live.
       const baseSymbol = symbol.replace(/\.i$/i, '').toUpperCase()
-      if (baseSymbol !== symbol) {
-        this.prices[baseSymbol] = priceObj
-      }
+      const upperCanonical = baseSymbol + '.I'
+      const lowerCanonical = baseSymbol.toLowerCase() + '.i'
+      
+      const variants = [baseSymbol, upperCanonical, lowerCanonical, symbol.toUpperCase(), symbol.toLowerCase()]
+      variants.forEach(v => {
+        if (v !== symbol) this.prices[v] = priceObj
+      })
       
       this.subscribers.forEach((callback) => {
         try { callback(this.prices, { [symbol]: this.prices[symbol] }, this.lastTickAt) } catch {}
