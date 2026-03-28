@@ -14,7 +14,7 @@ const isValidObjectId = (id) => {
 
 // Generate JWT token with issued at timestamp
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId, iat: Math.floor(Date.now() / 1000) }, process.env.JWT_SECRET, { expiresIn: '7d' })
+  return jwt.sign({ id: userId, iat: Math.floor(Date.now() / 1000) }, process.env.JWT_SECRET, { expiresIn: '4h' })
 }
 
 // POST /api/auth/signup

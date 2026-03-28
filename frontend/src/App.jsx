@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
@@ -52,27 +52,69 @@ import AdminCompetitionDetails from './pages/AdminCompititionDetails.jsx'
 import Switch_Account from "./pages/Switch_Account";
 import New_Dashboard from './pages/New_Dashboard.jsx'
 
-// 🛡️ Security Guard: Only allow admin routes on the admin subdomain
-const ALLOWED_ADMIN_HOSTNAME = 'admin.hcfinvest.com'
-const isAdminHost = () => {
-  const hostname = window.location.hostname
-  return hostname === ALLOWED_ADMIN_HOSTNAME ||
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1'
-}
+import { useEffect } from 'react'
 
-function AdminHostGuard({ children }) {
-  if (!isAdminHost()) {
-    // Redirect to main site if accessed from wrong subdomain
-    window.location.href = 'https://hcfinvest.com'
-    return null
+// 🛡️ Guard to restrict admin access to admin.hcfinvest.com
+const AdminHostGuard = ({ children }) => {
+  const hostname = window.location.hostname;
+  const isDevelopment = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isAdminSubdomain = hostname === 'admin.hcfinvest.com';
+
+  if (!isDevelopment && !isAdminSubdomain) {
+    // Redirect non-admin origins to the main trading site if they try to access /admin
+    window.location.href = 'https://trade.hcfinvest.com';
+    return null;
   }
-  return children
-}
+  return children;
+};
+
+// 🕒 Monitor to automatically logout users after 4 hours (JWT expiration)
+const SessionMonitor = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkSession = () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        // Manual JWT decode to check expiration claim (exp)
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        const now = Math.floor(Date.now() / 1000);
+        
+        // If token is expired, clear session and redirect
+        if (payload.exp && payload.exp < now) {
+          console.log('[Security] Session expired (4h limit reached). Logging out...');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/user/login', { 
+            state: { message: 'Your session has expired for security. Please login again.' },
+            replace: true 
+          });
+        }
+      } catch (e) {
+        console.error('Session check error:', e);
+      }
+    };
+
+    // check on route change
+    checkSession();
+    
+    // check every minute
+    const interval = setInterval(checkSession, 60000);
+    return () => clearInterval(interval);
+  }, [location.pathname, navigate]);
+
+  return null;
+};
 
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <SessionMonitor />
       <Routes>
         <Route path="/" element={<Signup />} />
          <Route path="/switch-account" element={<Switch_Account />} />
@@ -94,6 +136,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/instructions" element={<InstructionsPage />} />
+
         {/* 🛡️ All /admin routes are guarded — only accessible from admin.hcfinvest.com */}
         <Route path="/admin" element={<AdminHostGuard><AdminLogin /></AdminHostGuard>} />
         <Route path="/admin/login" element={<AdminHostGuard><AdminLogin /></AdminHostGuard>} />
@@ -115,7 +158,7 @@ function App() {
         <Route path="/admin/admin-management" element={<AdminHostGuard><AdminManagement /></AdminHostGuard>} />
         <Route path="/admin/kyc" element={<AdminHostGuard><AdminKYC /></AdminHostGuard>} />
         <Route path="/admin/support" element={<AdminHostGuard><AdminSupport /></AdminHostGuard>} />
-        <Route path="/admin/prop-trading" element={<AdminHostGuard><AdminPropTrading /></AdminHostGuard>} />
+        <Route path="/admin/prop-trading" element={<AdminPropTrading /></AdminHostGuard>} />
         <Route path="/admin/earnings" element={<AdminHostGuard><AdminEarnings /></AdminHostGuard>} />
         <Route path="/admin/theme" element={<AdminHostGuard><AdminThemeSettings /></AdminHostGuard>} />
         <Route path="/admin/email" element={<AdminHostGuard><AdminEmailManagement /></AdminHostGuard>} />
@@ -125,6 +168,7 @@ function App() {
         <Route path="/admin/competition" element={<AdminHostGuard><AdminCompetition /></AdminHostGuard>} />
         <Route path="/admin/create-competition" element={<AdminHostGuard><AdminCreateCompitition /></AdminHostGuard>} />
         <Route path="/admin/competition-details/:id" element={<AdminHostGuard><AdminCompetitionDetails /></AdminHostGuard>} />
+        
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />

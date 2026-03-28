@@ -560,7 +560,7 @@ router.post('/login-as-user/:userId', async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email, isAdminSession: true },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '2h' }
+      { expiresIn: '4h' }
     )
     
     res.json({
