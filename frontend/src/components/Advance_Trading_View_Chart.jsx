@@ -202,13 +202,21 @@ const Advance_Trading_View_Chart = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const lastThemeRef = useRef(isDarkMode ? "dark" : "light");
+
   // ─── Theme Sync ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!widgetRef.current || !isChartReady) return;
     try {
-      const theme = isDarkMode ? "dark" : "light";
-      widgetRef.current.changeTheme(theme);
-    } catch (e) {}
+      const newTheme = isDarkMode ? "dark" : "light";
+      if (newTheme !== lastThemeRef.current) {
+        console.log(`[v7.60] Theme change detected: ${lastThemeRef.current} -> ${newTheme}`);
+        widgetRef.current.changeTheme(newTheme);
+        lastThemeRef.current = newTheme;
+      }
+    } catch (e) {
+      console.error('[v7.60] Theme change error:', e);
+    }
   }, [isDarkMode, isChartReady]);
 
   // ─── CRITICAL: SYMBOL SYNC (Fixes XAU/GBP desync) ──────────────────────────
