@@ -3998,41 +3998,6 @@ const TradingPage = () => {
     }
   }
 
-  // Activate Kill Switch
-  const activateKillSwitch = (customDuration = null) => {
-    const multipliers = { seconds: 1000, minutes: 60 * 1000, hours: 60 * 60 * 1000, days: 24 * 60 * 60 * 1000 }
-    const durationConfig = customDuration || killSwitchDuration
-    const duration = durationConfig.value * multipliers[durationConfig.unit]
-    const endTime = Date.now() + duration
-    
-    setKillSwitchActive(true)
-    setKillSwitchEndTime(endTime)
-    localStorage.setItem(`killSwitch_${accountId}`, endTime.toString())
-    setShowKillSwitchModal(false)
-    
-    // Show global notification at top
-    const timeStr = `${durationConfig.value} ${durationConfig.unit}`
-    setGlobalNotification(`🛑 Kill Switch activated for ${timeStr}! Trading is now blocked.`)
-    setTimeout(() => setGlobalNotification(''), 5000)
-  }
-
-  // Quick activate Kill Switch with default 30 minutes (one-click)
-  const quickActivateKillSwitch = () => {
-    activateKillSwitch({ value: 30, unit: 'minutes' })
-  }
-
-  // Deactivate Kill Switch
-  const deactivateKillSwitch = () => {
-    setKillSwitchActive(false)
-    setKillSwitchEndTime(null)
-    setKillSwitchTimeLeft('')
-    localStorage.removeItem(`killSwitch_${accountId}`)
-    
-    // Show global notification at top
-    setGlobalNotification('✅ Kill Switch deactivated. Trading is now enabled.')
-    setTimeout(() => setGlobalNotification(''), 3000)
-  }
-
   // Listen to MetaAPI price events from TradingView chart
   useEffect(() => {
     const priceEventTarget = getPriceEvents()
