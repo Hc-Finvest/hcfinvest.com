@@ -133,8 +133,7 @@ const Advance_Trading_View_Chart = ({
           "side_toolbar_in_fullscreen_mode"
         ],
         overrides: {
-          "paneProperties.background": isDarkMode ? "#0d0d0d" : "#ffffff",
-          "mainSeriesProperties.style": 1,
+          "paneProperties.background": isDarkMode ? "#0d0d0d" : "#ffffff"
         }
       });
 
@@ -163,10 +162,21 @@ const Advance_Trading_View_Chart = ({
           debouncedSave();
         });
 
-        // 4. Persistence Listeners for Drawings/indicators
+        // 4. Persistence Listeners for Drawings/indicators/candle colors
         widget.subscribe('onAutoSaveNeeded', () => {
-          console.log('[v7.60] Autosave triggered by widget');
+          console.log('[v7.60] Autosave triggered by widget (AutoSaveNeeded)');
           debouncedSave();
+        });
+
+        // v7.83 Specific Style Listeners (Ensures candle colors save)
+        widget.activeChart().onSeriesPropertiesChanged().subscribe(null, () => {
+           console.log('[v7.60] Autosave triggered by Series Properties (Colors)');
+           debouncedSave();
+        });
+
+        widget.activeChart().onChartTypeChanged().subscribe(null, () => {
+           console.log('[v7.60] Autosave triggered by Chart Type Change');
+           debouncedSave();
         });
 
         // 5. Initialize Trade Lines
