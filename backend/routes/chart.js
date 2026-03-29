@@ -43,7 +43,11 @@ router.post('/save', async (req, res) => {
 router.get('/load/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    let targetSymbol = normalizeSymbol(symbol);
+    const { symbol } = req.query;
+    
+    // v7.77 Strict Normalization
+    const targetSymbol = normalizeSymbol(symbol || 'GLOBAL');
+    
     let layout = await ChartLayout.findOne({ userId, symbol: targetSymbol });
 
     // v7.77 Migration Logic: If not found, check for non-.i variant
@@ -77,6 +81,7 @@ router.get('/load/:userId', async (req, res) => {
 router.delete('/reset/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    const symbol = req.query.symbol || req.body.symbol || 'GLOBAL';
     const targetSymbol = normalizeSymbol(symbol);
     await ChartLayout.findOneAndDelete({ userId, symbol: targetSymbol });
 
