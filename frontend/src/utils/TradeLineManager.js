@@ -33,14 +33,6 @@ const getAuthToken = () => {
   } catch { return ''; }
 };
 
-// ΓöÇΓöÇΓöÇ Symbol normalization ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-const canonicalSymbol = (raw) => {
-  const v = String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!v) return '';
-  if (/^[A-Z]{6}/.test(v)) return v.slice(0, 6);
-  return v;
-};
-
 // ΓöÇΓöÇΓöÇ Price formatting ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const fmt = (price) => {
   if (!Number.isFinite(price)) return '0.00';
