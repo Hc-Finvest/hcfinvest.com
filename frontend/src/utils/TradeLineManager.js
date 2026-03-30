@@ -124,8 +124,8 @@ export class TradeLineManager {
 
       const action = String(status?.status || status || '').toLowerCase();
       
-      // Stop logging spammy points_changed and move events
-      if (action !== 'points_changed' && action !== 'move') {
+      // ≡ƒ¢í∩╕Å v7.46 Clean Console: Silence utility events
+      if (action !== 'points_changed' && action !== 'move' && action !== 'properties_changed') {
           console.log(`[TradeManager] EVENT: ${tvId} (${meta.type}) status="${action}"`);
       }
 
@@ -141,12 +141,6 @@ export class TradeLineManager {
         }
         const p = shape?.getPoints?.()?.[0]?.price;
         this.dragStartPrice = Number.isFinite(p) ? p : 0;
-        
-        // ≡ƒ¢í∩╕Å v7.46 Selection Guard: Immediately clear selection to hide floating toolbox
-        // This prevents the "Delete/Trash" and "Settings" icons from appearing while dragging.
-        setTimeout(() => {
-          try { widget.chart().clearSelection(); } catch(e) {}
-        }, 10);
       }
 
       // ≡ƒ¢í∩╕Å v7.46 Deletion Guard: If the user bypasses UI and deletes a line, re-sync to restore it.
@@ -162,7 +156,7 @@ export class TradeLineManager {
           if (this.commitTimers[tvId]) clearTimeout(this.commitTimers[tvId]);
           this.commitTimers[tvId] = setTimeout(() => {
               this._onNativeStop(tvId, meta);
-          }, 50); // ≡ƒ¢í∩╕Å v7.33 Ultra-fast 200ms user interaction response
+          }, 250); // ≡ƒ¢í∩╕Å v7.47 Stabilized interaction lock
       }
     };
     widget.subscribe('drawing_event', this._handler);
@@ -242,56 +236,51 @@ export class TradeLineManager {
         return;
     }
 
-    if (meta.type === 'entry') {
-      const trade = this.getTradeById(meta.tradeId);
-      const tid = String(meta.tradeId);
-      
-      const ghost = this.lines[tid]?.ghost;
-      if (ghost) {
-          this._destroyShape(ghost.tvId);
-          this.lines[tid].ghost = null;
+    try {
+        if (meta.type === 'entry') {
+          const trade = this.getTradeById(meta.tradeId);
+          const tid = String(meta.tradeId);
           
-          // ≡ƒ¢í∩╕Å v7.35 Absolute Final Target Verification
-          // Recalculating the drop classification here completely bypasses any visual lag or frame-drops 
-          // that might have caused the temporary Ghost shape to misread the ultimate destination.
-          const side = String(trade.side || trade.type || '').toLowerCase();
-          const isBuy = side.includes('buy') || side.includes('long');
-          const entryPrice = Number(trade.openPrice || trade.price);
-          const t = isBuy ? (price > entryPrice ? 'tp' : 'sl') : (price < entryPrice ? 'tp' : 'sl');
+          const ghost = this.lines[tid]?.ghost;
+          if (ghost) {
+              this._destroyShape(ghost.tvId);
+              this.lines[tid].ghost = null;
+              
+              const side = String(trade.side || trade.type || '').toLowerCase();
+              const isBuy = side.includes('buy') || side.includes('long');
+              const entryPrice = Number(trade.openPrice || trade.price);
+              const t = isBuy ? (price > entryPrice ? 'tp' : 'sl') : (price < entryPrice ? 'tp' : 'sl');
 
-          console.log(`[TradeManager] Confirming EXACT SPAWN: ${t.toUpperCase()} -> ${price} (Targeted)`);
-          
-          // Γ£¿ OPTIMISTIC RAW PLOT
-          if (this.lines[tid][t]) {
-              this._updateShape(this.lines[tid][t].tvId, price);
-          } else {
-              const color = t === 'tp' ? '#4caf50' : '#f44336';
-              const shapeRef = await this._createShape(tid, t, price, {
-                  color, style: 1, width: 2, text: `${t.toUpperCase()}`
-              });
-              this.lines[tid][t] = shapeRef;
+              console.log(`[TradeManager] Confirming EXACT SPAWN: ${t.toUpperCase()} -> ${price} (Targeted)`);
+              
+              if (this.lines[tid][t]) {
+                  this._updateShape(this.lines[tid][t].tvId, price);
+              } else {
+                  const color = t === 'tp' ? '#4caf50' : '#f44336';
+                  const shapeRef = await this._createShape(tid, t, price, {
+                      color, style: 1, width: 2, text: `${t.toUpperCase()}`
+                  });
+                  this.lines[tid][t] = shapeRef;
+              }
+
+              await this._commitTrade(tid, t, price); 
           }
 
-          await this._commitTrade(tid, t, price); // Network execution
-      }
+          const realEntry = Number(trade?.openPrice || trade?.price);
+          if (shape && realEntry) {
+              this._updateShape(tvId, realEntry);
+          }
+          return;
+        }
 
-      // ≡ƒ¢í∩╕Å v7.25 Forced Snap-Back: The Entry line never moves on the chart.
-      const realEntry = Number(trade?.openPrice || trade?.price);
-      if (shape && realEntry) {
-          this._updateShape(tvId, realEntry);
-      }
-      
-      setTimeout(() => { this.activeDragId = null; }, 100); 
-      return;
+        if (meta.type === 'sl' || meta.type === 'tp') {
+            console.log(`[TradeManager] Confirming ${meta.type.toUpperCase()} DROP -> ${price}`);
+            this._updateShape(tvId, price);
+            await this._commitTrade(meta.tradeId, meta.type, price);
+        }
+    } finally {
+        setTimeout(() => { this.activeDragId = null; }, 200);
     }
-
-    if (meta.type === 'sl' || meta.type === 'tp') {
-        console.log(`[TradeManager] Confirming ${meta.type.toUpperCase()} DROP -> ${price}`);
-        this._updateShape(tvId, price);
-        await this._commitTrade(meta.tradeId, meta.type, price);
-    }
-    
-    setTimeout(() => { this.activeDragId = null; }, 200);
   }
 
   async syncTrades(trades, symbol = null) {
@@ -528,6 +517,12 @@ export class TradeLineManager {
     const currentSL = type === 'sl' ? roundedPrice : parseFloat(Number(fallbackSL).toFixed(decimals));
     const currentTP = type === 'tp' ? roundedPrice : parseFloat(Number(fallbackTP).toFixed(decimals));
 
+    // ≡ƒ¢í∩╕Å v7.48 Payload Guard: Never send invalid or infinite values to the backend
+    if (!Number.isFinite(currentSL) || !Number.isFinite(currentTP)) {
+        console.error('[TradeManager] Aborting modification: SL or TP is invalid.', { currentSL, currentTP });
+        return;
+    }
+
     console.log('%c [TradeManager] ≡ƒÄ» ZERO-SLIPPAGE PAYLOAD ', 'background: #4caf50; color: white; padding: 2px 4px;', { 
         action: type.toUpperCase(), 
         rawDragValue: price, 
@@ -537,8 +532,8 @@ export class TradeLineManager {
 
     const payload = { 
         tradeId: tid,
-        sl: currentSL,
-        tp: currentTP
+        sl: currentSL || 0,
+        tp: currentTP || 0
     };
 
     const token = getAuthToken();
