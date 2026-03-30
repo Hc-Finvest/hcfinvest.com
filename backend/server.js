@@ -386,6 +386,7 @@ const allowedOrigins = [
   'https://www.hcfinvest.com',
   'https://api.hcfinvest.com',
   'https://admin.hcfinvest.com',
+  'https://testing.hcfinvest.com',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5000',
@@ -416,6 +417,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }))
 // 🛡️ Security: Restrict /api/admin & /api/admin-mgmt to admin subdomain only
 const ADMIN_ALLOWED_ORIGINS = [
   'https://admin.hcfinvest.com',
+  'https://testing.hcfinvest.com',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5000',

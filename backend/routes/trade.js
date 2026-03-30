@@ -9,6 +9,7 @@ import copyTradingEngine from '../services/copyTradingEngine.js'
 import ibEngine from '../services/ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
 import redisClient from '../services/redisClient.js'
+import alltickApiService from '../services/alltickApiService.js'
 import { isMarketOpen, isPriceFresh } from '../utils/marketHours.js'
 
 const router = express.Router()
@@ -60,13 +61,14 @@ router.post('/open', async (req, res) => {
 
     // ≡ƒ¢í∩╕Å Price Freshness Guard (60s Rule)
     try {
-      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase());
-      if (priceStr) {
-        const cachedPrice = JSON.parse(priceStr);
+      // Use centralized service for robust lookup (Redis + Memory fallback)
+      const cachedPrice = await alltickApiService.getLivePrice(symbol);
+      
+      if (cachedPrice) {
         // Relaxed to 300s (5 minutes) for opening trades
-        // Check both .timestamp and .time for compatibility
-        if (!isPriceFresh(cachedPrice.timestamp || cachedPrice.time, 300)) {
-          console.warn(`[Trade Route] Stale price detected for ${symbol}: ${cachedPrice.time}`);
+        const priceTime = cachedPrice.timestamp || cachedPrice.time;
+        if (!isPriceFresh(priceTime, 300)) {
+          console.warn(`[Trade Route] Stale price detected for ${symbol}: ${priceTime}`);
           return res.status(400).json({
             success: false,
             message: 'Market data is stale or delayed. Please wait for a live price update.',
@@ -74,15 +76,16 @@ router.post('/open', async (req, res) => {
           });
         }
       } else {
-        // No price in Redis at all
+        // No price found even with memory fallback
         return res.status(400).json({
           success: false,
-          message: 'Market data not yet available for this instrument.',
+          message: 'Market data not yet available for this instrument. Please wait a few seconds.',
           code: 'NO_DATA_FEED'
         });
       }
-    } catch (redisErr) {
-      console.error('[Trade Route] Redis price check error:', redisErr);
+    } catch (err) {
+      console.error('[Trade Route] Price guard error:', err);
+      // Non-blocking for now, follow with bid/ask validation below
     }
 
     // Check for stale prices (if bid equals ask exactly, likely no real data)
@@ -116,21 +119,20 @@ router.post('/open', async (req, res) => {
     let rawBidVal = null
     let rawAskVal = null
 
-    // ≡ƒ¢í∩╕Å Fetch server-side source of truth from Redis
+    // ≡ƒ¢í∩╕Å Fetch server-side source of truth
     try {
-      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase());
-      if (priceStr) {
-        const cachedPrice = JSON.parse(priceStr);
-        // Prioritize raw values from Redis for backend math
+      const cachedPrice = await alltickApiService.getLivePrice(symbol);
+      if (cachedPrice) {
+        // Prioritize raw values from cache for backend math
         rawBidVal = cachedPrice.rawBid || cachedPrice.bid;
         rawAskVal = cachedPrice.rawAsk || cachedPrice.ask;
         
-        // Use Redis prices as the authoritative execution price to prevent frontend manipulation
+        // Use authoritative execution price to prevent frontend manipulation
         serverSafeBid = rawBidVal;
         serverSafeAsk = rawAskVal;
       }
     } catch (err) {
-      console.warn(`[Trade Route] Non-critical: Failed to sync with Redis price source for ${symbol}`);
+      console.warn(`[Trade Route] Non-critical: Failed to sync with price source for ${symbol}`);
     }
 
     // Check if this is a challenge account first

@@ -57,11 +57,11 @@ class AllTickApiService {
       // Indices
       'US30.i': 'US30',
       'US500.i': 'US500',
-      'US100.i': 'US100',
+      'US100.i': 'NDX',
       'UK100.i': 'UK100',
-      'DE30.i': 'GER30',
+      'DE30.i': 'GER40',
       'FR40.i': 'FRA40',
-      'ES35.i': 'SPA35'
+      'ES35.i': 'IBEX'
     };
 
     this.reverseSymbolMap = {};
@@ -102,6 +102,9 @@ class AllTickApiService {
         }
       }
     }, 60000);
+
+    // ✅ PERFORMANCE: Throttle Redis tier-syncing to once per 5 seconds per symbol/timeframe
+    this.lastSyncAt = new Map();
 
     // REST Request Queue to prevent concurrent 429s/402s on trial tokens
     this.restQueue = Promise.resolve();
@@ -181,8 +184,8 @@ class AllTickApiService {
         console.error('[AllTick] WebSocket error:', err.message);
         // Handle 429 specifically on socket upgrade
         if (err.message.includes('429')) {
-          console.error('[AllTick] 🚨 WS Rate limit hit (429). Entering 60s cooldown.');
-          this.wsCooldownUntil = Date.now() + 60000;
+          console.error('[AllTick] 🚨 WS Rate limit hit (429). Entering 15s cooldown.');
+          this.wsCooldownUntil = Date.now() + 15000;
         }
       });
     } catch (err) {
@@ -398,15 +401,16 @@ class AllTickApiService {
       
       while (attempts <= maxRetries) {
         try {
-          // Mandatory throttle (e.g. 1.5s between requests)
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          // ✅ PERFORMANCE: Reduced throttle from 1.5s to 300ms for production speed
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           const response = await fetch(url);
 
           if (response.status === 429) {
             attempts++;
             console.warn(`[AllTick] 🚨 Rate limit hit (429). Retrying...`);
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Exponential backoff for retries
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
             continue;
           }
 
@@ -420,13 +424,13 @@ class AllTickApiService {
               const retryUrl = `${restUrl}/kline?token=${token}&query=${encodeURIComponent(JSON.stringify(queryPayload))}`;
               
               // Second mandatory throttle
-              await new Promise(resolve => setTimeout(resolve, 1200));
+              await new Promise(resolve => setTimeout(resolve, 300));
               
               const retryRes = await fetch(retryUrl);
               
               if (retryRes.status === 429) {
                 attempts++;
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 continue; 
               }
               
@@ -486,10 +490,14 @@ class AllTickApiService {
     try {
       if (!symbol || !data) return;
       
-      const targetSymbol = String(symbol).toLowerCase().endsWith('.i') ? symbol : `${symbol.toUpperCase()}.i`;
+      // ✅ ELITE Normalization: Always UPPERCASE base with lowercase .i suffix
+      // This ensures Redis lookups are predictable across all routes
+      const base = String(symbol).toUpperCase().replace(/\.I$/, '');
+      const targetSymbol = `${base}.i`;
+      
       const payloadString = JSON.stringify({ ...data, symbol: targetSymbol });
       
-      // 1. Store the newest price in Redis HSET (Strictly canonical .i only)
+      // 1. Store the newest price in Redis HSET
       await redisClient.hset('live_prices', targetSymbol, payloadString);
       
       // 2. Publish for real-time WebSocket broadcasting
@@ -497,26 +505,40 @@ class AllTickApiService {
       
       // 3. Update local memory cache
       this.prices[targetSymbol] = data;
+      this.prices[base] = data; // Also index by clean symbol for faster fallback
     } catch (err) {
       console.error('[Redis] Failed to set live price:', err.message);
     }
   }
 
   async getLivePrice(symbol) {
+    if (!symbol) return null;
+    const s = String(symbol).toUpperCase();
+    const base = s.replace(/\.I$/, '');
+    const targetWithSuffix = `${base}.i`;
+    
+    // Try multiple permutations in order of likelihood
+    const permutations = [targetWithSuffix, s, base, symbol];
+    
     try {
-      if (!symbol) return null;
-      const targetSymbol = String(symbol);
-      const data = await redisClient.hget('live_prices', targetSymbol);
+      for (const p of permutations) {
+        const data = await redisClient.hget('live_prices', p);
+        if (data) return JSON.parse(data);
+      }
       
-      if (data) return JSON.parse(data);
-      
-      // ✅ ELITE Fallback: Memory cache (v7.77 Resilience)
-      if (this.prices[targetSymbol]) return this.prices[targetSymbol];
+      // ✅ ELITE Fallback: Memory cache (Resilience against Redis outages)
+      for (const p of permutations) {
+        if (this.prices[p]) return this.prices[p];
+      }
       
       return null;
     } catch (err) {
-      console.error('[Redis] Failed to get live price:', err.message);
-      return this.prices[symbol] || null;
+      console.error('[Redis] Error in getLivePrice:', err.message);
+      // Fallback to memory on Redis error
+      for (const p of permutations) {
+        if (this.prices[p]) return this.prices[p];
+      }
+      return null;
     }
   }
 
@@ -635,24 +657,33 @@ class AllTickApiService {
     try {
       // Use a lock-free approach: just update the "live" keys
       for (const { tf, mins } of timeframes) {
+        // ✅ PERFORMANCE: Throttling Redis writes to once per 5 seconds per symbol/timeframe
+        const syncKey = `${cleanSymbol}:${tf}`;
+        const lastSync = this.lastSyncAt.get(syncKey) || 0;
+        const now = Date.now();
+        if (now - lastSync < 5000) continue; // Skip sync if updated recently
+        
         // Build the same cache key pattern used in prices.js
-        // hist:${symbol}:${timeframe}:start:latest:1000:std
         const cacheKey = `hist:${cleanSymbol}:${tf}:start:latest:1000:std`;
         const liveCacheKey = `hist:${cleanSymbol}:${tf}:start:latest:1000:live`;
 
-        // We try both because the history route might have cached it with either
         const keys = [cacheKey, liveCacheKey];
         
+        let hasUpdated = false;
         for (const key of keys) {
           const cached = await redisClient.get(key);
           if (cached) {
             const candles = JSON.parse(cached);
             if (candles.length > 0) {
               const updated = updateCandleListWithTick(candles, tick, mins);
-              // Save back with short TTL (5 mins) as it's a live-updated cache
               await redisClient.set(key, JSON.stringify(updated), 'EX', 300);
+              hasUpdated = true;
             }
           }
+        }
+        
+        if (hasUpdated) {
+          this.lastSyncAt.set(syncKey, now);
         }
       }
     } catch (err) {

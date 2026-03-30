@@ -75,9 +75,13 @@ const PRICE_CONFIG = {
   US30: { decimals: 1, pipSize: 1, tickSize: 0.1 },
   US500: { decimals: 2, pipSize: 0.1, tickSize: 0.01 },
   US100: { decimals: 1, pipSize: 1, tickSize: 0.1 },
+  NDX: { decimals: 1, pipSize: 1, tickSize: 0.1 },
   UK100: { decimals: 1, pipSize: 1, tickSize: 0.1 },
   GER40: { decimals: 1, pipSize: 1, tickSize: 0.1 },
+  GER30: { decimals: 1, pipSize: 1, tickSize: 0.1 },
   FRA40: { decimals: 1, pipSize: 1, tickSize: 0.1 },
+  IBEX: { decimals: 1, pipSize: 1, tickSize: 0.1 },
+  SPA35: { decimals: 1, pipSize: 1, tickSize: 0.1 },
   JP225: { decimals: 0, pipSize: 1, tickSize: 1 },
   HK50: { decimals: 0, pipSize: 1, tickSize: 1 },
   AUS200: { decimals: 1, pipSize: 1, tickSize: 0.1 }
