@@ -361,13 +361,13 @@ const Datafeed = {
     // ✅ Monitor for data gaps - production-grade health check
     const dataGapMonitor = setInterval(() => {
       const now = Date.now();
-      if (lastTickTime > 0) {
+      if (lastTickTime > 0 && priceStreamService.isConnected) {
         const timeSinceLastTick = now - lastTickTime;
-        if (timeSinceLastTick > 30000) {
-          console.warn(`[DATAFEED] ⚠️  DATA GAP: No ticks for ${(timeSinceLastTick / 1000).toFixed(1)}s (${tickCount} total ticks received)`);
+        if (timeSinceLastTick > 300000) { // 5 minutes
+          console.debug(`[DATAFEED] ℹ️  Quiet Period: No ticks for ${(timeSinceLastTick / 1000).toFixed(1)}s`);
         }
       }
-    }, 10000);
+    }, 60000); // Check every minute
 
     // ✅ Backend Candle Authority: Authoritative bar updates (Source of Truth)
     const handleCandleUpdate = (e) => {

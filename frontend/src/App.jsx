@@ -58,7 +58,7 @@ import New_Dashboard from './pages/New_Dashboard.jsx'
 const AdminHostGuard = ({ children }) => {
   const hostname = window.location.hostname;
   const isDevelopment = hostname === 'localhost' || hostname === '127.0.0.1';
-  const isAdminSubdomain = hostname === 'admin.hcfinvest.com';
+  const isAdminSubdomain = hostname === 'admin.hcfinvest.com' || hostname === 'testing.hcfinvest.com';
 
   if (!isDevelopment && !isAdminSubdomain) {
     // Redirect non-admin origins to the main trading site if they try to access /admin

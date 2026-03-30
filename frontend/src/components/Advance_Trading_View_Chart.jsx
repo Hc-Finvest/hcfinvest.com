@@ -188,11 +188,10 @@ const Advance_Trading_View_Chart = ({
         });
 
         // v7.83 Specific Style Listeners (Ensures candle colors save)
-        widget.activeChart().onSeriesPropertiesChanged().subscribe(null, () => {
-           console.log('[v7.60] Autosave triggered by Series Properties (Colors)');
-           debouncedSave();
-        });
-
+            widget.headerReady().then(() => {
+                const headerContainer = widget.headerReady();
+            });
+        
         widget.activeChart().onChartTypeChanged().subscribe(null, () => {
            console.log('[v7.60] Autosave triggered by Chart Type Change');
            debouncedSave();
