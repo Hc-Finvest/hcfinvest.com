@@ -645,7 +645,8 @@ class AllTickApiService {
    */
   async syncLivePriceToTiers(symbol, tick) {
     if (!symbol || !tick || !tick.price) return;
-    const cleanSymbol = String(symbol).toUpperCase();
+    const base = String(symbol).toUpperCase().replace(/\.I$/, '');
+    const cleanSymbol = base; // Logic in prices.js history route uses Base (e.g. BTCUSD) for keys
 
     // 🚀 PERFORMANCE: Only sync high-frequency timeframes (1m, 5m) to Redis.
     // Syncing 4h or 1d on every tick at 50ms latency is excessive and blocks the event loop.

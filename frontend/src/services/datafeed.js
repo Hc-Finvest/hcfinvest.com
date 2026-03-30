@@ -476,12 +476,14 @@ const Datafeed = {
     
     Object.values(Datafeed._activeSubscribers).forEach(sub => {
       if (normalizeRealtimeSymbol(sub.symbol) === normalizeRealtimeSymbol(symbol)) {
-        const bar = { ...sub.currentBar };
-        bar.close = interpolatedPrice;
-        bar.high = Math.max(bar.high, interpolatedPrice);
-        bar.low = Math.min(bar.low, interpolatedPrice);
+        if (!sub.currentBar) return;
         
-        const markupBar = wrapOHLC(bar, sub.symbol, Datafeed._adminSpreads);
+        // Update the actual subscriber's bar state so next real tick builds on this
+        sub.currentBar.close = interpolatedPrice;
+        sub.currentBar.high = Math.max(sub.currentBar.high, interpolatedPrice);
+        sub.currentBar.low = Math.min(sub.currentBar.low, interpolatedPrice);
+        
+        const markupBar = wrapOHLC(sub.currentBar, sub.symbol, Datafeed._adminSpreads);
         sub.onRealtimeCallback(markupBar);
       }
     });

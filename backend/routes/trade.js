@@ -268,9 +268,8 @@ router.post('/close', async (req, res) => {
     try {
       const tradeObj = await Trade.findById(tradeId);
       if (tradeObj) {
-        const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase());
-        if (priceStr) {
-          const cachedPrice = JSON.parse(priceStr);
+        const cachedPrice = await alltickApiService.getLivePrice(tradeObj.symbol);
+        if (cachedPrice) {
           // Check both .timestamp and .time for compatibility
           if (!isPriceFresh(cachedPrice.timestamp || cachedPrice.time, 600)) { // Relaxed 600s for closing
             console.warn(`[Trade Route] Stale price detected on CLOSE for ${tradeObj.symbol}: ${cachedPrice.time}`);
@@ -299,11 +298,10 @@ router.post('/close', async (req, res) => {
     let serverRawBid = null
     let serverRawAsk = null
 
-    // Fetch server-side source of truth from Redis
+    // Fetch server-side source of truth from Redis (via alltickApiService to support memory fallback)
     try {
-      const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase());
-      if (priceStr) {
-        const cachedPrice = JSON.parse(priceStr);
+      const cachedPrice = await alltickApiService.getLivePrice(tradeObj.symbol);
+      if (cachedPrice) {
         // Prioritize high-precision raw values from Redis for closing
         serverRawBid = cachedPrice.rawBid || cachedPrice.bid;
         serverRawAsk = cachedPrice.rawAsk || cachedPrice.ask;

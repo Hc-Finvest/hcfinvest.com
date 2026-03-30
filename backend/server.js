@@ -135,8 +135,18 @@ redisSubscriber.subscribe('price_updates', (err, count) => {
   else console.log(`[Redis Pub/Sub] Subscribed to ${count} channels.`);
 });
 
+// ✅ MONITORING: Redis Pub/Sub Heartbeat
+let totalTicksReceived = 0;
+setInterval(() => {
+  if (totalTicksReceived > 0) {
+    console.log(`[Monitoring] Redis Pub/Sub Heartbeat: Received ${totalTicksReceived} price ticks in 60s.`);
+    totalTicksReceived = 0;
+  }
+}, 60000);
+
 redisSubscriber.on('message', (channel, message) => {
   if (channel === 'price_updates') {
+    totalTicksReceived++;
     try {
       const priceData = JSON.parse(message);
       const symbol = priceData.symbol;

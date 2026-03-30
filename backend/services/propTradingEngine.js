@@ -651,7 +651,10 @@ class PropTradingEngine {
 
     for (const trade of openTrades) {
       const priceData = prices[trade.symbol]
-      if (!priceData) continue
+      if (!priceData || !priceData.bid || !priceData.ask || parseFloat(priceData.bid) <= 0 || parseFloat(priceData.ask) <= 0) {
+        // Skip SL/TP check for challenge trades when price is missing or zero
+        continue
+      }
 
       const bid = priceData.rawBid !== undefined ? priceData.rawBid : priceData.bid
       const ask = priceData.rawAsk !== undefined ? priceData.rawAsk : priceData.ask

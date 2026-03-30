@@ -551,7 +551,10 @@ class TradeEngine {
                      currentPrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
                      currentPrices[targetSym.replace(/\.i$/i, '').toLowerCase()];
       
-      if (!prices) continue
+      if (!prices || !prices.bid || !prices.ask || parseFloat(prices.bid) <= 0 || parseFloat(prices.ask) <= 0) {
+        // Skip SL/TP check if prices are missing, zero, or invalid to prevent auto-closure bug
+        continue
+      }
 
       const trigger = trade.checkSlTp(prices.bid, prices.ask)
       if (trigger) {
