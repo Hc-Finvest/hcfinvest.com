@@ -231,19 +231,19 @@ export class TradeLineManager {
               this._destroyShape(ghost.tvId);
               this.lines[tid].ghost = null;
               
-              const side = String(trade.side || trade.type || '').toLowerCase();
-              const isBuy = side.includes('buy') || side.includes('long');
+              // v7.52 Hardened side detection
+              const sideStr = String(trade.side || trade.type || trade.action || trade.orderType || '').toLowerCase();
+              const isBuy = sideStr.includes('buy') || sideStr.includes('long');
               const entryPrice = Number(trade.openPrice || trade.price);
               
-              // v7.51 Precision decision logic
               const priceScale = this.widget.activeChart().symbolInfo()?.pricescale || 100;
-              const epsilon = 1 / (priceScale * 10); // 0.1 pip epsilon
+              const epsilon = 5 / (priceScale * 10); // 0.5 pip epsilon for better drag stability
               
-              let t;
+              let t = null;
               if (isBuy) {
                   if (price > entryPrice + epsilon) t = 'tp';
                   else if (price < entryPrice - epsilon) t = 'sl';
-                  else return; // Dropped too close to entry, ignore to prevent accidental SL hit
+                  else return;
               } else {
                   if (price < entryPrice - epsilon) t = 'tp';
                   else if (price > entryPrice + epsilon) t = 'sl';
@@ -528,11 +528,15 @@ export class TradeLineManager {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
       if (data.success && this.onTradeModify) {
+        console.log(`[TradeManager] SUCCESS: Trade ${tid} modified (${type} -> ${roundedPrice})`);
         this.onTradeModify({ tradeId: tid, sl: currentSL, tp: currentTP });
+      } else {
+        console.warn(`[TradeManager] FAILED: ${data.message || 'Unknown backend error'}`);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(`[TradeManager] ERROR: Network or parse failure during commit`, e);
+    }
   }
 
   updateLivePrice(symbol, prices) {

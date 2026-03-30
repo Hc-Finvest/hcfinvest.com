@@ -260,6 +260,13 @@ class AllTickApiService {
         let tickMs = parseInt(tick.tick_time);
         if (tickMs < 100000000000) tickMs *= 1000;
 
+        // v7.52 Freshness Guard: Fallback to Date.now() if provider timestamp is 
+        // slightly lagged (> 30s) or missing, provided it's within a 10min window.
+        const now = Date.now();
+        if (!tickMs || (Math.abs(now - tickMs) > 30000 && Math.abs(now - tickMs) < 600000)) {
+            tickMs = now;
+        }
+
         const tickTime = tickMs ? new Date(tickMs) : new Date();
         
         // Normalize price (rounds for display, keeps raw for math)

@@ -557,11 +557,12 @@ class TradeEngine {
       }
 
       // ✅ ELITE: Price Freshness Guard (Anti-Fossilization)
-      // If the price is older than 60 seconds, it's considered stale and dangerous for SL/TP checks
-      const priceAgeMs = Date.now() - (prices.timestamp || 0);
-      if (priceAgeMs > 60000) {
-        if (Math.random() < 0.01) { // Log only 1% of instances to avoid flooding
-           console.warn(`[TradeEngine] Skipping SL/TP check for ${targetSym} due to stale price data (age: ${Math.round(priceAgeMs/1000)}s)`);
+      // v7.52: Increased threshold to 120s to account for clock drift/lag
+      const now = Date.now();
+      const priceAgeMs = now - (prices.timestamp || 0);
+      if (priceAgeMs > 120000) {
+        if (Math.random() < 0.05) { // Log 5% for better diagnostics
+           console.warn(`[TradeEngine] Skipping SL/TP check for ${targetSym} due to stale price data (age: ${Math.round(priceAgeMs/1000)}s, drift: ${now - (prices.timestamp || 0)}ms)`);
         }
         continue;
       }
