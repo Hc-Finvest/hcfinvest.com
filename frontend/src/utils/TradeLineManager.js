@@ -501,15 +501,15 @@ export class TradeLineManager {
     if (!this._ownRemovals) this._ownRemovals = new Set();
     this._ownRemovals.add(tvId);
     setTimeout(() => this._ownRemovals?.delete(tvId), 500);
-    try { 
-        const chart = this.widget.chart();
-        try { chart.removeEntity(tvId); } catch(e) {}
-        // ≡ƒ¢í∩╕Å v7.48 Double-Tap Deletion: Some shapes linger if deleted during a render cycle.
-        // We fire a second cleanup 100ms later to ensure the entity is gone.
-        setTimeout(() => {
-            try { this.widget?.chart()?.removeEntity(tvId); } catch(e) {}
-        }, 100);
-    } catch (e) {}
+    //Sanket v2.0 - Removed the 100ms double-tap deletion. The double-tap called removeEntity on an
+    // ID that TV had already deleted from the first call. TV fires "Can't find a source with id"
+    // for every double-tap → each error triggered the drawing_event 'remove' handler → handler
+    // called syncTrades → syncTrades ran removeTradeLines → _destroyShape on freshly created
+    // SL/TP shapes → those fresh shapes also got double-tapped → cascade wipe of all lines.
+    // Single removeEntity is sufficient; TV processes it synchronously within the same frame.
+    try {
+        this.widget?.chart()?.removeEntity(tvId);
+    } catch(e) {}
     delete this.tvIdMap[tvId];
   }
 
