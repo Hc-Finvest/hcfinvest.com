@@ -4974,8 +4974,8 @@ const TradingPage = () => {
 
           {/* Positions Panel - Expanded height for History tab */}
           <div className={`${isBottomPanelMinimized ? 'h-10' : (isMobile ? 'h-48' : (activePositionTab === 'History' ? 'h-80' : 'h-44'))} border-t flex flex-col shrink-0 overflow-hidden ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} transition-all duration-300`}>
-            <div className={`min-h-10 flex flex-wrap items-center justify-between gap-y-2 px-2 sm:px-4 py-2 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-6 min-w-0">
+            <div className={`h-10 flex items-center justify-between gap-2 px-2 sm:px-3 border-b overflow-hidden ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-1 sm:gap-3 min-w-0 flex-1 overflow-hidden">
                 {[
                   { name: 'Positions', count: openTrades.length },
                   { name: 'Pending', count: pendingOrders.length },
@@ -4988,50 +4988,50 @@ const TradingPage = () => {
                       if (isBottomPanelMinimized) setIsBottomPanelMinimized(false);
                       setActivePositionTab(tab.name);
                     }}
-                    className={`text-xs sm:text-sm whitespace-nowrap ${activePositionTab === tab.name ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500 hover:text-white'}`}
+                    className={`text-[11px] sm:text-xs lg:text-sm whitespace-nowrap truncate ${activePositionTab === tab.name ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500 hover:text-white'}`}
                   >
                     {isMobile ? `${tab.name.split(' ')[0]}(${tab.count})` : `${tab.name}(${tab.count})`}
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="flex items-center justify-end gap-1 sm:gap-2 shrink-0 min-w-0">
                 {!isMobile && (
                   <>
                     {oneClickTrading && (
-                      <div className="flex items-center gap-1.5 mr-2 animate-in slide-in-from-right-4 duration-300">
+                      <div className="flex items-center gap-1 mr-1 sm:mr-2 animate-in slide-in-from-right-4 duration-300">
                         <button
                           onClick={() => confirmCloseAll()}
-                          className="h-7 px-2.5 text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500/20 transition-all active:scale-95"
+                          className="h-6 px-1.5 sm:px-2 text-[9px] sm:text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500/20 transition-all active:scale-95"
                         >
                           Close All
                         </button>
                         <button
                           onClick={() => handleCloseAllTrades('profit')}
-                          className="h-7 px-2.5 text-[10px] font-semibold bg-green-500/10 text-green-500 border border-green-500/20 rounded hover:bg-green-500/20 transition-all active:scale-95"
+                          className="h-6 px-1.5 sm:px-2 text-[9px] sm:text-[10px] font-semibold bg-green-500/10 text-green-500 border border-green-500/20 rounded hover:bg-green-500/20 transition-all active:scale-95"
                         >
                           Close Profit
                         </button>
                         <button
                           onClick={() => handleCloseAllTrades('loss')}
-                          className="h-7 px-2.5 text-[10px] font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-all active:scale-95"
+                          className="h-6 px-1.5 sm:px-2 text-[9px] sm:text-[10px] font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-all active:scale-95"
                         >
                           Close Loss
                         </button>
                       </div>
                     )}
-                    <span className="text-sm text-gray-500">One Click</span>
+                    <span className="text-xs text-gray-500 hidden lg:inline">One Click</span>
                     <button
                       onClick={() => setOneClickTrading(!oneClickTrading)}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${oneClickTrading ? 'bg-blue-600' : 'bg-gray-600'}`}
+                      className={`w-9 h-5 rounded-full relative transition-colors ${oneClickTrading ? 'bg-blue-600' : 'bg-gray-600'}`}
                     >
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${oneClickTrading ? 'left-5' : 'left-0.5'}`} />
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${oneClickTrading ? 'left-4.5' : 'left-0.5'}`} />
                     </button>
                     {oneClickTrading && (
                       <>
                         <button 
                           onClick={() => executeMarketOrder('SELL')}
                           disabled={isExecutingTrade}
-                          className="w-8 h-8 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50"
+                          className="w-7 h-7 rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors disabled:opacity-50"
                         >
                           S
                         </button>
@@ -5039,12 +5039,12 @@ const TradingPage = () => {
                           type="text"
                           value={volume}
                           onChange={(e) => setVolume(e.target.value)}
-                          className="w-14 h-7 bg-[#1a1a1a] border border-gray-600 rounded text-center text-white text-sm font-medium focus:outline-none focus:border-blue-500"
+                          className="w-12 h-6 bg-[#1a1a1a] border border-gray-600 rounded text-center text-white text-xs font-medium focus:outline-none focus:border-blue-500"
                         />
                         <button 
                           onClick={() => executeMarketOrder('BUY')}
                           disabled={isExecutingTrade}
-                          className="w-8 h-8 rounded-full bg-blue-500 text-white text-sm font-bold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                          className="w-7 h-7 rounded-full bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors disabled:opacity-50"
                         >
                           B
                         </button>
@@ -5052,10 +5052,10 @@ const TradingPage = () => {
                     )}
                   </>
                 )}
-                <span className="text-xs sm:text-sm text-gray-500 flex items-center gap-1">P/L: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{accountSummary.floatingPnl >= 0 ? '+' : ''}${(accountSummary.floatingPnl || 0).toFixed(2)}</span></span>
+                <span className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">P/L: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{accountSummary.floatingPnl >= 0 ? '+' : ''}${(accountSummary.floatingPnl || 0).toFixed(2)}</span></span>
                 <button
                   onClick={() => setIsBottomPanelMinimized(!isBottomPanelMinimized)}
-                  className={`ml-1 p-1 rounded-md transition-all duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'} ${isBottomPanelMinimized ? 'rotate-180' : ''}`}
+                  className={`ml-0.5 p-0.5 rounded-md transition-all duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'} ${isBottomPanelMinimized ? 'rotate-180' : ''}`}
                   title={isBottomPanelMinimized ? "Expand Panel" : "Minimize Panel"}
                 >
                   <ChevronDown size={18} />
@@ -5063,7 +5063,7 @@ const TradingPage = () => {
               </div>
             </div>
             
-            <div className={`flex-1 overflow-auto transition-opacity duration-300 ${isBottomPanelMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide transition-opacity duration-300 ${isBottomPanelMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {activePositionTab === 'Positions' && (
               <table className="w-full text-sm">
                 <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
