@@ -267,21 +267,22 @@ async function seed() {
     console.log('✅ Connected to MongoDB')
 
     let created = 0
-    let skipped = 0
+    let updated = 0
 
     for (const tpl of templates) {
       const existing = await EmailTemplate.findOne({ slug: tpl.slug })
       if (existing) {
-        console.log(`⏭  Skipped (already exists): ${tpl.slug}`)
-        skipped++
-        continue
+        await EmailTemplate.updateOne({ slug: tpl.slug }, tpl)
+        console.log(`🔄 Updated: ${tpl.slug}`)
+        updated++
+      } else {
+        await EmailTemplate.create(tpl)
+        console.log(`✅ Created: ${tpl.slug}`)
+        created++
       }
-      await EmailTemplate.create(tpl)
-      console.log(`✅ Created: ${tpl.slug}`)
-      created++
     }
 
-    console.log(`\n📧 Email templates seeded — ${created} created, ${skipped} skipped`)
+    console.log(`\n📧 Email templates seeded — ${created} created, ${updated} updated`)
     process.exit(0)
   } catch (err) {
     console.error('❌ Seed failed:', err.message)
