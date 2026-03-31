@@ -41,17 +41,13 @@ const Advance_Trading_View_Chart = ({
   // ─── SMOOTH INTERPOLATION ──────────────────────────────────────────────────
   const displayPrice = useInterpolation(targetPrice, 0.2);
 
-  // Sync interpolated price to manager and datafeed for smooth updates
+  // Sync interpolated price to manager for smooth SL/TP/PnL label updates
   useEffect(() => {
-    if (isChartReady) {
-      // 1. Update order lines/PnL labels via manager
-      if (managerRef.current) {
-        managerRef.current.updateLivePrice(symbol, displayPrice);
-      }
-      // 2. Inject smooth price into TradingView candle updates
-      // Using mid-price for candles to keep display consistent with standard charts
-      const mid = typeof displayPrice === 'object' ? (displayPrice.bid + displayPrice.ask) / 2 : displayPrice;
-      Datafeed.updateInterpolatedTick?.(symbol, mid);
+    if (isChartReady && managerRef.current) {
+      //Sanket v2.0 - Only use interpolated price for trade line labels, NOT for TV candle updates.
+      // Pushing candles at 60fps via requestAnimationFrame overwhelms TV's bar queue and freezes the chart.
+      // TV candles are driven exclusively by real tick data via handlePriceUpdate in datafeed.js.
+      managerRef.current.updateLivePrice(symbol, displayPrice);
     }
   }, [displayPrice, symbol, isChartReady]);
 
