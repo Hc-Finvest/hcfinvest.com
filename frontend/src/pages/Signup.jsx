@@ -200,6 +200,19 @@ const Signup = () => {
               referralCode: referralCode
             })
           })
+              await resend.emails.send({
+              from: 'HC Finvest <noreply@hcfinvest.com>',
+              to: [email],
+              subject: 'Welcome to HC Finvest 🎉',
+
+              template: {
+                id: 'tpl_welcome123',   // 👈 your published template ID
+                variables: {
+                  name: user.firstName || 'User',
+                  dashboardLink: 'https://trade.hcfinvest.com/dashboard'
+                }
+              }
+            });
           console.log('Referral registered:', referralCode)
         } catch (refError) {
           console.error('Error registering referral:', refError)
