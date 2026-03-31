@@ -9,133 +9,6 @@ import { canonicalSymbol, normalizeSymbol } from "../utils/symbolUtils.js";
 // ─── v7.60 Configuration ───────────────────────────────────────────────────
 const DEBOUNCE_SAVE_MS = 2000; // Auto-save after 2 seconds of inactivity
 
-const getPriceDecimals = (symbol = '') => {
-  const base = normalizeSymbol(symbol).replace(/\.I$/i, '');
-  if (base.includes('JPY')) return 3;
-  if (['XAUUSD', 'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD', 'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD'].includes(base)) return 2;
-  if (base === 'XAGUSD') return 4;
-  return 5;
-};
-
-const resolutionToMs = (resolution = '1') => {
-  if (resolution === '1M' || resolution === 'M') return 30 * 24 * 60 * 60 * 1000;
-  if (resolution === '1W' || resolution === 'W') return 7 * 24 * 60 * 60 * 1000;
-  if (resolution === '1D' || resolution === 'D') return 24 * 60 * 60 * 1000;
-  if (resolution === '240' || resolution === '4h') return 4 * 60 * 60 * 1000;
-  if (resolution === '120' || resolution === '2h') return 2 * 60 * 60 * 1000;
-  if (resolution === '60' || resolution === '1h') return 60 * 60 * 1000;
-  return (parseInt(resolution, 10) || 1) * 60 * 1000;
-};
-
-const formatCountdown = (ms) => {
-  if (!Number.isFinite(ms) || ms < 0) return '--:--';
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-};
-
-//Sanket v2.0 - Production-grade live quote overlay for the chart.
-// Do NOT depend on TradingView's built-in last-price bubble for smooth decimals:
-// that bubble is derived from bar callbacks and will never feel exactly like a
-// plain interpolated React number. This overlay uses the same scalar interpolation
-// model as the BUY/SELL buttons, so the visible chart quote matches them exactly.
-const ChartLiveQuoteOverlay = ({ chartRef, isChartReady, symbol, selectedSide, targetQuotePrice }) => {
-  const displayQuote = useInterpolation(targetQuotePrice ?? 0, 0.15);
-  const [overlay, setOverlay] = useState({ top: 0, countdown: '--:--', visible: false });
-  const serverOffsetRef = useRef(0);
-
-  useEffect(() => {
-    const syncServerOffset = () => {
-      if (typeof Datafeed.getServerTime !== 'function') return;
-      Datafeed.getServerTime((serverTime) => {
-        const serverMs = Number(serverTime) * 1000;
-        if (Number.isFinite(serverMs) && serverMs > 0) {
-          serverOffsetRef.current = serverMs - Date.now();
-        }
-      });
-    };
-
-    syncServerOffset();
-    const intervalId = setInterval(syncServerOffset, 30000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
-    if (!isChartReady || !chartRef.current || !Number.isFinite(displayQuote) || displayQuote <= 0) {
-      setOverlay((prev) => prev.visible ? { ...prev, visible: false } : prev);
-      return;
-    }
-
-    let rafId;
-    const updateOverlay = () => {
-      const chart = chartRef.current;
-      const pane = chart?.getPanes?.()?.[0];
-      const priceScale = pane?.getMainSourcePriceScale?.();
-      const priceRange = priceScale?.getVisiblePriceRange?.();
-      const paneHeight = pane?.getHeight?.();
-
-      if (!priceRange || !Number.isFinite(priceRange.from) || !Number.isFinite(priceRange.to) ||
-          !Number.isFinite(paneHeight) || paneHeight <= 0 || priceRange.to === priceRange.from) {
-        rafId = requestAnimationFrame(updateOverlay);
-        return;
-      }
-
-      const normalized = (priceRange.to - displayQuote) / (priceRange.to - priceRange.from);
-      const top = Math.max(12, Math.min(paneHeight - 12, normalized * paneHeight));
-
-      const now = Date.now() + serverOffsetRef.current;
-      const resolutionMs = resolutionToMs(chart?.resolution?.() || '1');
-      const barStart = Math.floor(now / resolutionMs) * resolutionMs;
-      const countdown = formatCountdown((barStart + resolutionMs) - now);
-
-      setOverlay((prev) => {
-        if (prev.visible && Math.abs(prev.top - top) < 0.5 && prev.countdown === countdown) {
-          return prev;
-        }
-        return { top, countdown, visible: true };
-      });
-
-      rafId = requestAnimationFrame(updateOverlay);
-    };
-
-    rafId = requestAnimationFrame(updateOverlay);
-    return () => cancelAnimationFrame(rafId);
-  }, [chartRef, displayQuote, isChartReady, symbol]);
-
-  if (!overlay.visible || !Number.isFinite(displayQuote) || displayQuote <= 0) return null;
-
-  const decimals = getPriceDecimals(symbol);
-  const isBuy = selectedSide === 'BUY';
-  const bubbleColor = isBuy ? '#2563eb' : '#ef4444';
-  const lineColor = isBuy ? 'rgba(37,99,235,0.45)' : 'rgba(239,68,68,0.45)';
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
-      <div
-        className="absolute left-0 right-0"
-        style={{ top: `${overlay.top}px`, transform: 'translateY(-50%)' }}
-      >
-        <div
-          className="absolute left-0 right-[78px] border-t border-dotted"
-          style={{ borderColor: lineColor }}
-        />
-        <div
-          className="absolute right-0 flex w-[74px] flex-col items-center rounded-sm px-1 py-1 text-white shadow-sm"
-          style={{ backgroundColor: bubbleColor }}
-        >
-          <div className="font-mono text-[11px] font-semibold leading-none">
-            {displayQuote.toFixed(decimals)}
-          </div>
-          <div className="font-mono text-[10px] leading-none opacity-90">
-            {overlay.countdown}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 /**
  * Institutional-Grade Trading Chart Component — v7.60
  * - Persists all chart settings, indicators, and drawings to the backend.
@@ -177,7 +50,6 @@ const Advance_Trading_View_Chart = ({
   const [isChartReady, setIsChartReady] = useState(false);
   const chartReadyRef = useRef(false);
   const [targetPrice, setTargetPrice] = useState(0);
-  const [targetQuotePrice, setTargetQuotePrice] = useState(0);
 
   // ─── SMOOTH INTERPOLATION ──────────────────────────────────────────────────
   const displayPrice = useInterpolation(targetPrice, 0.2);
@@ -323,10 +195,7 @@ const Advance_Trading_View_Chart = ({
           "side_toolbar_in_fullscreen_mode"
         ],
         overrides: {
-          "paneProperties.background": isDarkMode ? "#0d0d0d" : "#ffffff",
-          "scalesProperties.showSeriesLastValue": false,
-          "mainSeriesProperties.showPriceLine": false,
-          "mainSeriesProperties.showCountdown": false
+          "paneProperties.background": isDarkMode ? "#0d0d0d" : "#ffffff"
         }
       });
 
@@ -469,13 +338,6 @@ const Advance_Trading_View_Chart = ({
       if (tickSymbol === chartSymbol) {
         const { bid, ask } = e.detail;
         setTargetPrice({ bid, ask });
-        //Sanket v2.0 - Use the same scalar side quote as the BUY/SELL buttons.
-        // This is the production-grade fix: the chart-side bubble should be its own
-        // quote widget, not TradingView's internal last-price label.
-        const nextQuote = selectedSide === 'SELL' ? Number(bid) : selectedSide === 'BUY' ? Number(ask) : (Number(bid) + Number(ask)) / 2;
-        if (Number.isFinite(nextQuote) && nextQuote > 0) {
-          setTargetQuotePrice(nextQuote);
-        }
       }
     };
     const priceEvents = getPriceEvents();
@@ -483,26 +345,17 @@ const Advance_Trading_View_Chart = ({
     return () => {
       priceEvents.removeEventListener("priceUpdate", handlePriceUpdate);
     };
-  }, [symbol, selectedSide]);
+  }, [symbol]);
 
   return (
-    <div className="relative h-full w-full">
-      <div
-        ref={containerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          backgroundColor: "#0d0d0d"
-        }}
-      />
-      <ChartLiveQuoteOverlay
-        chartRef={chartRef}
-        isChartReady={isChartReady}
-        symbol={symbol}
-        selectedSide={selectedSide}
-        targetQuotePrice={targetQuotePrice}
-      />
-    </div>
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        backgroundColor: "#0d0d0d"
+      }}
+    />
   );
 };
 
