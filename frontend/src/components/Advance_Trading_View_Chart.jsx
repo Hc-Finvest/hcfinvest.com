@@ -72,7 +72,16 @@ const Advance_Trading_View_Chart = ({
     if (!userId || !widgetRef.current || !chartReadyRef.current) return;
 
     try {
+      //Sanket v2.0 - Clear managed SL/TP/entry lines before saving so they don't get baked into
+      // the layoutJson. Stale shape IDs in saved state cause "Can't find source" errors and
+      // TradingView schema mismatches on next load. Re-sync after save to restore them.
+      const manager = managerRef.current;
+      if (manager) manager.clearAllManagedDrawings();
+
       widgetRef.current.save((layoutJson) => {
+        // Re-sync trade lines immediately after snapshot is captured
+        if (manager) manager.syncTrades(manager.trades || [], symbol);
+
         fetch(`${API_URL}/chart/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -89,7 +98,7 @@ const Advance_Trading_View_Chart = ({
       });
     } catch (err) {
     }
-  }, []);
+  }, [symbol]);
 
   const debouncedSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
