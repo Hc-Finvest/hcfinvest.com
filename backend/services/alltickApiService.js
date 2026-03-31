@@ -78,6 +78,10 @@ class AllTickApiService {
     this.restCooldownUntil = 0; // Cooldown for REST API (history)
     this.wsCooldownUntil = 0;   // Cooldown for WebSocket (connection)
     this.historyCache = new Map(); // Cache for historical requests to avoid 429s
+    //Sanket v2.0 - Blacklist for symbols that AllTick confirms are unsupported (HTTP 600 / code invalid).
+    // Without this, every startup warmup + chart load re-hits the API for the same bad symbol,
+    // stacking up REST requests that trigger 429 → WS disconnect → real-time prices lost.
+    this.unsupportedSymbols = new Set();
     
     // Periodically clear old cache entries (5 minute TTL)
     setInterval(() => {
@@ -336,6 +340,13 @@ class AllTickApiService {
     const restUrl = ALLTICK_REST_URL();
     const alltickSymbol = this.normalizeSymbol(symbol);
 
+    //Sanket v2.0 - Blacklist early-exit: if AllTick already returned code_invalid for this symbol
+    // during this session, skip the API call entirely. This prevents the XAGUSD warmup spam where
+    // 4 timeframe requests × multiple PM2 restarts stack up REST calls → 429 → WS disconnects.
+    if (this.unsupportedSymbols.has(alltickSymbol)) {
+      return { success: false, candles: [], error: 'code_invalid', source: 'blacklist' };
+    }
+
     //Sanket v2.0 - Added 2h timeframe mapping (AllTick doesn't have native 2h, use 1h and double count)
     const timeframeMap = {
       '1m': 1, '5m': 2, '15m': 3, '30m': 4, '1h': 5, '2h': 5, '4h': 6, '1d': 7, '1w': 8, '1M': 9
@@ -392,7 +403,10 @@ class AllTickApiService {
           if (response.status === 600 || !response.ok) {
             const errBody = await response.text().catch(() => '');
             if (errBody.includes('code invalid') || response.status === 600) {
-              console.warn(`[AllTick] ⚠️ Symbol not supported by AllTick: ${alltickSymbol} (HTTP ${response.status}, code invalid). Check symbolMap.`);
+              console.warn(`[AllTick] ⚠️ Symbol not supported by AllTick: ${alltickSymbol} (HTTP ${response.status}, code invalid). Blacklisting for this session.`);
+              //Sanket v2.0 - Blacklist: prevents repeated API calls for the same unsupported symbol,
+              // which would stack up REST requests and trigger 429 → WS rate limit → real-time data lost.
+              this.unsupportedSymbols.add(alltickSymbol);
               return { success: false, candles: [], error: 'code_invalid', source: 'api' };
             }
             throw new Error(`HTTP ${response.status}`);
