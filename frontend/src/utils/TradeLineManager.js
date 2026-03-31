@@ -61,6 +61,7 @@ export class TradeLineManager {
     this.isUpdatingGhost = false;
     this.syncLockUntil = 0;
     this._adminSpreads = {};
+    this._lastPrices = {}; // canonicalSymbol -> { bid, ask }
   }
 
   setAdminSpreads(spreads) {
@@ -267,6 +268,20 @@ export class TradeLineManager {
                   this.lines[tid][t] = shapeRef;
               }
 
+                  //Sanket v2.0 - Multi-trade safety guard: reject commits that are already triggerable
+                  // at the current live bid/ask. On crowded charts with overlapping SL/TP lines,
+                  // users can accidentally drag the wrong trade's line. Without this check, backend
+                  // accepts the new SL/TP and the trade closes on the very next engine cycle.
+                  if (!this._isSafeLevelForCurrentPrice(trade, t, price)) {
+                    const original = t === 'sl'
+                    ? Number(trade.stopLoss || trade.sl || 0)
+                    : Number(trade.takeProfit || trade.tp || 0);
+                    if (Number.isFinite(original) && original > 0 && this.lines[tid][t]) {
+                      this._updateShape(this.lines[tid][t].tvId, original);
+                    }
+                    return;
+                  }
+
               await this._commitTrade(tid, t, price); 
           }
 
@@ -278,6 +293,16 @@ export class TradeLineManager {
         }
 
         if (meta.type === 'sl' || meta.type === 'tp') {
+          const trade = this.getTradeById(meta.tradeId);
+          if (trade && !this._isSafeLevelForCurrentPrice(trade, meta.type, price)) {
+            const original = meta.type === 'sl'
+              ? Number(trade.stopLoss || trade.sl || 0)
+              : Number(trade.takeProfit || trade.tp || 0);
+            if (Number.isFinite(original) && original > 0) {
+              this._updateShape(tvId, original);
+            }
+            return;
+          }
             this._updateShape(tvId, price);
             await this._commitTrade(meta.tradeId, meta.type, price);
         }
@@ -530,6 +555,30 @@ export class TradeLineManager {
     return this.trades.find(t => String(t._id || t.id) === tid);
   }
 
+  _isSafeLevelForCurrentPrice(trade, type, price) {
+    //Sanket v2.0 - Validation uses current live bid/ask to prevent an immediate SL/TP trigger.
+    // This is especially critical on multi-trade charts where lines overlap and a wrong drag can
+    // otherwise close a different open trade instantly.
+    if (!trade || !type || !Number.isFinite(price)) return true;
+
+    const sym = canonicalSymbol(trade.symbol || this.widget?.symbolInterval?.()?.symbol);
+    const live = this._lastPrices[sym];
+    const bid = Number(live?.bid);
+    const ask = Number(live?.ask);
+    if (!Number.isFinite(bid) || !Number.isFinite(ask)) return true;
+
+    const side = String(trade.side || trade.type || '').toLowerCase();
+    const isBuy = side.includes('buy') || side.includes('long');
+    const { pricescale } = getInstrumentInfo(sym || 'XAUUSD');
+    const epsilon = 5 / (pricescale * 10); // 0.5 pip safety buffer
+
+    if (isBuy && type === 'sl') return price < (bid - epsilon);
+    if (isBuy && type === 'tp') return price > (bid + epsilon);
+    if (!isBuy && type === 'sl') return price > (ask + epsilon);
+    if (!isBuy && type === 'tp') return price < (ask - epsilon);
+    return true;
+  }
+
   async _commitTrade(tradeId, type, price) {
     const tid = String(tradeId);
     
@@ -620,6 +669,10 @@ export class TradeLineManager {
     // Support both single numeric price (legacy) and dual price object
     const bid = typeof prices === 'object' ? prices.bid : prices;
     const ask = typeof prices === 'object' ? prices.ask : prices;
+
+    if (Number.isFinite(Number(bid)) && Number.isFinite(Number(ask))) {
+      this._lastPrices[curSym] = { bid: Number(bid), ask: Number(ask) };
+    }
 
     visibleTrades.forEach(trade => {
       const tid = String(trade._id || trade.id);
