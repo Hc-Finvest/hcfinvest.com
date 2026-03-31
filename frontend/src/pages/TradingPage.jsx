@@ -4974,8 +4974,8 @@ const TradingPage = () => {
 
           {/* Positions Panel - Expanded height for History tab */}
           <div className={`${isBottomPanelMinimized ? 'h-10' : (isMobile ? 'h-48' : (activePositionTab === 'History' ? 'h-80' : 'h-44'))} border-t flex flex-col shrink-0 overflow-hidden ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} transition-all duration-300`}>
-            <div className={`h-10 flex items-center justify-between px-2 sm:px-4 border-b overflow-x-auto ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-              <div className="flex gap-2 sm:gap-6">
+            <div className={`min-h-10 flex flex-wrap items-center justify-between gap-y-2 px-2 sm:px-4 py-2 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-6 min-w-0">
                 {[
                   { name: 'Positions', count: openTrades.length },
                   { name: 'Pending', count: pendingOrders.length },
@@ -4994,7 +4994,7 @@ const TradingPage = () => {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 w-full sm:w-auto">
                 {!isMobile && (
                   <>
                     {oneClickTrading && (
