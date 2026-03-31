@@ -5022,9 +5022,10 @@ const TradingPage = () => {
                     <span className="text-xs text-gray-500 hidden lg:inline">One Click</span>
                     <button
                       onClick={() => setOneClickTrading(!oneClickTrading)}
-                      className={`w-9 h-5 rounded-full relative transition-colors ${oneClickTrading ? 'bg-blue-600' : 'bg-gray-600'}`}
+                      aria-pressed={oneClickTrading}
+                      className={`w-10 h-5 rounded-full relative border transition-all duration-300 ease-out ${oneClickTrading ? 'bg-blue-600 border-blue-500 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : (isDarkMode ? 'bg-gray-700 border-gray-500' : 'bg-gray-300 border-gray-400')}`}
                     >
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${oneClickTrading ? 'left-4.5' : 'left-0.5'}`} />
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ease-out ${oneClickTrading ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                     {oneClickTrading && (
                       <>
