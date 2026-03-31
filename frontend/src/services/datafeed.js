@@ -25,7 +25,8 @@ const formatResolution = (res) => {
   return map[res] || res;
 };
 
-const normalizeRealtimeSymbol = (value = '') => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+//Sanket v2.0 - Strip .i suffix before removing non-alphanumeric so XAUUSD.i and XAUUSD both normalize to XAUUSD
+const normalizeRealtimeSymbol = (value = '') => value.toUpperCase().replace(/\.I$/i, '').replace(/[^A-Z0-9]/g, '');
 
 const toMs = (rawTime) => {
   let timeMs = rawTime;
