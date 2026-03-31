@@ -17,23 +17,24 @@ export const canonicalSymbol = (raw) => {
 };
 
 /**
- * Ensures symbol has the .i suffix.
- * Example: XAUUSD -> XAUUSD.i
+ * Ensures symbol is normalized (uppercase, no .i suffix).
+ * Backward compat: strips .i from old saved symbols.
+ * Example: XAUUSD.i -> XAUUSD
  */
+//Sanket v2.0 - Changed to strip .i suffix instead of adding it
 export const ensureISuffix = (raw) => {
-  const s = String(raw || '').trim();
+  const s = String(raw || '').trim().toUpperCase();
   if (!s) return '';
-  if (s.toLowerCase().endsWith('.i')) return s;
-  return `${s}.i`;
+  return s.replace(/\.I$/i, '');
 };
 
 /**
- * Complete normalization: Uppercase and .i suffix.
- * Example: xauusd -> XAUUSD.i
+ * Complete normalization: Uppercase, no .i suffix.
+ * Example: xauusd.i -> XAUUSD
  */
+//Sanket v2.0 - Changed to strip .i suffix instead of adding it
 export const normalizeSymbol = (raw) => {
   const s = String(raw || '').trim().toUpperCase();
   if (!s) return '';
-  if (s.endsWith('.I')) return s.slice(0, -2) + '.i';
-  return `${s}.i`;
+  return s.replace(/\.I$/i, '');
 };

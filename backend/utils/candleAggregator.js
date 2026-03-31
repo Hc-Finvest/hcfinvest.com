@@ -99,28 +99,22 @@ export const fillGaps = (candles, intervalMinutes) => {
     // We skip massive gaps (> 2 days) to avoid generating millions of virtual bars during weekend/shutdowns.
     const gapMs = nextTime - currentTime;
     
-    // Detect and log gaps for "PROVE IT" transparency
-    if (gapMs > intervalMs * 1.5) {
-      console.log(`[GapFinder] ❌ GAP FOUND for ${intervalMinutes}m resolution:`, {
-        gapDurationMins: Math.round(gapMs / 60000),
-        between: new Date(currentTime).toISOString(),
-        and: new Date(nextTime).toISOString()
-      });
-    }
-
-    // 🛡️ Skip weekend gaps (roughly > 48h) or massive outages to prevent memory overflow
-    if (gapMs > intervalMs && gapMs < (48 * 60 * 60 * 1000)) {
-      while (nextTime - currentTime > intervalMs * 1.5) {
-        currentTime += intervalMs;
+    //Sanket v2.0 - Skip weekend gaps (>48h) to prevent memory overflow, fill intra-session gaps with flat candles
+    if (gapMs > intervalMs * 1.5 && gapMs < (48 * 60 * 60 * 1000)) {
+      //Sanket v2.0 - Use bucket-aligned fill to prevent overshoot: stop BEFORE the next real candle's bucket
+      const nextBucket = Math.floor(nextTime / intervalMs) * intervalMs;
+      let fillTime = Math.floor(currentTime / intervalMs) * intervalMs + intervalMs;
+      while (fillTime < nextBucket) {
         filled.push({
-          time: currentTime,
+          time: fillTime,
           open: current.close,
           high: current.close,
           low: current.close,
           close: current.close,
           volume: 0,
-          isFilled: true // 🏷️ Mark as virtual/filler for debugging if needed
+          isFilled: true
         });
+        fillTime += intervalMs;
       }
     }
   }
@@ -200,12 +194,13 @@ export const updateCandleListWithTick = (candles, tick, timeframeMinutes) => {
     if (tickPrice < lastCandle.low) lastCandle.low = tickPrice;
     // Note: Volume increment depends on tick data, here we assume it's just a price update
   } else if (bucketTime > lastCandle.time) {
-    // 🆕 Start new candle bucket
+    //Sanket v2.0 - Snap new candle open to previous candle's close for visual continuity (no gap-up micro-jumps)
+    const openPrice = lastCandle.close;
     updated.push({
       time: bucketTime,
-      open: tickPrice,
-      high: tickPrice,
-      low: tickPrice,
+      open: openPrice,
+      high: Math.max(openPrice, tickPrice),
+      low: Math.min(openPrice, tickPrice),
       close: tickPrice,
       volume: 0
     });

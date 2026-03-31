@@ -2,16 +2,12 @@
  * v7.77 Symbol Normalization Utility (Backend)
  */
 
-/**
- * Ensures symbol has the .i suffix and is uppercase.
- * Example: xauusd -> XAUUSD.i
- */
+//Sanket v2.0 - Normalizes symbol to uppercase without .i suffix
 export const normalizeSymbol = (raw) => {
   if (!raw) return 'GLOBAL';
   const s = String(raw).trim().toUpperCase();
   if (s === 'GLOBAL') return 'GLOBAL';
-  if (s.endsWith('.I')) return s.slice(0, -2) + '.i';
-  return `${s}.i`;
+  return s.replace(/\.I$/i, '');
 };
 
 /**

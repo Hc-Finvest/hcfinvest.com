@@ -25,7 +25,8 @@ class StorageService extends EventEmitter {
     this.inflightBackfillTasks = new Map();
     this.inflightHistoryRequests = new Map();
     this.liveBars = new Map();
-    this.realtimeTimeframes = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'];
+    //Sanket v2.0 - Added '2h' and '1M' so candleUpdate events fire for all supported timeframes
+    this.realtimeTimeframes = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '1d', '1w', '1M'];
     this.livePersistedTicks = 0;
     this.livePersistedWrites = 0;
     this.livePersistErrors = 0;
@@ -424,16 +425,20 @@ class StorageService extends EventEmitter {
       '15m': 15 * 60,
       '30m': 30 * 60,
       '1h':  60 * 60,
+      '2h':  2  * 60 * 60,
       '4h':  4  * 60 * 60,
       '1d':  24 * 60 * 60,
-      '1w':  7  * 24 * 60 * 60
+      '1w':  7  * 24 * 60 * 60,
+      '1M':  30 * 24 * 60 * 60
     };
     return map[timeframe] || 60;
   }
 
   getAggregationSourceTimeframe(timeframe) {
+    //Sanket v2.0 - Added 2h->1h aggregation source
     const sourceMap = {
       '30m': '1m',
+      '2h': '1h',
       '4h': '1h',
       '1w': '1d'
     };

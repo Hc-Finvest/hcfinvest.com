@@ -264,7 +264,7 @@ const AdminForexCharges = () => {
       return (
         <optgroup key={name} label={name}>
           {syms.sort().map(s => (
-            <option key={s} value={s.replace('.i', '')}>{s}</option>
+            <option key={s} value={s.replace('.i', '')}>{s.replace('.i', '')}</option>
           ))}
         </optgroup>
       )

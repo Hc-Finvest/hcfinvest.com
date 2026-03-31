@@ -245,23 +245,24 @@ router.get('/history', async (req, res) => {
     return res.status(400).json({ success: false, message: 'symbol is required' });
   }
 
-  // 🎯 Map resolution to AllTick native timeframes
+  //Sanket v2.0 - Added 120/2h mapping for 2-hour timeframe support
   const resolutionMap = {
     '1': '1m', '1m': '1m', '5': '5m', '5m': '5m', '15': '15m', '15m': '15m',
-    '30': '30m', '30m': '30m', '60': '1h', '1h': '1h', '240': '4h', '4h': '4h',
+    '30': '30m', '30m': '30m', '60': '1h', '1h': '1h', '120': '2h', '2h': '2h', '240': '4h', '4h': '4h',
     'D': '1d', '1D': '1d', 'W': '1w', '1W': '1w', 'M': '1M', '1M': '1M'
   };
   
+  //Sanket v2.0 - Removed duplicate '1m' key that was at the end
   const resolutionToMinutes = {
     '1': 1, '1m': 1, '5': 5, '5m': 5, '15': 15, '15m': 15,
-    '30': 30, '30m': 30, '60': 60, '1h': 60, '120': 120, '240': 240, '4h': 240,
+    '30': 30, '30m': 30, '60': 60, '1h': 60, '120': 120, '2h': 120, '240': 240, '4h': 240,
     'D': 1440, '1D': 1440, '1d': 1440, 
     'W': 10080, '1W': 10080, '1w': 10080, 
-    'M': 43200, '1M': 43200, '1m': 1
+    'M': 43200, '1M': 43200
   };
 
-  // 🛡️ ELITE: Always normalize symbol to UPPERCASE for internal consistency
-  const cleanSymbol = String(symbol).toUpperCase();
+  //Sanket v2.0 - Strip .i suffix and uppercase for consistent symbol lookup
+  const cleanSymbol = String(symbol).toUpperCase().replace(/\.I$/i, '');
   const timeframe = resolutionMap[resolution] || '1m';
   const targetMinutes = resolutionToMinutes[resolution] || parseInt(resolution) || 1;
   const isPreferLive = preferLive === '1' || preferLive === 'true';
@@ -282,7 +283,7 @@ router.get('/history', async (req, res) => {
   // Always use 'latest' for the end if not specified, to match live tier-sync
   const cacheSuffix = isPreferLive ? 'live' : 'std';
   const effectiveEnd = (isPreferLive && !to) ? 'latest' : (endTime || 'latest');
-  const cacheKey = `hist:${cleanSymbol}:${timeframe}:start:${effectiveEnd}:1000:${cacheSuffix}`;
+  const cacheKey = `hist:${cleanSymbol}:${timeframe}:end:${effectiveEnd}:${requestLimit}:${cacheSuffix}`;
   
   try {
     const cached = await redisClient.get(cacheKey);
@@ -310,8 +311,8 @@ router.get('/history', async (req, res) => {
     // 1. Sort (Clean)
     finalCandles.sort((a, b) => a.time - b.time);
 
-    // 2. Fill Gaps (PRO Tier Continuity)
-    if (finalCandles.length > 5 && targetMinutes <= 1440) {
+    //Sanket v2.0 - Fill gaps even with sparse data (was > 5, now > 1)
+    if (finalCandles.length > 1 && targetMinutes <= 1440) {
        const prevCount = finalCandles.length;
        finalCandles = fillGaps(finalCandles, targetMinutes);
        if (finalCandles.length > prevCount) {

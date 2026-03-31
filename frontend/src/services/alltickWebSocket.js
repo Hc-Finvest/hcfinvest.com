@@ -136,10 +136,8 @@ class AllTickWebSocket {
         return
       }
 
-      // v7.77 Strict Normalization: Ensure .i suffix and remove duplicates
-      if (!symbol.toLowerCase().endsWith('.i')) {
-        symbol = `${symbol.toUpperCase()}.i`
-      }
+      //Sanket v2.0 - Normalize to uppercase without .i suffix
+      symbol = symbol.toUpperCase().replace(/\.I$/i, '')
 
       const priceData = {
         symbol: symbol,

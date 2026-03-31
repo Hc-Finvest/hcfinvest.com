@@ -58,9 +58,10 @@ router.post('/open', async (req, res) => {
       })
     }
 
-    // ≡ƒ¢í∩╕Å Price Freshness Guard (60s Rule)
+    // Price Freshness Guard (60s Rule)
     try {
-      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase());
+      //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase().replace(/\.I$/i, ''));
       if (priceStr) {
         const cachedPrice = JSON.parse(priceStr);
         // Relaxed to 300s (5 minutes) for opening trades
@@ -116,9 +117,10 @@ router.post('/open', async (req, res) => {
     let rawBidVal = null
     let rawAskVal = null
 
-    // ≡ƒ¢í∩╕Å Fetch server-side source of truth from Redis
+    // Fetch server-side source of truth from Redis
     try {
-      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase());
+      //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase().replace(/\.I$/i, ''));
       if (priceStr) {
         const cachedPrice = JSON.parse(priceStr);
         // Prioritize raw values from Redis for backend math
@@ -244,7 +246,7 @@ router.post('/open', async (req, res) => {
 // POST /api/trade/close - Close a trade
 router.post('/close', async (req, res) => {
   try {
-    const { tradeId, bid, ask } = req.body
+    const { tradeId, bid, ask, quantity } = req.body
 
     if (!tradeId) {
       return res.status(400).json({ 
@@ -266,7 +268,8 @@ router.post('/close', async (req, res) => {
     try {
       const tradeObj = await Trade.findById(tradeId);
       if (tradeObj) {
-        const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase());
+        //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+        const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase().replace(/\.I$/i, ''));
         if (priceStr) {
           const cachedPrice = JSON.parse(priceStr);
           // Check both .timestamp and .time for compatibility
@@ -299,7 +302,8 @@ router.post('/close', async (req, res) => {
 
     // Fetch server-side source of truth from Redis
     try {
-      const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase());
+      //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+      const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase().replace(/\.I$/i, ''));
       if (priceStr) {
         const cachedPrice = JSON.parse(priceStr);
         // Prioritize high-precision raw values from Redis for closing
@@ -316,41 +320,24 @@ router.post('/close', async (req, res) => {
     const challengeAccount = await ChallengeAccount.findById(tradeObj.tradingAccountId)
     
     if (challengeAccount) {
-      // Close trade for challenge account
-      // Use refined server prices for closing
-      const closePrice = tradeObj.side === 'BUY' ? serverBid : serverAsk
-      const pnl = tradeObj.side === 'BUY'
-        ? (closePrice - tradeObj.openPrice) * tradeObj.quantity * tradeObj.contractSize
-        : (tradeObj.openPrice - closePrice) * tradeObj.quantity * tradeObj.contractSize
+      const result = await propTradingEngine.closeTrade(tradeId, serverBid, serverAsk, 'USER', null, serverRawBid, serverRawAsk, quantity)
       
-      // Update trade
-      tradeObj.status = 'CLOSED'
-      tradeObj.closePrice = closePrice
-      tradeObj.closedAt = new Date()
-      tradeObj.realizedPnl = pnl
-      tradeObj.closeReason = 'USER'
-      await tradeObj.save()
-      
-      // Update challenge account
-      await propTradingEngine.onTradeClosed(challengeAccount._id, tradeObj, pnl)
-      
-      // Emit WebSocket event
       const io = req.app.get('io');
       if (io) {
-        io.to(`account:${challengeAccount._id}`).emit('tradeClosed', tradeObj);
+        io.to(`account:${challengeAccount._id}`).emit('tradeClosed', result.trade);
       }
 
       return res.json({
         success: true,
         message: 'Challenge trade closed successfully',
-        trade: tradeObj,
-        realizedPnl: pnl,
+        trade: result.trade,
+        realizedPnl: result.realizedPnl,
         isChallengeAccount: true
       })
     }
 
     // Regular trading account
-    const result = await tradeEngine.closeTrade(tradeId, serverBid, serverAsk, 'USER', null, serverRawBid, serverRawAsk)
+    const result = await tradeEngine.closeTrade(tradeId, serverBid, serverAsk, 'USER', null, serverRawBid, serverRawAsk, quantity)
 
     // Note: Copy trading close is now handled inside tradeEngine.closeTrade()
     // This ensures SL/TP triggered closes also propagate to followers

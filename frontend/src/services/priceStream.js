@@ -90,7 +90,12 @@ class PriceStreamService {
       
       // Update local price cache with all prices
       if (prices) {
-        this.prices = { ...this.prices, ...prices }
+        //Sanket v2.0 - Only merge prices with valid bid to prevent overwriting good cache with zero/null values
+        Object.entries(prices).forEach(([sym, p]) => {
+          if (p && p.bid && p.bid > 0) {
+            this.prices[sym] = p;
+          }
+        });
       }
       
       // Update categories cache
@@ -166,6 +171,9 @@ class PriceStreamService {
       if (this.connectionStatus !== 'live') this._emitStatus('live')
       
       const { symbol, bid, ask, time, rawBid, rawAsk } = tickData
+
+      //Sanket v2.0 - Drop ticks with invalid/zero bid to prevent PnL flicker to $0
+      if (!symbol || !bid || bid <= 0) return
 
       //Sanket v2.0 - Drop duplicate ticks arriving back-to-back for same symbol.
       const tickKey = `${symbol}|${bid}|${ask}|${time || ''}`

@@ -282,8 +282,68 @@ class PropTradingEngine {
 
     // Update challenge account stats
     await this.onTradeOpened(challengeAccountId, trade)
-
     return trade
+  }
+
+  // Close a trade for challenge account (supports partial close)
+  async closeTrade(tradeId, currentBid, currentAsk, closedBy = 'USER', adminId = null, rawBid = null, rawAsk = null, quantityToClose = null) {
+    const trade = await Trade.findById(tradeId);
+    if (!trade) throw new Error('Trade not found');
+    if (trade.status !== 'OPEN') return { trade, alreadyClosed: true };
+
+    const bidToUse = rawBid !== undefined && rawBid !== null ? rawBid : currentBid;
+    const askToUse = rawAsk !== undefined && rawAsk !== null ? rawAsk : ask;
+    const closePrice = trade.side === 'BUY' ? bidToUse : askToUse;
+
+    const totalQuantity = trade.quantity;
+    const actualQuantityToClose = (quantityToClose && quantityToClose > 0 && quantityToClose < totalQuantity)
+      ? parseFloat(quantityToClose)
+      : totalQuantity;
+    
+    const isPartialClose = actualQuantityToClose < totalQuantity;
+
+    // Calculate PnL for closed portion
+    const pnl = trade.side === 'BUY'
+      ? (closePrice - trade.openPrice) * actualQuantityToClose * trade.contractSize
+      : (trade.openPrice - closePrice) * actualQuantityToClose * trade.contractSize;
+
+    let finalTradeForResponse = trade;
+
+    if (isPartialClose) {
+      // 1. Create history entry
+      const closedPartTradeId = `CH${Date.now()}P${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+      const closedPartTrade = await Trade.create({
+        ...trade.toObject(),
+        _id: new mongoose.Types.ObjectId(),
+        tradeId: closedPartTradeId,
+        quantity: actualQuantityToClose,
+        status: 'CLOSED',
+        closePrice: closePrice,
+        closedAt: new Date(),
+        realizedPnl: pnl,
+        closedBy: closedBy,
+        marginUsed: 0
+      });
+
+      // 2. Update original
+      trade.quantity -= actualQuantityToClose;
+      const leverage = trade.leverage || 100;
+      trade.marginUsed = (trade.quantity * trade.contractSize * trade.openPrice) / leverage;
+      await trade.save();
+      finalTradeForResponse = closedPartTrade;
+    } else {
+      trade.status = 'CLOSED';
+      trade.closePrice = closePrice;
+      trade.closedAt = new Date();
+      trade.realizedPnl = pnl;
+      trade.closedBy = closedBy;
+      await trade.save();
+    }
+
+    // Update challenge account stats
+    await this.onTradeClosed(trade.tradingAccountId, finalTradeForResponse, pnl, !isPartialClose);
+
+    return { trade: finalTradeForResponse, realizedPnl: pnl, isChallengeAccount: true };
   }
 
   // Get contract size based on symbol
@@ -358,7 +418,7 @@ class PropTradingEngine {
   }
 
   // Called after trade closes - CRITICAL for rule enforcement
-  async onTradeClosed(challengeAccountId, trade, closePnL) {
+  async onTradeClosed(challengeAccountId, trade, closePnL, isFullClose = true) {
     const account = await ChallengeAccount.findById(challengeAccountId)
       .populate('challengeId')
     
@@ -370,7 +430,10 @@ class PropTradingEngine {
     // Update balance and equity
     account.currentBalance += closePnL
     account.currentEquity = account.currentBalance
-    account.openTradesCount = Math.max(0, account.openTradesCount - 1)
+    
+    if (isFullClose) {
+      account.openTradesCount = Math.max(0, account.openTradesCount - 1)
+    }
 
     // Update equity tracking
     await account.updateEquity(account.currentEquity)
@@ -650,7 +713,9 @@ class PropTradingEngine {
     const closedTrades = []
 
     for (const trade of openTrades) {
-      const priceData = prices[trade.symbol]
+      //Sanket v2.0 - Normalize trade symbol: strip .i suffix for consistent price lookup
+      const sym = trade.symbol.toUpperCase().replace(/\.I$/i, '');
+      const priceData = prices[sym] || prices[`${sym}.i`] || prices[trade.symbol];
       if (!priceData) continue
 
       const bid = priceData.rawBid !== undefined ? priceData.rawBid : priceData.bid

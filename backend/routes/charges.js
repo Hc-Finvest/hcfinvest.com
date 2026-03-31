@@ -14,14 +14,40 @@ router.get('/spreads', async (req, res) => {
     // Build a map of symbol -> spread (respecting hierarchy)
     const spreadMap = {}
     
-    // All supported symbols - used for global/segment expansion
-    const allSymbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD']
+    //Sanket v2.0 - Complete symbol list matching all instruments in the trading UI
+    const allSymbols = [
+      // Forex majors & crosses
+      'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+      'EURGBP', 'EURJPY', 'GBPJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURNZD',
+      'AUDJPY', 'CADJPY', 'CHFJPY', 'NZDJPY',
+      'AUDNZD', 'AUDCAD', 'AUDCHF', 'CADCHF', 'NZDCAD', 'NZDCHF',
+      'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD',
+      // Metals & Commodities
+      'XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'USOIL', 'UKOIL', 'NGAS', 'COPPER',
+      // Crypto
+      'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD',
+      'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD',
+      'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD',
+      // Indices
+      'US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35'
+    ]
     
     const segmentSymbols = {
-      'Forex': ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY'],
-      'Metals': ['XAUUSD', 'XAGUSD'],
-      'Crypto': ['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'],
-      'Indices': ['US30', 'US500', 'NAS100']
+      'Forex': [
+        'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+        'EURGBP', 'EURJPY', 'GBPJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURNZD',
+        'AUDJPY', 'CADJPY', 'CHFJPY', 'NZDJPY',
+        'AUDNZD', 'AUDCAD', 'AUDCHF', 'CADCHF', 'NZDCAD', 'NZDCHF',
+        'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD'
+      ],
+      'Metals': ['XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD'],
+      'Commodities': ['USOIL', 'UKOIL', 'NGAS', 'COPPER'],
+      'Crypto': [
+        'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD',
+        'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD',
+        'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD'
+      ],
+      'Indices': ['US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35']
     }
     
     // Priority order: USER > INSTRUMENT > ACCOUNT_TYPE > SEGMENT > GLOBAL

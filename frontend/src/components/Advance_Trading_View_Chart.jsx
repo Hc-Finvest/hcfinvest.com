@@ -226,7 +226,7 @@ const Advance_Trading_View_Chart = ({
       widgetRef.current.setSymbol(normalizedSymbol, widgetRef.current.activeChart().resolution(), () => {
         lastSetSymbolRef.current = normalizedSymbol;
         if (managerRef.current) {
-          managerRef.current.syncTrades(trades, symbol);
+          managerRef.current.syncTrades(trades, symbol, true); // force sync to clear fossils
         }
       });
     }

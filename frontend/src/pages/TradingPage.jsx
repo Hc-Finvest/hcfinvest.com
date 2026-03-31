@@ -2783,7 +2783,7 @@
 
 //       {/* iOS-Style Close Trade Confirmation Modal */}
 //       {showCloseModal && selectedTradeForClose && (
-//         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+//         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
 //           <div className="w-full sm:w-80 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
 //             {/* Header */}
 //             <div className="px-4 py-4 text-center">
@@ -3096,14 +3096,14 @@ const TradingPage = () => {
   const [chartLoading, setChartLoading] = useState(false)
   const [selectedInstrument, setSelectedInstrument] = useState(() => {
     try {
-      const savedActiveTab = localStorage.getItem('activeTab') || 'XAUUSD.i'
+      const savedActiveTab = localStorage.getItem('activeTab') || 'XAUUSD'
       const savedOpenTabs = JSON.parse(localStorage.getItem('openTabs') || '[]')
       // Ensure all loaded symbols are normalized
       const normalizedActiveTab = ensureISuffix(savedActiveTab);
       const activeTabData = savedOpenTabs.find(t => ensureISuffix(t.symbol) === normalizedActiveTab)
-      return activeTabData ? { ...activeTabData, symbol: normalizedActiveTab } : { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
+      return activeTabData ? { ...activeTabData, symbol: normalizedActiveTab } : { symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
     } catch {
-      return { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
+      return { symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
     }
   })
   const [showInstruments, setShowInstruments] = useState(window.innerWidth >= 768)
@@ -3116,18 +3116,19 @@ const TradingPage = () => {
   const [activePositionTab, setActivePositionTab] = useState('Positions')
   const [isBottomPanelMinimized, setIsBottomPanelMinimized] = useState(false)
   const [oneClickTrading, setOneClickTrading] = useState(false)
+  const [partialQuantity, setPartialQuantity] = useState('')
   const [selectedSide, setSelectedSide] = useState('BUY') // BUY or SELL
   const [openTabs, setOpenTabs] = useState(() => {
     try {
       const saved = localStorage.getItem('openTabs')
       return saved ? JSON.parse(saved) : [
-        { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 },
-        { symbol: 'EURUSD.i', name: 'Euro vs US Dollar', bid: 0, ask: 0, spread: 0 }
+        { symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 },
+        { symbol: 'EURUSD', name: 'Euro vs US Dollar', bid: 0, ask: 0, spread: 0 }
       ]
-    } catch { return [{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }] }
+    } catch { return [{ symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }] }
   })
   const [activeTab, setActiveTab] = useState(() => {
-    try { return localStorage.getItem('activeTab') || 'XAUUSD.i' } catch { return 'XAUUSD.i' }
+    try { return localStorage.getItem('activeTab') || 'XAUUSD' } catch { return 'XAUUSD' }
   })
   const [showSymbolPicker, setShowSymbolPicker] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
@@ -3140,57 +3141,57 @@ const TradingPage = () => {
   // Initialize with default instruments immediately - no loading state
   const [instruments, setInstruments] = useState([
     // ============ FOREX PAIRS ============
-    { symbol: 'EURUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
-    { symbol: 'GBPUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
-    { symbol: 'USDJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURGBP.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURAUD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'CADJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'CHFJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDNZD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'CADCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPAUD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPNZD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURNZD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
+    { symbol: 'GBPUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
+    { symbol: 'USDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURGBP', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURAUD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CADJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CHFJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CADCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPAUD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
     // ============ COMMODITIES / METALS ============
-    { symbol: 'XAUUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: true },
-    { symbol: 'XAGUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'USOIL.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'UKOIL.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'NGAS.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'XAUUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: true },
+    { symbol: 'XAGUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'USOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'UKOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'NGAS', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     // { symbol: 'COPPER', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     // ============ CRYPTO ============
-    { symbol: 'BTCUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: true },
-    { symbol: 'ETHUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'BNBUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'SOLUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'DOGEUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'LTCUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'BTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: true },
+    { symbol: 'ETHUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'BNBUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'SOLUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'DOGEUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'LTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     // ============ INDICES ============
-    { symbol: 'US30.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: true },
-    { symbol: 'US500.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-    { symbol: 'US100.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-    { symbol: 'UK100.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-    { symbol: 'ES35.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-  ].filter(inst => inst.symbol.toLowerCase().endsWith('.i'))) // v7.77 Strict UI Guard
+    { symbol: 'US30', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: true },
+    { symbol: 'US500', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'US100', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'UK100', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'ES35', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+  ])
   const [loadingInstruments, setLoadingInstruments] = useState(false) // Don't block UI on prices
-  const [starredSymbols, setStarredSymbols] = useState(['XAUUSD.i', 'EURUSD.i', 'GBPUSD.i'])
+  const [starredSymbols, setStarredSymbols] = useState(['XAUUSD', 'EURUSD', 'GBPUSD'])
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [openTrades, setOpenTrades] = useState([])
   const [pendingOrders, setPendingOrders] = useState([])
@@ -3275,75 +3276,6 @@ const TradingPage = () => {
     }
   }, [accountId])
 
-  // Kill Switch countdown timer
-  useEffect(() => {
-    if (!killSwitchActive || !killSwitchEndTime) return
-    
-    const updateTimer = () => {
-      const now = Date.now()
-      const remaining = killSwitchEndTime - now
-      
-      if (remaining <= 0) {
-        setKillSwitchActive(false)
-        setKillSwitchEndTime(null)
-        setKillSwitchTimeLeft('')
-        localStorage.removeItem(`killSwitch_${accountId}`)
-        return
-      }
-      
-      // Format time remaining
-      const days = Math.floor(remaining / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((remaining % (1000 * 60)) / 1000)
-      
-      let timeStr = ''
-      if (days > 0) timeStr += `${days}d `
-      if (hours > 0 || days > 0) timeStr += `${hours}h `
-      if (minutes > 0 || hours > 0 || days > 0) timeStr += `${minutes}m `
-      timeStr += `${seconds}s`
-      
-      setKillSwitchTimeLeft(timeStr.trim())
-    }
-    
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
-    return () => clearInterval(interval)
-  }, [killSwitchActive, killSwitchEndTime, accountId])
-
-  // Activate Kill Switch
-  const activateKillSwitch = (customDuration = null) => {
-    const multipliers = { seconds: 1000, minutes: 60 * 1000, hours: 60 * 60 * 1000, days: 24 * 60 * 60 * 1000 }
-    const durationConfig = customDuration || killSwitchDuration
-    const duration = durationConfig.value * multipliers[durationConfig.unit]
-    const endTime = Date.now() + duration
-    
-    setKillSwitchActive(true)
-    setKillSwitchEndTime(endTime)
-    localStorage.setItem(`killSwitch_${accountId}`, endTime.toString())
-    setShowKillSwitchModal(false)
-    
-    // Show notification
-    const timeStr = `${durationConfig.value} ${durationConfig.unit}`
-    setTradeSuccess(`🛑 Kill Switch activated for ${timeStr}! Trading is now blocked.`)
-    setTimeout(() => setTradeSuccess(''), 5000)
-  }
-
-  // Quick activate Kill Switch with default 30 minutes (one-click)
-  const quickActivateKillSwitch = () => {
-    activateKillSwitch({ value: 30, unit: 'minutes' })
-  }
-
-  // Deactivate Kill Switch
-  const deactivateKillSwitch = () => {
-    setKillSwitchActive(false)
-    setKillSwitchEndTime(null)
-    setKillSwitchTimeLeft('')
-    localStorage.removeItem(`killSwitch_${accountId}`)
-    
-    setTradeSuccess('✅ Kill Switch deactivated. Trading is now enabled.')
-    setTimeout(() => setTradeSuccess(''), 3000)
-  }
 
   // Persist open tabs + active tab to localStorage
   useEffect(() => {
@@ -3448,6 +3380,10 @@ const TradingPage = () => {
   // Use a ref to store prices and only update state every 300ms to keep UI smooth
   const lastUpdateRef = useRef(0);
   const priceBufferRef = useRef({});
+  //Sanket v2.0 - Cache last valid price per symbol to prevent PnL flicker when ticks arrive for only some symbols
+  const lastValidPricesRef = useRef({});
+  //Sanket v2.0 - Cache last computed PnL per trade to use as fallback when price is temporarily missing
+  const lastTradePnlRef = useRef({});
 
   useEffect(() => {
     const unsubscribe = priceStreamService.subscribe('tradingPage', (prices, updated, timestamp) => {
@@ -3628,6 +3564,13 @@ const TradingPage = () => {
     // Skip if no live prices yet (prevent flickering to zero)
     if (Object.keys(livePrices).length === 0) return
     
+    //Sanket v2.0 - Update lastValidPricesRef with any new valid prices from this tick cycle
+    Object.entries(livePrices).forEach(([sym, p]) => {
+      if (p && p.bid && p.bid > 0) {
+        lastValidPricesRef.current[sym] = p;
+      }
+    });
+    
     // Calculate total floating PnL from current prices
     let totalFloatingPnl = 0
     let totalUsedMargin = 0
@@ -3635,12 +3578,14 @@ const TradingPage = () => {
     
     if (openTrades.length > 0) {
       openTrades.forEach(trade => {
-        // ✅ ELITE: Robust case-insensitive lookup (matching the positions table)
         const targetSym = trade.symbol;
+        //Sanket v2.0 - Look up price: live first, then lastValidPricesRef cache, then instrument fallback
         const livePrice = livePrices[targetSym] || 
                         livePrices[targetSym.toUpperCase()] || 
                         livePrices[targetSym.toLowerCase()] ||
-                        livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()];
+                        livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
+                        lastValidPricesRef.current[targetSym] ||
+                        lastValidPricesRef.current[targetSym.toUpperCase()];
 
         const inst = instruments.find(i => i.symbol === trade.symbol)
         
@@ -3658,8 +3603,13 @@ const TradingPage = () => {
             ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
             : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize
           
-          // Deduct commission from floating PnL if not already deducted
-          totalFloatingPnl += pnl - (trade.swap || 0)
+          const tradePnl = pnl - (trade.swap || 0)
+          totalFloatingPnl += tradePnl
+          //Sanket v2.0 - Cache this trade's PnL so partial updates don't reset it to $0
+          lastTradePnlRef.current[trade._id] = tradePnl;
+        } else {
+          //Sanket v2.0 - No valid price for this trade right now, use last cached PnL instead of $0
+          totalFloatingPnl += lastTradePnlRef.current[trade._id] || 0;
         }
         totalUsedMargin += trade.marginUsed || 0
       })
@@ -4270,7 +4220,7 @@ const TradingPage = () => {
   }
 
   // Close a trade
-  const closeTrade = async (tradeId) => {
+  const closeTrade = async (tradeId, quantity = null) => {
     // Prevent double-click - check if already closing this trade
     if (closingTradeIds.has(tradeId)) {
       console.log(`Trade ${tradeId} already being closed, ignoring duplicate request`)
@@ -4306,7 +4256,8 @@ const TradingPage = () => {
         body: JSON.stringify({
           tradeId,
           bid,
-          ask
+          ask,
+          quantity
         })
       })
 
@@ -4427,9 +4378,14 @@ const TradingPage = () => {
   }
 
   // Open close confirmation modal
-  const openCloseModal = (trade) => {
-    setSelectedTradeForClose(trade)
-    setShowCloseModal(true)
+  const openCloseModal = async (trade) => {
+    if (oneClickTrading) {
+      await closeTrade(trade._id)
+    } else {
+      setSelectedTradeForClose(trade)
+      setPartialQuantity(trade.quantity.toString())
+      setShowCloseModal(true)
+    }
   }
 
   // Confirm close trade
@@ -4556,9 +4512,6 @@ const TradingPage = () => {
   }
 
   const filteredInstruments = instruments.filter(inst => {
-    // v7.77 Strict Filter: Only show .i symbols in UI
-    if (!inst.symbol.toLowerCase().endsWith('.i')) return false;
-
     const matchesSearch = inst.symbol.toLowerCase().includes(searchTerm.toLowerCase())
     if (activeCategory === 'Starred') {
       return matchesSearch && inst.starred
@@ -4850,7 +4803,16 @@ const TradingPage = () => {
                     <div className="text-gray-500 text-sm">No instruments found</div>
                   </div>
                 ) : (
-                  filteredInstruments.map(inst => (
+                  filteredInstruments.map(inst => {
+                    //Sanket v2.0 - Apply admin markup to displayed bid/ask so instruments panel matches execution prices
+                    const markup = getAdminMarkupValue(inst.symbol, adminSpreads);
+                    const retailBid = inst.bid > 0 ? inst.bid - markup : 0;
+                    const retailAsk = inst.ask > 0 ? inst.ask + markup : 0;
+                    const effectiveSpread = retailBid > 0 && retailAsk > 0 ? retailAsk - retailBid : 0;
+                    const sym = getBaseSymbol(inst.symbol);
+                    const isPointBased = isMetalSymbol(sym) || isCryptoSymbol(sym) || ['USOIL','UKOIL','NGAS','COPPER','US30','US500','US100','UK100','GER40','FRA40','JP225','HK50','AUS200','ES35'].includes(sym);
+
+                    return (
                     <button
                       key={inst.symbol}
                       onClick={() => handleInstrumentClick(inst)}
@@ -4870,32 +4832,30 @@ const TradingPage = () => {
                       <div className="flex-1" />
                       <div className="text-right w-16">
                         <div className="text-red-500 text-xs font-mono">
-                          {inst.bid > 0 ? inst.bid.toFixed(inst.bid > 100 ? 2 : 5) : '...'}
+                          {retailBid > 0 ? retailBid.toFixed(retailBid > 100 ? 2 : 5) : '...'}
                         </div>
                         <div className="text-gray-600 text-[9px]">Bid</div>
                       </div>
-                      <div className="bg-[#2a2a2a] px-1.5 py-0.5 rounded text-cyan-400 text-[10px] font-medium min-w-[28px] text-center mx-2">
-                        {/* Show admin-set spread if available, otherwise show market spread */}
-                        {getSpreadConfig(inst.symbol)?.spread > 0 ? (
-                          // Convert admin spread to pips for display
-                          isJpyPair(inst.symbol) ? (getSpreadConfig(inst.symbol).spread * 100).toFixed(1) :
-                          inst.bid > 100 ? getSpreadConfig(inst.symbol).spread.toFixed(2) :
-                          (getSpreadConfig(inst.symbol).spread * 10000).toFixed(1)
-                        ) : inst.spread > 0 ? (
-                          // Convert market spread to pips
-                          isJpyPair(inst.symbol) ? (inst.spread * 100).toFixed(1) :
-                          inst.bid > 100 ? inst.spread.toFixed(2) :
-                          (inst.spread * 10000).toFixed(1)
+                      <div className={`px-1.5 py-0.5 rounded text-[10px] font-medium min-w-[28px] text-center mx-1.5 ${
+                        isDarkMode 
+                          ? 'bg-gray-800 text-gray-300' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {effectiveSpread > 0 ? (
+                          isJpyPair(inst.symbol) ? (effectiveSpread * 100).toFixed(1) :
+                          isPointBased ? effectiveSpread.toFixed(2) :
+                          (effectiveSpread * 10000).toFixed(1)
                         ) : '-'}
                       </div>
                       <div className="text-right w-14">
                         <div className="text-green-500 text-xs font-mono">
-                          {inst.ask > 0 ? inst.ask.toFixed(inst.ask > 100 ? 2 : 5) : '...'}
+                          {retailAsk > 0 ? retailAsk.toFixed(retailAsk > 100 ? 2 : 5) : '...'}
                         </div>
                         <div className="text-gray-600 text-[9px]">Ask</div>
                       </div>
                     </button>
-                  ))
+                    )
+                  })
                 )}
               </div>
               
@@ -5072,6 +5032,28 @@ const TradingPage = () => {
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 {!isMobile && (
                   <>
+                    {oneClickTrading && (
+                      <div className="flex items-center gap-1.5 mr-2 animate-in slide-in-from-right-4 duration-300">
+                        <button
+                          onClick={() => confirmCloseAll()}
+                          className="h-7 px-2.5 text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500/20 transition-all active:scale-95"
+                        >
+                          Close All
+                        </button>
+                        <button
+                          onClick={() => handleCloseAllTrades('profit')}
+                          className="h-7 px-2.5 text-[10px] font-semibold bg-green-500/10 text-green-500 border border-green-500/20 rounded hover:bg-green-500/20 transition-all active:scale-95"
+                        >
+                          Close Profit
+                        </button>
+                        <button
+                          onClick={() => handleCloseAllTrades('loss')}
+                          className="h-7 px-2.5 text-[10px] font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-all active:scale-95"
+                        >
+                          Close Loss
+                        </button>
+                      </div>
+                    )}
                     <span className="text-sm text-gray-500">One Click</span>
                     <button
                       onClick={() => setOneClickTrading(!oneClickTrading)}
@@ -5142,24 +5124,36 @@ const TradingPage = () => {
                     </tr>
                   ) : (
                     openTrades.map(trade => {
-                      // ✅ ELITE: Case-insensitive lookup (handles XAUUSD.i vs XAUUSD.I)
                       const targetSym = trade.symbol;
+                      //Sanket v2.0 - Use lastValidPricesRef cache as fallback to prevent PnL flicker to $0
                       const livePrice = livePrices[targetSym] || 
                                       livePrices[targetSym.toUpperCase()] || 
                                       livePrices[targetSym.toLowerCase()] ||
-                                      livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()];
+                                      livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
+                                      lastValidPricesRef.current[targetSym] ||
+                                      lastValidPricesRef.current[targetSym.toUpperCase()];
 
                       const inst = instruments.find(i => i.symbol === trade.symbol) || selectedInstrument
                       
                       // Normalize side for safety (matching calculateEquity)
                       const side = String(trade.side || '').toUpperCase();
 
-                      const currentPrice = livePrice 
+                      const rawPrice = livePrice 
                         ? (side === 'BUY' ? (livePrice.rawBid || livePrice.bid) : (livePrice.rawAsk || livePrice.ask))
                         : (side === 'BUY' ? (inst.rawBid || inst.bid) : (inst.rawAsk || inst.ask))
-                      const pnl = side === 'BUY' 
-                        ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
-                        : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize
+                      //Sanket v2.0 - Guard against 0/undefined price: use cached PnL as fallback
+                      const currentPrice = (rawPrice && rawPrice > 0) ? rawPrice : null;
+                      //Sanket v2.0 - For display, show last valid price instead of '-' when current tick is missing
+                      const displayPrice = currentPrice || (lastValidPricesRef.current[targetSym.toUpperCase()] 
+                        ? (side === 'BUY' 
+                          ? (lastValidPricesRef.current[targetSym.toUpperCase()].rawBid || lastValidPricesRef.current[targetSym.toUpperCase()].bid) 
+                          : (lastValidPricesRef.current[targetSym.toUpperCase()].rawAsk || lastValidPricesRef.current[targetSym.toUpperCase()].ask))
+                        : null);
+                      const pnl = currentPrice
+                        ? (side === 'BUY' 
+                          ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
+                          : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize)
+                        : (lastTradePnlRef.current[trade._id] || 0);
                       
                       // Format price based on symbol type
                       const formatPrice = (price) => {
@@ -5177,7 +5171,7 @@ const TradingPage = () => {
                           <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(currentPrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(displayPrice)}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.stopLoss ? formatPrice(trade.stopLoss) : '-'}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.takeProfit ? formatPrice(trade.takeProfit) : '-'}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.commission?.toFixed(2) || '0.00'}</td>
@@ -6126,7 +6120,7 @@ const TradingPage = () => {
 
       {/* iOS-Style Modify SL/TP Modal */}
       {showModifyModal && selectedTradeForModify && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={() => setShowModifyModal(false)}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowModifyModal(false)}>
           <div className="w-full sm:w-96 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-700/50 text-center">
@@ -6200,66 +6194,77 @@ const TradingPage = () => {
         </div>
       )}
 
-      {/* iOS-Style Close Trade Confirmation Modal */}
+      {/* Enhanced Close Trade Modal (No Blur, Partial Close Support) */}
       {showCloseModal && selectedTradeForClose && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
           <div className="w-full sm:w-80 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
-            {/* Header */}
-            <div className="px-4 py-4 text-center">
-              <h3 className="text-white font-semibold text-lg">Close Trade?</h3>
-              <p className="text-gray-400 text-sm mt-2">
+            <div className="p-5 text-center">
+              <h3 className="text-sm font-medium text-white">Close Trade?</h3>
+              <p className="text-xs text-white/60 mt-1">
                 {selectedTradeForClose.symbol} • {selectedTradeForClose.side} • {selectedTradeForClose.quantity} lots
               </p>
-              <p className="text-gray-500 text-xs mt-1">
-                This action cannot be undone
-              </p>
-            </div>
 
-            {/* Actions */}
-            <div className="border-t border-gray-700/50">
-              <button
-                onClick={handleConfirmClose}
-                className="w-full py-4 text-red-500 font-semibold text-lg hover:bg-[#2c2c2e] transition-colors"
-              >
-                Close Trade
-              </button>
-            </div>
-            {/* Close All Options */}
-            {openTrades.length > 1 && (
-              <>
-                <div className="border-t border-gray-700/50">
-                  <button
-                    onClick={() => { setShowCloseModal(false); handleCloseAllTrades('all'); }}
-                    className="w-full py-4 text-orange-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-                  >
-                    Close All ({openTrades.length})
-                  </button>
+              <div className="mt-4 p-3 bg-white/5 border border-white/10 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-white/40 uppercase font-bold">Partial Close (Lots)</span>
+                  <span className="text-[10px] text-blue-400 font-bold">Max: {selectedTradeForClose?.quantity}</span>
                 </div>
-                <div className="border-t border-gray-700/50">
-                  <button
+                <input 
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={selectedTradeForClose?.quantity}
+                  value={partialQuantity}
+                  onChange={(e) => setPartialQuantity(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 text-center"
+                  placeholder="Lots to close"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <button 
+                  onClick={() => setShowCloseModal(false)}
+                  className="py-2.5 bg-white/5 text-white/60 text-xs font-medium rounded active:scale-95 transition-all hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    const qty = parseFloat(partialQuantity);
+                    if (qty > 0 && qty <= selectedTradeForClose.quantity) {
+                      closeTrade(selectedTradeForClose._id, qty);
+                      setShowCloseModal(false);
+                    }
+                  }}
+                  className="py-2.5 bg-red-500 text-white text-xs font-medium rounded active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                >
+                  {parseFloat(partialQuantity) < selectedTradeForClose?.quantity ? 'Partial Close' : 'Close Trade'}
+                </button>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <p className="text-[10px] text-white/40 uppercase font-bold mb-2">Batch Actions</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => { setShowCloseModal(false); confirmCloseAll(); }}
+                    className="py-2 bg-red-500/10 text-red-400 text-[10px] font-semibold border border-red-500/20 rounded active:scale-95 transition-all hover:bg-red-500/20"
+                  >
+                    Close All
+                  </button>
+                  <button 
                     onClick={() => { setShowCloseModal(false); handleCloseAllTrades('profit'); }}
-                    className="w-full py-4 text-green-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
+                    className="py-2 bg-green-500/10 text-green-400 text-[10px] font-semibold border border-green-500/20 rounded active:scale-95 transition-all hover:bg-green-500/20"
                   >
-                    Close Profit
+                    All Profit
                   </button>
-                </div>
-                <div className="border-t border-gray-700/50">
-                  <button
+                  <button 
                     onClick={() => { setShowCloseModal(false); handleCloseAllTrades('loss'); }}
-                    className="w-full py-4 text-red-400 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
+                    className="py-2 bg-orange-500/10 text-orange-400 text-[10px] font-semibold border border-orange-500/20 rounded active:scale-95 transition-all hover:bg-orange-500/20"
                   >
-                    Close Loss
+                    All Loss
                   </button>
                 </div>
-              </>
-            )}
-            <div className="border-t border-gray-700/50">
-              <button
-                onClick={() => setShowCloseModal(false)}
-                className="w-full py-4 text-blue-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-              >
-                Cancel
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -6267,7 +6272,7 @@ const TradingPage = () => {
 
       {/* iOS-Style Close All Trades Confirmation Modal */}
       {showCloseAllModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
           <div className="w-full sm:w-80 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
             {/* Header */}
             <div className="px-4 py-4 text-center">
@@ -6313,7 +6318,7 @@ const TradingPage = () => {
 
       {/* Kill Switch Modal */}
       {showKillSwitchModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
           <div className="w-full sm:w-96 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
             {/* Header */}
             <div className="px-4 py-4 text-center border-b border-gray-700/50">

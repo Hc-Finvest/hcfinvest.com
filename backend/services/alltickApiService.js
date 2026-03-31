@@ -25,63 +25,49 @@ class AllTickApiService {
     // ✅ ELITE Resilience: Initialize memory cache (v7.77)
     this.prices = {};
     
-    // Comprehensive mapping for all instruments defined in frontend
+    //Sanket v2.0 - Removed .i suffix convention from symbolMap keys for system-wide consistency
     this.symbolMap = {
       // Forex
-      'EURUSD.i': 'EURUSD', 'GBPUSD.i': 'GBPUSD', 'USDJPY.i': 'USDJPY', 'USDCHF.i': 'USDCHF', 
-      'AUDUSD.i': 'AUDUSD', 'NZDUSD.i': 'NZDUSD', 'USDCAD.i': 'USDCAD', 'EURGBP.i': 'EURGBP', 
-      'EURJPY.i': 'EURJPY', 'GBPJPY.i': 'GBPJPY', 'EURAUD.i': 'EURAUD', 'EURCAD.i': 'EURCAD', 
-      'EURCHF.i': 'EURCHF', 'AUDJPY.i': 'AUDJPY', 'CADJPY.i': 'CADJPY', 'CHFJPY.i': 'CHFJPY', 
-      'AUDNZD.i': 'AUDNZD', 'AUDCAD.i': 'AUDCAD', 'CADCHF.i': 'CADCHF', 'NZDJPY.i': 'NZDJPY', 
-      'GBPAUD.i': 'GBPAUD', 'GBPCAD.i': 'GBPCAD', 'GBPCHF.i': 'GBPCHF', 'GBPNZD.i': 'GBPNZD', 
-      'AUDCHF.i': 'AUDCHF', 'NZDCAD.i': 'NZDCAD', 'NZDCHF.i': 'NZDCHF', 'EURNZD.i': 'EURNZD',
+      'EURUSD': 'EURUSD', 'GBPUSD': 'GBPUSD', 'USDJPY': 'USDJPY', 'USDCHF': 'USDCHF', 
+      'AUDUSD': 'AUDUSD', 'NZDUSD': 'NZDUSD', 'USDCAD': 'USDCAD', 'EURGBP': 'EURGBP', 
+      'EURJPY': 'EURJPY', 'GBPJPY': 'GBPJPY', 'EURAUD': 'EURAUD', 'EURCAD': 'EURCAD', 
+      'EURCHF': 'EURCHF', 'AUDJPY': 'AUDJPY', 'CADJPY': 'CADJPY', 'CHFJPY': 'CHFJPY', 
+      'AUDNZD': 'AUDNZD', 'AUDCAD': 'AUDCAD', 'CADCHF': 'CADCHF', 'NZDJPY': 'NZDJPY', 
+      'GBPAUD': 'GBPAUD', 'GBPCAD': 'GBPCAD', 'GBPCHF': 'GBPCHF', 'GBPNZD': 'GBPNZD', 
+      'AUDCHF': 'AUDCHF', 'NZDCAD': 'NZDCAD', 'NZDCHF': 'NZDCHF', 'EURNZD': 'EURNZD',
 
       // Metals & Commodities
-      'XAUUSD.i': 'XAUUSD',
-      'XAGUSD.i': 'XAGUSD',
-      'USOIL.i': 'USOIL',
-      'UKOIL.i': 'UKOIL',
-      'NGAS.i': 'NGAS',
-      'COPPER.i': 'COPPER',
+      'XAUUSD': 'XAUUSD',
+      'XAGUSD': 'XAGUSD',
+      'USOIL': 'USOIL',
+      'UKOIL': 'UKOIL',
+      'NGAS': 'NGAS',
+      'COPPER': 'COPPER',
 
       // Cryptocurrencies (AllTick uses USDT pairings)
-      'BTCUSD.i': 'BTCUSDT',
-      'ETHUSD.i': 'ETHUSDT',
-      'BNBUSD.i': 'BNBUSDT',
-      'SOLUSD.i': 'SOLUSDT',
-      'DOGEUSD.i': 'DOGEUSDT',
-      'LTCUSD.i': 'LTCUSDT',
-      'XRPUSD.i': 'XRPUSDT',
-      'ADAUSD.i': 'ADAUSDT',
+      'BTCUSD': 'BTCUSDT',
+      'ETHUSD': 'ETHUSDT',
+      'BNBUSD': 'BNBUSDT',
+      'SOLUSD': 'SOLUSDT',
+      'DOGEUSD': 'DOGEUSDT',
+      'LTCUSD': 'LTCUSDT',
+      'XRPUSD': 'XRPUSDT',
+      'ADAUSD': 'ADAUSDT',
 
       // Indices
-      'US30.i': 'US30',
-      'US500.i': 'US500',
-      'US100.i': 'US100',
-      'UK100.i': 'UK100',
-      'DE30.i': 'GER30',
-      'FR40.i': 'FRA40',
-      'ES35.i': 'SPA35'
+      'US30': 'US30',
+      'US500': 'US500',
+      'US100': 'US100',
+      'UK100': 'UK100',
+      'DE30': 'GER30',
+      'FR40': 'FRA40',
+      'ES35': 'SPA35'
     };
 
+    //Sanket v2.0 - Build reverseSymbolMap: AllTick symbol -> App symbol (no .i suffix)
     this.reverseSymbolMap = {};
     Object.entries(this.symbolMap).forEach(([key, value]) => {
       this.reverseSymbolMap[value] = key;
-      // Also map clean symbols to themselves if they differ from the .i key
-      const cleanKey = key.replace(/\.i$/i, '');
-      if (cleanKey !== key) {
-        this.symbolMap[cleanKey] = value;
-      }
-    });
-
-    // ≡ƒ¢í∩╕Å Senior Dev Fix: Ensure reverse map points to the FULL instrument ID (e.g. XAUUSD.i)
-    // This ensures Redis lookups and frontend streaming stay consistent.
-    Object.entries(this.symbolMap).forEach(([key, value]) => {
-        if (key.includes('.i')) {
-           this.reverseSymbolMap[value] = key;
-        } else if (!this.reverseSymbolMap[value]) {
-           this.reverseSymbolMap[value] = key;
-        }
     });
 
     this.subscribedSymbols = new Set(['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'ETHUSD', 'XAGUSD', 'EURJPY', 'USDJPY', 'GBPJPY']);
@@ -350,10 +336,13 @@ class AllTickApiService {
     const restUrl = ALLTICK_REST_URL();
     const alltickSymbol = this.normalizeSymbol(symbol);
 
+    //Sanket v2.0 - Added 2h timeframe mapping (AllTick doesn't have native 2h, use 1h and double count)
     const timeframeMap = {
-      '1m': 1, '5m': 2, '15m': 3, '30m': 4, '1h': 5, '4h': 6, '1d': 7, '1w': 8, '1M': 9
+      '1m': 1, '5m': 2, '15m': 3, '30m': 4, '1h': 5, '2h': 5, '4h': 6, '1d': 7, '1w': 8, '1M': 9
     };
     const klineType = timeframeMap[timeframe] || 1;
+    //Sanket v2.0 - For 2h: fetch double the 1h candles so we can aggregate them
+    const adjustedLimit = timeframe === '2h' ? Math.min(limit * 2, 5000) : limit;
 
     const cacheKey = `${alltickSymbol}|${timeframe}|${effectiveEndTime || 'latest'}|${limit}`;
     if (this.historyCache.has(cacheKey)) {
@@ -367,7 +356,7 @@ class AllTickApiService {
       data: {
         code: alltickSymbol,
         kline_type: klineType,
-        query_kline_num: Math.min(limit, 5000),
+        query_kline_num: Math.min(adjustedLimit, 5000),
         adjust_type: 0
       }
     };
@@ -399,7 +388,15 @@ class AllTickApiService {
             continue;
           }
 
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          //Sanket v2.0 - AllTick returns HTTP 600 for unsupported symbols (e.g. XAGUSD not on this plan)
+          if (response.status === 600 || !response.ok) {
+            const errBody = await response.text().catch(() => '');
+            if (errBody.includes('code invalid') || response.status === 600) {
+              console.warn(`[AllTick] ⚠️ Symbol not supported by AllTick: ${alltickSymbol} (HTTP ${response.status}, code invalid). Check symbolMap.`);
+              return { success: false, candles: [], error: 'code_invalid', source: 'api' };
+            }
+            throw new Error(`HTTP ${response.status}`);
+          }
           let result = await response.json();
           
           if (result.ret !== 0 && result.ret !== 200 || !result.data || !result.data.kline_list || result.data.kline_list.length === 0) {
@@ -427,7 +424,7 @@ class AllTickApiService {
             return { success: false, candles: [], error: result.msg || 'api_invalid_response', source: 'api' };
           }
           
-          const candles = result.data.kline_list.map(c => ({
+          let candles = result.data.kline_list.map(c => ({
             time: parseInt(c.timestamp) * 1000,
             open: parseFloat(c.open_price),
             high: parseFloat(c.high_price),
@@ -435,6 +432,28 @@ class AllTickApiService {
             close: parseFloat(c.close_price),
             volume: parseFloat(c.volume) || 0
           })).sort((a, b) => a.time - b.time);
+
+          //Sanket v2.0 - Aggregate 1h candles into 2h candles since AllTick has no native 2h
+          if (timeframe === '2h' && candles.length > 1) {
+            const aggregated = [];
+            for (let i = 0; i < candles.length; i += 2) {
+              const c1 = candles[i];
+              const c2 = candles[i + 1];
+              if (c2) {
+                aggregated.push({
+                  time: c1.time,
+                  open: c1.open,
+                  high: Math.max(c1.high, c2.high),
+                  low: Math.min(c1.low, c2.low),
+                  close: c2.close,
+                  volume: c1.volume + c2.volume
+                });
+              } else {
+                aggregated.push(c1);
+              }
+            }
+            candles = aggregated;
+          }
 
           this.historyCache.set(cacheKey, {
             timestamp: Date.now(),
@@ -475,7 +494,8 @@ class AllTickApiService {
     try {
       if (!symbol || !data) return;
       
-      const targetSymbol = String(symbol).toLowerCase().endsWith('.i') ? symbol : `${symbol.toUpperCase()}.i`;
+      //Sanket v2.0 - Store prices with plain uppercase symbol (no .i suffix)
+      const targetSymbol = String(symbol).toUpperCase().replace(/\.I$/i, '');
       const payloadString = JSON.stringify({ ...data, symbol: targetSymbol });
       
       // 1. Store the newest price in Redis HSET (Strictly canonical .i only)
@@ -534,9 +554,6 @@ class AllTickApiService {
     };
 
     Object.entries(allPrices).forEach(([symbol, data]) => {
-      // v7.77 Strict Filter: Only include canonical symbols in categories
-      if (!symbol.toLowerCase().endsWith('.i')) return;
-
       categories['All'][symbol] = data;
       const s = symbol.toUpperCase();
       if (s.includes('USD') || s.includes('JPY') || s.includes('EUR')) {
@@ -614,20 +631,23 @@ class AllTickApiService {
     if (!symbol || !tick || !tick.price) return;
     const cleanSymbol = String(symbol).toUpperCase();
 
-    // 🚀 PERFORMANCE: Only sync high-frequency timeframes (1m, 5m) to Redis.
-    // Syncing 4h or 1d on every tick at 50ms latency is excessive and blocks the event loop.
+    //Sanket v2.0 - Sync all cached intraday timeframes, not just 1m/5m. 2h skipped (aggregated from 1h client-side).
     const timeframes = [
       { tf: '1m', mins: 1 },
-      { tf: '5m', mins: 5 }
+      { tf: '5m', mins: 5 },
+      { tf: '15m', mins: 15 },
+      { tf: '30m', mins: 30 },
+      { tf: '1h', mins: 60 },
+      { tf: '4h', mins: 240 }
     ];
 
     try {
       // Use a lock-free approach: just update the "live" keys
       for (const { tf, mins } of timeframes) {
         // Build the same cache key pattern used in prices.js
-        // hist:${symbol}:${timeframe}:start:latest:1000:std
-        const cacheKey = `hist:${cleanSymbol}:${tf}:start:latest:1000:std`;
-        const liveCacheKey = `hist:${cleanSymbol}:${tf}:start:latest:1000:live`;
+        //Sanket v2.0 - Fixed cache key to match prices.js format (end: not start:, requestLimit not hardcoded 1000)
+        const cacheKey = `hist:${cleanSymbol}:${tf}:end:latest:1000:std`;
+        const liveCacheKey = `hist:${cleanSymbol}:${tf}:end:latest:1000:live`;
 
         // We try both because the history route might have cached it with either
         const keys = [cacheKey, liveCacheKey];

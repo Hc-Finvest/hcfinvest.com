@@ -8,8 +8,8 @@ import alltickApiService from './alltickApiService.js';
  */
 class WarmupService {
   constructor() {
-    // Choose the most popular trading pairs for your platform
-    this.topSymbols = ['XAUUSD.i', 'BTCUSD.i', 'EURUSD.i', 'GBPUSD.i', 'XAGUSD.i'];
+    //Sanket v2.0 - Removed .i suffix from warmup symbols
+    this.topSymbols = ['XAUUSD', 'BTCUSD', 'EURUSD', 'GBPUSD', 'XAGUSD'];
     this.topTimeframes = ['1m', '5m', '15m', '1h'];
     this.isWarming = false;
   }
