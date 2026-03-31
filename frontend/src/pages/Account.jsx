@@ -1,31 +1,28 @@
 // Account.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
-import { UserCircle, RefreshCw, TrendingUp,  Settings,  User,  Moon, ShieldCheck,  LogOut, Sun,} from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { API_URL } from "../config/api";
 import Sidebar from "../components/Sidebar";
 import NavbarClient from "../components/NavbarClient";
-import { useSidebar } from "../context/SidebarContext.jsx";
-import { getPriceEvents } from "../services/priceStream";
-import { useInterpolation } from "../hooks/useInterpolation";
+import { useSidebar } from "../context/SidebarContext";
 
 export default function Account() {
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
+    const { sidebarExpanded } = useSidebar();
 
   const [accounts, setAccounts] = useState([]);
   const [openTrades, setOpenTrades] = useState([]);
   const [loadingTrades, setLoadingTrades] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
-  // const [sidebarExpanded, setSidebarExpanded] = useState(false);
-    // const { isDarkMode, toggleDarkMode } = useTheme();
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const { sidebarExpanded } = useSidebar();
 
   const [wallet, setWallet] = useState(null);
+
+  const dropdownRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -37,14 +34,14 @@ export default function Account() {
   };
 
   const fetchWallet = async () => {
-  try {
-    const res = await fetch(`${API_URL}/wallet/${user._id}`);
-    const data = await res.json();
-    setWallet(data.wallet);
-  } catch (err) {
-    console.error("Error fetching wallet", err);
-  }
-};
+    try {
+      const res = await fetch(`${API_URL}/wallet/${user._id}`);
+      const data = await res.json();
+      setWallet(data.wallet);
+    } catch (err) {
+      console.error("Error fetching wallet", err);
+    }
+  };
 
   const fetchAccounts = async () => {
     try {
@@ -53,57 +50,28 @@ export default function Account() {
 
       const accs = data.accounts || [];
       setAccounts(accs);
-/* 
+      /* 
       if (accs.length > 0) {
         setSelectedAccount(accs[0]); // default first account
       }
  */
-const storedAccount = JSON.parse(localStorage.getItem("selectedAccount"));
+      const storedAccount = JSON.parse(localStorage.getItem("selectedAccount"));
 
-if (storedAccount) {
-  const matched = accs.find((a) => a._id === storedAccount._id);
-  if (matched) {
-    setSelectedAccount(matched);
-    return;
-  }
-}
+      if (storedAccount) {
+        const matched = accs.find((a) => a._id === storedAccount._id);
+        if (matched) {
+          setSelectedAccount(matched);
+          return;
+        }
+      }
 
-if (accs.length > 0) {
-  setSelectedAccount(accs[0]);
-}
-
+      if (accs.length > 0) {
+        setSelectedAccount(accs[0]);
+      }
     } catch (err) {
       console.error("Error fetching accounts", err);
     }
   };
-  /* 
-  const fetchOpenTrades = async () => {
-    setLoadingTrades(true);
-
-    try {
-      let allOpenTrades = [];
-
-      for (const account of accounts) {
-        const res = await fetch(`${API_URL}/trade/open/${account._id}`);
-        const data = await res.json();
-
-        if (data.success && data.trades) {
-          const trades = data.trades.map((t) => ({
-            ...t,
-            accountName: account.accountId,
-          }));
-
-          allOpenTrades = [...allOpenTrades, ...trades];
-        }
-      }
-
-      setOpenTrades(allOpenTrades);
-    } catch (err) {
-      console.error("Error fetching trades", err);
-    }
-
-    setLoadingTrades(false);
-  }; */
 
   const fetchOpenTrades = async () => {
     if (!selectedAccount) return;
@@ -123,58 +91,12 @@ if (accs.length > 0) {
     setLoadingTrades(false);
   };
 
-  const [livePrices, setLivePrices] = useState({});
-
   useEffect(() => {
-    const handlePriceUpdate = (e) => {
-      const { symbol, bid, ask } = e.detail;
-      setLivePrices(prev => ({
-        ...prev,
-        [symbol]: { bid, ask }
-      }));
-    };
-    const priceEvents = getPriceEvents();
-    priceEvents.addEventListener('priceUpdate', handlePriceUpdate);
-    return () => priceEvents.removeEventListener('priceUpdate', handlePriceUpdate);
-  }, []);
-
-  // Calculate Raw Floating PnL following MT5 logic
-  const calculateTotalPnL = () => {
-    return openTrades.reduce((total, trade) => {
-      const prices = livePrices[trade.symbol];
-      if (!prices) return total;
-      
-      const { bid, ask } = prices;
-      const isBuy = trade.side === "BUY";
-      
-      // MT5: BUY closes at Bid against EntryAsk
-      // MT5: SELL closes at Ask against EntryBid
-      const entryAsk = trade.entryAsk || trade.openPrice || 0;
-      const entryBid = trade.entryBid || trade.openPrice || 0;
-      const quantity = trade.quantity || 0;
-      const contractSize = trade.contractSize || 100000;
-      
-      let pnl = 0;
-      if (isBuy) {
-        pnl = (bid - entryAsk) * quantity * contractSize;
-      } else {
-        pnl = (entryBid - ask) * quantity * contractSize;
-      }
-      
-      // Include commission and swap if they exist
-      return total + pnl - (trade.commission || 0) - (trade.swap || 0);
-    }, 0);
-  };
-
-  const targetPnL = calculateTotalPnL();
-  const smoothPnL = useInterpolation(targetPnL, 0.15); // Slightly slower smoothing for account numbers
-
-  useEffect(() => {
-  if (user._id) {
-    fetchAccounts();
-    fetchWallet(); // ✅ ADDED
-  }
-}, [user._id]);
+    if (user._id) {
+      fetchAccounts();
+      fetchWallet(); // ✅ ADDED
+    }
+  }, [user._id]);
 
   useEffect(() => {
     if (selectedAccount) {
@@ -186,8 +108,41 @@ if (accs.length > 0) {
   const credit = selectedAccount?.credit || 0;
   const leverage = selectedAccount?.leverage || "-";
   const walletBalance = wallet?.balance || 0; // ✅ ADDED
-  const equity = balance + credit + smoothPnL;
-  const freeMargin = equity; // Simplified for this view
+  const equity = balance + credit;
+  const freeMargin = equity;
+
+  // ✅ ADD THIS ABOVE return()
+
+  const priorityOrder = ["Starter", "Pro Trader", "Zero", "Elite"];
+
+  const sortedAccounts = [...accounts].sort((a, b) => {
+    const aType = a.accountTypeId?.name || "";
+    const bType = b.accountTypeId?.name || "";
+
+    // ✅ Check using "includes" instead of exact match
+    const getPriorityIndex = (type) => {
+      const index = priorityOrder.findIndex((p) =>
+        type.toLowerCase().includes(p.toLowerCase()),
+      );
+      return index === -1 ? 999 : index;
+    };
+
+    return getPriorityIndex(aType) - getPriorityIndex(bType);
+  });
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowAccountDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-[#f4f6fb] text-gray-800">
@@ -202,8 +157,10 @@ if (accs.length > 0) {
 >
         {/* TOP BAR */}
 
-              <NavbarClient title="My Account" subtitle="Manage your trading accounts" />
-        
+        <NavbarClient
+          title="My Account"
+          subtitle="Manage your trading accounts"
+        />
 
         {/* PAGE CONTENT */}
         <div className="flex-1  sm:p-6 space-y-6 overflow-y-auto">
@@ -232,27 +189,19 @@ if (accs.length > 0) {
 
             <div className="flex flex-wrap gap-2 sm:gap-3">
               {/* SWITCH ACCOUNT */}
-              
+
               <button
-                onClick={() => window.open(`/trade/${selectedAccount?._id}`, "_blank")}
+                onClick={() =>
+                  window.open(`/trade/${selectedAccount?._id}`, "_blank")
+                }
                 className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-medium shadow"
               >
                 <TrendingUp size={16} />
                 Trade Now
               </button>
 
-                {/* <button
-                  onClick={() =>
-                  window.open(`/trade/${competitionAccount._id}`, "_blank")
-                  }
-                  className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-medium shadow"
-                >
-                  <TrendingUp size={16} />
-                    Trade Competition
-              </button> */}
-
-              
-              <div className="relative">
+              {/* Switch Account */}
+              <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowAccountDropdown(!showAccountDropdown)}
                   className="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm"
@@ -262,46 +211,53 @@ if (accs.length > 0) {
 
                 {showAccountDropdown && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
-                    {/* {accounts.map((acc) => (
-                      <button
-                        key={acc._id}
-                        onClick={() => {
-                          setSelectedAccount(acc);
-                          localStorage.setItem("selectedAccount", JSON.stringify(acc));
-                          setShowAccountDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                      >
-                        <div className="font-medium">{acc.accountId}</div>
+                    {/* ✅ If no accounts */}
+                    {sortedAccounts.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-600 text-center">
+                        You don't have any Trading Account.
+                        <br />
+                        <button
+                          onClick={() => {
+                            // 👉 navigate to create account page (update route if needed)
+                            window.location.href =
+                              "/switch-account?create=true";
+                          }}
+                          className="mt-2 text-blue-500 hover:underline"
+                        >
+                          Create it
+                        </button>
+                      </div>
+                    ) : (
+                      /* ✅ If accounts exist */
+                      sortedAccounts.map((acc) => (
+                        <button
+                          key={acc._id}
+                          onClick={() => {
+                            setSelectedAccount(acc);
+                            localStorage.setItem(
+                              "selectedAccount",
+                              JSON.stringify(acc),
+                            );
+                            setShowAccountDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
+                            selectedAccount?._id === acc._id
+                              ? "bg-gray-100 font-semibold"
+                              : ""
+                          }`}
+                        >
+                          {/* Account Type */}
+                          <div className="font-medium">
+                            {acc.accountTypeId?.name || "Account"}
+                          </div>
 
-                        <div className="text-gray-500 text-xs">
-                          {acc.accountTypeId?.name}
-                        </div>
-                      </button>
-                    ))} */}
-
-                    {accounts.map((acc) => (
-  <button
-    key={acc._id}
-    onClick={() => {
-      setSelectedAccount(acc);
-      localStorage.setItem("selectedAccount", JSON.stringify(acc));
-      setShowAccountDropdown(false);
-    }}
-    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-  >
-    {/* Account Name */}
-    <div className="font-medium">
-      {acc.accountTypeId?.name || "Account"}
-    </div>
-
-    {/* Account Number */}
-    <div className="text-gray-500 text-xs">
-      {acc.accountId}
-    </div>
-  </button>
-))}
-                    
+                          {/* Account Number */}
+                          <div className="text-gray-500 text-xs">
+                            {acc.accountId}
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
@@ -356,9 +312,9 @@ if (accs.length > 0) {
 
             <div className="bg-white border rounded-xl p-4 sm:p-5">
               <p className="text-sm text-gray-500">Wallet Balance</p>
-<h2 className="text-xl sm:text-2xl font-semibold mt-1">
-  ${walletBalance.toLocaleString()} {/* ✅ CHANGED */}
-</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold mt-1">
+                ${walletBalance.toLocaleString()} {/* ✅ CHANGED */}
+              </h2>
             </div>
           </div>
 
@@ -431,32 +387,10 @@ if (accs.length > 0) {
                           TP: {trade.takeProfit || "-"}
                         </td>
 
-                        <td className={
-                          (() => {
-                            const prices = livePrices[trade.symbol];
-                            if (!prices) return "text-gray-400";
-                            const entryAsk = trade.entryAsk || trade.openPrice;
-                            const entryBid = trade.entryBid || trade.openPrice;
-                            const contractSize = trade.contractSize || 100000;
-                            const pnl = trade.side === "BUY" 
-                              ? (prices.bid - entryAsk) * trade.quantity * contractSize
-                              : (entryBid - prices.ask) * trade.quantity * contractSize;
-                            const finalPnl = pnl - (trade.commission || 0) - (trade.swap || 0);
-                            return finalPnl >= 0 ? "text-green-500" : "text-red-500";
-                          })()
-                        }>
-                          {(() => {
-                            const prices = livePrices[trade.symbol];
-                            if (!prices) return "Waiting...";
-                            const entryAsk = trade.entryAsk || trade.openPrice;
-                            const entryBid = trade.entryBid || trade.openPrice;
-                            const contractSize = trade.contractSize || 100000;
-                            const pnl = trade.side === "BUY" 
-                              ? (prices.bid - entryAsk) * trade.quantity * contractSize
-                              : (entryBid - prices.ask) * trade.quantity * contractSize;
-                            const finalPnl = pnl - (trade.commission || 0) - (trade.swap || 0);
-                            return `$${finalPnl.toFixed(2)}`;
-                          })()}
+                        <td className="text-blue-500">
+                          {trade.realizedPnl
+                            ? `$${trade.realizedPnl.toFixed(2)}`
+                            : "Live"}
                         </td>
                       </tr>
                     ))

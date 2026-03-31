@@ -1,3 +1,6 @@
+
+// tradingAccount.js
+
 import express from 'express'
 import TradingAccount from '../models/TradingAccount.js'
 import AccountType from '../models/AccountType.js'
@@ -46,6 +49,10 @@ router.post('/', async (req, res) => {
   try {
     const { userId, accountTypeId, pin } = req.body
 
+    console.log("REQ BODY:", req.body)
+console.log("userId:", userId)
+console.log("accountTypeId:", accountTypeId)
+
     if (!isValidObjectId(userId) || !isValidObjectId(accountTypeId)) {
       return res.status(400).json({ message: 'Invalid user ID or account type ID' })
     }
@@ -81,7 +88,7 @@ router.post('/', async (req, res) => {
       accountId,
       pin,
       balance: initialBalance,
-      credit: accountType.isDemo ? initialBalance : 0, // Demo balance is non-refundable (credit)
+      credit: /* accountType.isDemo ? initialBalance : */ 0, // Demo balance is non-refundable (credit)
       leverage: accountType.leverage,
       exposureLimit: accountType.exposureLimit,
       isDemo: accountType.isDemo || false
@@ -104,7 +111,7 @@ router.post('/', async (req, res) => {
       })
     }
 
-    res.status(201).json({ 
+    res.status(201).json({
       success: true,
       message: accountType.isDemo 
         ? `Demo account created with $${initialBalance} non-refundable balance` 
@@ -551,7 +558,7 @@ router.post('/:id/reset-demo', async (req, res) => {
 
     // Check if this is a demo account
     if (!account.isDemo) {
-      return res.status(400).json({ success: false, message: 'Only demo accounts can be reset' })
+      return res.status(400).json({ success: false, message: 'Only demo accounts can be reset' })   
     }
 
     // Close all open trades for this account
@@ -571,7 +578,7 @@ router.post('/:id/reset-demo', async (req, res) => {
 
     // Reset account balance
     account.balance = initialBalance
-    account.credit = initialBalance
+    account.credit = 0 /* initialBalance */ 
     await account.save()
 
     // Log the reset

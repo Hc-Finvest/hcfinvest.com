@@ -1,3 +1,6 @@
+
+// AdminLayout.js
+
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { 
@@ -20,6 +23,7 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  Megaphone,
   Palette,
   Mail,
   Bitcoin,
@@ -57,6 +61,8 @@ const AdminLayout = ({ children, title, subtitle }) => {
     { name: 'KYC Verification', icon: FileCheck, path: '/admin/kyc' },
     { name: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
   
+    { name: 'Announcement Managment', icon: Megaphone, path: '/admin/announcement' },
+
   ]
 
   useEffect(() => {
@@ -200,4 +206,4 @@ const AdminLayout = ({ children, title, subtitle }) => {
   )
 }
 
-export default AdminLayout
+export default AdminLayout;

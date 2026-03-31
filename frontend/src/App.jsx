@@ -52,6 +52,7 @@ import LeaderBoard  from './pages/LeaderBoard.jsx'
 import AdminCompetitionDetails from './pages/AdminCompititionDetails.jsx'
 import Switch_Account from "./pages/Switch_Account";
 import New_Dashboard from './pages/New_Dashboard.jsx'
+import Admin_Announcement from './pages/Admin_Announcement.jsx'
 
 
 // 🛡️ Guard to restrict admin access to admin.hcfinvest.com
@@ -168,6 +169,7 @@ function App() {
         <Route path="/admin/competition" element={<AdminHostGuard><AdminCompetition /></AdminHostGuard>} />
         <Route path="/admin/create-competition" element={<AdminHostGuard><AdminCreateCompitition /></AdminHostGuard>} />
         <Route path="/admin/competition-details/:id" element={<AdminHostGuard><AdminCompetitionDetails /></AdminHostGuard>} />
+        <Route path="/admin/announcement" element={<Admin_Announcement />} />
         
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />

@@ -3,6 +3,7 @@
 import { API_URL } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   Copy,
   Plus,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import Sidebar from "../components/Sidebar";
+import { useSidebar } from "../context/SidebarContext";
 
 const Switch_Account = () => {
   const navigate = useNavigate();
@@ -65,6 +67,7 @@ const Switch_Account = () => {
   const [success, setSuccess] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [createAccountTab, setCreateAccountTab] = useState("live");
+  const { sidebarExpanded } = useSidebar();
 
   const [createOnlyMode, setCreateOnlyMode] = useState(false);
 
@@ -78,43 +81,6 @@ const Switch_Account = () => {
     ? ["Real", "Demo", "Challenge", "Archived"]
     : ["Real", "Demo", "Archived"];
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  /* 
-  useEffect(() => {
-  // Check if redirected from failed challenge
-  const failed = searchParams.get('failed')
-  const reason = searchParams.get('reason')
-
-  if (failed === 'true' && reason) {
-    setFailReason(decodeURIComponent(reason))
-    setShowFailModal(true)
-    setActiveTab('Challenge')
-
-    // Clear URL params
-    navigate('/account', { replace: true })
-  }
-
-  // ⭐ NEW FEATURE → Auto open Create Account modal
-  const openCreate = searchParams.get('create')
-  if (openCreate === 'true') {
-    fetchAccountTypes()
-    setShowCreateModal(true)
-  }
-
-  // Existing logic
-  fetchAccountTypes()
-  fetchChallengeStatus()
-
-  if (user._id) {
-    fetchUserAccounts()
-    fetchWalletBalance()
-    fetchChallengeAccounts()
-  } else {
-    setLoading(false)
-  }
-
-}, [user._id])
- */
 
   useEffect(() => {
     const failed = searchParams.get("failed");
@@ -302,12 +268,17 @@ const Switch_Account = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setSuccess("Account created successfully!");
+        toast.success("Account created successfully!");
+
         setShowCreateModal(false);
         setPin(["", "", "", ""]);
         setSelectedType(null);
         fetchUserAccounts();
-        setTimeout(() => setSuccess(""), 3000);
+
+        // ✅ redirect after short delay (so user can see toast)
+        setTimeout(() => {
+          navigate("/account");
+        }, 2000);
       } else {
         setError(data.message || "Failed to create account");
       }
@@ -624,43 +595,45 @@ const Switch_Account = () => {
 
       {/* Main Content */}
       {/* <main className={`flex-1 overflow-y-auto ${isMobile ? "pt-14" : ""}`}> */}
-      <main className={`flex-1 overflow-y-auto ${isMobile ? "pt-14" : ""}`}>
+          <main
+            className={`flex-1 overflow-y-auto transition-all duration-300 ${
+              isMobile
+                ? "pt-14"
+                : sidebarExpanded
+                ? "ml-[280px]"
+                : "ml-[64px]"
+            }`}
+          >
         <div className={`${isMobile ? "p-4" : "p-6"}`}>
           {createOnlyMode && (
             <div className="w-full max-w-4xl mx-auto">
-
               {/* Header */}
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-semibold text-gray-900">
                   Open New Account
                 </h2>
-
-                <button
-                  onClick={() => window.close()}
-                  className="text-gray-500 hover:text-gray-900 transition"
-                >
-                  <X size={22} />
-                </button>
               </div>
 
               {/* Tabs */}
               <div className="flex gap-3 mb-8">
                 <button
                   onClick={() => setCreateAccountTab("live")}
-                  className={`px-5 py-2.5 rounded-lg font-medium transition ${createAccountTab === "live"
+                  className={`px-5 py-2.5 rounded-lg font-medium transition ${
+                    createAccountTab === "live"
                       ? "bg-blue-500 text-white shadow"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                  }`}
                 >
                   Live Account
                 </button>
 
                 <button
                   onClick={() => setCreateAccountTab("demo")}
-                  className={`px-5 py-2.5 rounded-lg font-medium transition ${createAccountTab === "demo"
+                  className={`px-5 py-2.5 rounded-lg font-medium transition ${
+                    createAccountTab === "demo"
                       ? "bg-yellow-500 text-black shadow"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                  }`}
                 >
                   Demo Account
                 </button>
@@ -668,10 +641,9 @@ const Switch_Account = () => {
 
               {/* Account Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
                 {accountTypes
                   .filter((t) =>
-                    createAccountTab === "demo" ? t.isDemo : !t.isDemo
+                    createAccountTab === "demo" ? t.isDemo : !t.isDemo,
                   )
                   .map((type) => {
                     const isSelected = selectedType?._id === type._id;
@@ -680,12 +652,12 @@ const Switch_Account = () => {
                       <button
                         key={type._id}
                         onClick={() => setSelectedType(type)}
-                        className={`relative border rounded-xl p-6 text-left transition ${isSelected
+                        className={`relative bg-white shadow-md border rounded-xl p-6 text-left transition ${
+                          isSelected
                             ? "border-blue-500 ring-2 ring-blue-500"
                             : "border-gray-200 hover:border-gray-300"
-                          }`}
+                        }`}
                       >
-
                         {/* Selected Icon */}
                         {isSelected && (
                           <Check
@@ -705,7 +677,6 @@ const Switch_Account = () => {
 
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-5 text-sm">
-
                           <div>
                             <p className="text-gray-400 text-xs">Min Deposit</p>
                             <p className="font-medium text-gray-900">
@@ -733,7 +704,6 @@ const Switch_Account = () => {
                               {type.commission ? `$${type.commission}` : "None"}
                             </p>
                           </div>
-
                         </div>
                       </button>
                     );
@@ -742,10 +712,9 @@ const Switch_Account = () => {
 
               {/* Footer Buttons */}
               <div className="flex justify-center gap-4 mt-10">
-
                 <button
                   onClick={() => window.close()}
-                  className={`flex items-center gap-2 font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg border bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-300`}
+                  className={`flex items-center gap-2 font-medium ${isMobile ? "px-4 py-2 text-sm" : "px-6 py-3"} rounded-lg border bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-300`}
                 >
                   Cancel
                 </button>
@@ -757,9 +726,7 @@ const Switch_Account = () => {
                 >
                   Create Account
                 </button>
-
               </div>
-
             </div>
           )}
           {/* Mobile Header */}
@@ -799,15 +766,11 @@ const Switch_Account = () => {
           {/* Sidebar - Hidden on Mobile, Fixed height with scroll for nav */}
 
           {/* Main Content - Scrollable */}
-          <main
-            className={`flex-1 overflow-y-auto ${isMobile ? "pt-14" : ""}`}
-          >
+          <main className={`flex-1 overflow-y-auto ${isMobile ? "pt-14" : ""}`}>
             <div className={`${isMobile ? "p-4" : "p-6"}`}>
               {/* Success/Error Messages */}
               {success && (
-                <div
-                  className={`mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-500 flex items-center gap-2 ${isMobile ? "text-sm" : ""}`}
-                >
+                <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-500 flex items-center gap-2">
                   <Check size={18} /> {success}
                 </div>
               )}
@@ -959,14 +922,15 @@ const Switch_Account = () => {
                               <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
                                   <div
-                                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${account.status === "FUNDED"
+                                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                      account.status === "FUNDED"
                                         ? "bg-purple-500/20"
                                         : account.status === "PASSED"
                                           ? "bg-green-500/20"
                                           : account.status === "FAILED"
                                             ? "bg-red-500/20"
                                             : "bg-yellow-500/20"
-                                      }`}
+                                    }`}
                                   >
                                     <Trophy
                                       size={20}
@@ -986,15 +950,15 @@ const Switch_Account = () => {
                                       {account.accountId}
                                     </h3>
                                     <p className="text-gray-600 text-xs uppercase">
-                                      {account.challengeId?.name ||
-                                        "Challenge"}{" "}
+                                      {account.challengeId?.name || "Challenge"}{" "}
                                       • Phase {account.currentPhase}/
                                       {account.totalPhases}
                                     </p>
                                   </div>
                                 </div>
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${account.status === "FUNDED"
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    account.status === "FUNDED"
                                       ? "bg-purple-500/20 text-purple-500"
                                       : account.status === "PASSED"
                                         ? "bg-green-500/20 text-green-500"
@@ -1003,7 +967,7 @@ const Switch_Account = () => {
                                           : account.status === "EXPIRED"
                                             ? "bg-orange-500/20 text-orange-500"
                                             : "bg-blue-500/20 text-blue-500"
-                                    }`}
+                                  }`}
                                 >
                                   {account.status}
                                 </span>
@@ -1019,9 +983,7 @@ const Switch_Account = () => {
                                     account.currentBalance || 0
                                   ).toLocaleString()}
                                 </p>
-                                <p className="text-gray-600 text-sm">
-                                  Balance
-                                </p>
+                                <p className="text-gray-600 text-sm">Balance</p>
                               </div>
                               <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="bg-gray-100 rounded-lg p-2 text-center">
@@ -1057,7 +1019,7 @@ const Switch_Account = () => {
                             {/* Card Footer - Actions */}
                             <div className="flex border-t border-gray-200">
                               {account.status === "ACTIVE" ||
-                                account.status === "FUNDED" ? (
+                              account.status === "FUNDED" ? (
                                 <button
                                   onClick={() => {
                                     setSelectedChallengeAccount(account);
@@ -1089,8 +1051,8 @@ const Switch_Account = () => {
                       No {activeTab.toLowerCase()} accounts yet
                     </h3>
                     <p className="text-gray-600 text-sm mb-6">
-                      Open your first {activeTab.toLowerCase()} trading
-                      account to start trading
+                      Open your first {activeTab.toLowerCase()} trading account
+                      to start trading
                     </p>
                     <button
                       onClick={() => {
@@ -1122,8 +1084,7 @@ const Switch_Account = () => {
                           );
                         if (activeTab === "Archived")
                           return (
-                            acc.status === "Archived" ||
-                            acc.status !== "Active"
+                            acc.status === "Archived" || acc.status !== "Active"
                           );
                         return true;
                       })
@@ -1153,8 +1114,7 @@ const Switch_Account = () => {
                                     {account.accountId}
                                   </h3>
                                   <p className="text-gray-600 text-xs uppercase">
-                                    {account.accountTypeId?.name ||
-                                      "STANDARD"}
+                                    {account.accountTypeId?.name || "STANDARD"}
                                   </p>
                                 </div>
                               </div>
@@ -1182,9 +1142,7 @@ const Switch_Account = () => {
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             setShowAccountMenu(null);
-                                            handleUnarchiveAccount(
-                                              account._id,
-                                            );
+                                            handleUnarchiveAccount(account._id);
                                           }}
                                           className="w-full px-4 py-2 text-left text-sm text-green-400 hover:bg-gray-200 rounded-t-lg flex items-center gap-2"
                                         >
@@ -1259,9 +1217,7 @@ const Switch_Account = () => {
                                 </p>
                               </div>
                               <div className="text-center">
-                                <p className="text-gray-600 text-xs">
-                                  Credit
-                                </p>
+                                <p className="text-gray-600 text-xs">Credit</p>
                                 <p
                                   className={`font-medium text-sm ${isDarkMode ? "text-gray-900" : "text-gray-900"}`}
                                 >
@@ -1281,9 +1237,7 @@ const Switch_Account = () => {
                                 </p>
                               </div>
                               <div className="text-center">
-                                <p className="text-gray-600 text-xs">
-                                  Equity
-                                </p>
+                                <p className="text-gray-600 text-xs">Equity</p>
                                 <p
                                   className={`font-medium text-sm ${isDarkMode ? "text-gray-900" : "text-gray-900"}`}
                                 >
@@ -1311,8 +1265,7 @@ const Switch_Account = () => {
                             >
                               <ArrowRight size={isMobile ? 12 : 16} /> Trade
                             </button>
-                            {account.isDemo ||
-                              account.accountTypeId?.isDemo ? (
+                            {account.isDemo || account.accountTypeId?.isDemo ? (
                               // Demo account - show Reset button only
                               <button
                                 onClick={() => handleResetDemo(account._id)}
@@ -1362,7 +1315,6 @@ const Switch_Account = () => {
         </div>
       </main>
 
-
       {/* Create Account Modal */}
       {showCreateModal && !createOnlyMode && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1399,19 +1351,21 @@ const Switch_Account = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setCreateAccountTab("live")}
-                  className={`flex-1 py-2 rounded-lg font-medium transition-colors ${createAccountTab === "live"
+                  className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                    createAccountTab === "live"
                       ? "bg-blue-500 hover:bg-blue-600 text-white text-black"
                       : "bg-gray-100 text-gray-600 hover:text-gray-900"
-                    }`}
+                  }`}
                 >
                   Live Account
                 </button>
                 <button
                   onClick={() => setCreateAccountTab("demo")}
-                  className={`flex-1 py-2 rounded-lg font-medium transition-colors ${createAccountTab === "demo"
+                  className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                    createAccountTab === "demo"
                       ? "bg-yellow-500 text-black"
                       : "bg-gray-100 text-gray-600 hover:text-gray-900"
-                    }`}
+                  }`}
                 >
                   Demo Account
                 </button>
@@ -1454,10 +1408,11 @@ const Switch_Account = () => {
                         <button
                           key={type._id}
                           onClick={() => setSelectedType(type)}
-                          className={`relative bg-gray-100 rounded-xl p-5 text-left transition-all duration-200 border ${isSelected
+                          className={`relative bg-gray-100 rounded-xl p-5 text-left transition-all duration-200 border ${
+                            isSelected
                               ? "border-white ring-1 ring-white"
                               : "border-gray-700 hover:border-gray-600"
-                            }`}
+                          }`}
                         >
                           {/* Header */}
                           <div className="flex items-center gap-3 mb-3">
@@ -1495,7 +1450,7 @@ const Switch_Account = () => {
                                 {type.isDemo
                                   ? "10,000"
                                   : type.minDeposit?.toLocaleString() ||
-                                  "100"}{" "}
+                                    "100"}{" "}
                                 {!type.isDemo && "USD"}
                               </p>
                             </div>
@@ -1963,10 +1918,11 @@ const Switch_Account = () => {
                     <button
                       key={acc._id}
                       onClick={() => setTargetAccount(acc)}
-                      className={`w-full p-3 rounded-lg border flex items-center justify-between ${targetAccount?._id === acc._id
+                      className={`w-full p-3 rounded-lg border flex items-center justify-between ${
+                        targetAccount?._id === acc._id
                           ? "border-blue-500 bg-blue-500/10"
                           : "border-gray-700 bg-gray-100 hover:border-gray-600"
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center gap-2">
                         <TrendingUp size={14} className="text-gray-600" />
@@ -1989,10 +1945,10 @@ const Switch_Account = () => {
                     !acc.isDemo &&
                     !acc.accountTypeId?.isDemo,
                 ).length === 0 && (
-                    <p className="text-gray-600 text-sm text-center py-2">
-                      No live accounts available for transfer
-                    </p>
-                  )}
+                  <p className="text-gray-600 text-sm text-center py-2">
+                    No live accounts available for transfer
+                  </p>
+                )}
               </div>
             </div>
 
@@ -2107,12 +2063,13 @@ const Switch_Account = () => {
                   <div>
                     <p className="text-gray-600 text-xs">Status</p>
                     <p
-                      className={`font-bold ${selectedChallengeAccount.status === "ACTIVE"
+                      className={`font-bold ${
+                        selectedChallengeAccount.status === "ACTIVE"
                           ? "text-blue-500"
                           : selectedChallengeAccount.status === "FUNDED"
                             ? "text-purple-500"
                             : "text-gray-600"
-                        }`}
+                      }`}
                     >
                       {selectedChallengeAccount.status}
                     </p>
@@ -2173,13 +2130,13 @@ const Switch_Account = () => {
                 </div>
                 {selectedChallengeAccount.challengeId?.rules
                   ?.stopLossMandatory && (
-                    <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                      <Check size={18} className="text-yellow-500" />
-                      <span className="text-yellow-500">
-                        Stop Loss is REQUIRED on all trades
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                    <Check size={18} className="text-yellow-500" />
+                    <span className="text-yellow-500">
+                      Stop Loss is REQUIRED on all trades
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Warning */}

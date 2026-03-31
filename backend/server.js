@@ -45,6 +45,7 @@ import competitionLeaderboard from "./routes/competitionLeaderboard.js";
 import competitionEmailRoutes from "./routes/emailRoutes.js";
 import chartRoutes from "./routes/chart.js";
 import "./utils/competitionStatusCron.js";
+import announcementRoute from "./routes/announcements_Router.js"; 
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -60,7 +61,8 @@ const httpServer = createServer(app)
 const io = new Server(httpServer, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+
   },
   transports: ['websocket'], // //sanket - Force WebSockets for lower latency and better stability
   pingTimeout: 30000,
@@ -484,6 +486,7 @@ app.use("/api/competition", competitionLeaderboard);
 app.use("/api/email", emailRoutes);
 app.use("/api/competition-email", competitionEmailRoutes);
 app.use("/api/chart", chartRoutes);
+app.use('/api/announcement', announcementRoute);
 
 // Historical API route
 // app.use("/api/history", historyRoute);

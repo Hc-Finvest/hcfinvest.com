@@ -51,14 +51,6 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
 >
       {/* TOP SECTION */}
       <div className="flex items-center justify-between p-4 border-b h-24">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 hover:bg-gray-100 rounded "
-        >
-          <Menu size={25} />
-        </button>
-
-        
 
         {/* 🔥 LOGO (ONLY WHEN EXPANDED) */}
     {sidebarExpanded && (
@@ -67,7 +59,16 @@ const Sidebar = ({ activeMenu = "Dashboard" }) => {
         alt="logo"
         className="h-8 object-contain "
       />
+
+      
     )}
+
+            <button
+          onClick={toggleSidebar}
+          className="p-2 hover:bg-gray-100 rounded "
+        >
+          <Menu size={25} />
+        </button>
       </div>
 
       {/* MENU */}
