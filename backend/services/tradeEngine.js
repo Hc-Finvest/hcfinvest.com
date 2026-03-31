@@ -509,6 +509,13 @@ class TradeEngine {
       trade.tp = tp
     }
 
+    //Sanket v2.0 - Stamp modification time for 5s grace period: prevents immediate SL trigger when user
+    // moves stop above current price (e.g. trailing stop on BUY). checkSlTpForAllTrades skips this trade
+    // for 5 seconds after modification so the price has time to actually cross the new SL level.
+    if ((sl !== null && !isNaN(sl)) || (tp !== null && !isNaN(tp))) {
+      trade.slLastModifiedAt = new Date();
+    }
+
     if (adminId) {
       trade.adminModified = true
       trade.adminModifiedBy = adminId
@@ -593,6 +600,13 @@ class TradeEngine {
     const triggeredTrades = []
 
     for (const trade of openTrades) {
+      //Sanket v2.0 - Skip SL/TP check for 5 seconds after user modified SL/TP.
+      // Prevents immediate close when user moves stop above current price (trailing stop / lock-in-profit).
+      if (trade.slLastModifiedAt) {
+        const secsSinceModify = (Date.now() - new Date(trade.slLastModifiedAt).getTime()) / 1000;
+        if (secsSinceModify < 5) continue;
+      }
+
       //Sanket v2.0 - Normalize trade symbol: strip .i suffix for consistent price lookup
       const targetSym = trade.symbol.toUpperCase().replace(/\.I$/i, '');
       const prices = currentPrices[targetSym] || 
