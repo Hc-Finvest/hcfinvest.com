@@ -23,6 +23,8 @@ export default function New_Compition() {
 const [tab, setTab] = useState("active");
   const navigate = useNavigate();
   
+const [insufficientDialogOpen, setInsufficientDialogOpen] = useState(false);
+
 
     const [leaderboard, setLeaderboard] = useState([]);
     const [selectedCompId, setSelectedCompId] = useState(null);
@@ -344,7 +346,38 @@ const [tab, setTab] = useState("active");
       }
   
     };
-  
+const sendCompetitionJoinEmail = async ({
+  email,
+  name,
+  competitionName,
+  startDate,
+}) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/competition-email/competition-join`,
+      {
+        email,
+        name,
+        competitionName,
+        startDate,
+      }
+    );
+
+    // ✅ optional success log
+    if (res.data?.success) {
+      console.log("📧 Email sent successfully");
+    }
+
+  } catch (error) {
+    console.error(
+      "❌ Email sending failed:",
+      error.response?.data?.message || error.message
+    );
+
+    // ❗ DO NOT throw → don't break main flow
+  }
+};
+
  const confirmJoinCompetition = async () => {
 
     try {
@@ -374,10 +407,10 @@ const [tab, setTab] = useState("active");
       const balance = walletRes.data?.wallet?.balance;
 
       if (balance < entryFee) {
-        alert("Insufficient wallet balance");
+        setInsufficientDialogOpen(true);
+        setOpenRules(false);
         return;
       }
-
       // ✅ STEP 1: JOIN COMPETITION
       await deductEntryFee({ userId: clientId, amount: entryFee });
       // ✅ STEP 2: DEDUCT ENTRY FEE
@@ -390,13 +423,6 @@ const [tab, setTab] = useState("active");
       // 🔥 STORE DATA FOR DIALOG
 
 
-      await axios.post(`${API_URL}/competition-email/competition-join`, {
-        email: user.email,
-        name: user.firstName,
-        competitionName: selectedComp.competitionName,
-        startDate: selectedComp.startDate
-        });
-
       setEnrollmentData({
         name: user.firstName,
         email: user.email,
@@ -406,6 +432,9 @@ const [tab, setTab] = useState("active");
         password: user.password || "******",
         startDate: selectedComp.startDate
       });
+
+
+      await sendCompetitionJoinEmail({email: user.email, name: user.firstName, competitionName: selectedComp.competitionName, startDate: selectedComp.startDate});
 
       setSuccessDialogOpen(true);
       setOpenRules(false);
@@ -772,6 +801,14 @@ const [tab, setTab] = useState("active");
                               </span>
                             </div>
 
+
+                            <div className="flex items-center gap-1 text-sm">
+                              <DollarSign className="h-4 w-4 text-green-500" />
+                              <span className="text-gray-600">
+                                Entry: ${comp.entryFee || 0}
+                              </span>
+                            </div>
+
                             {/* 👥 Participants */}
                             <div className="flex items-center gap-1 text-sm">
                               <Users className="h-4 w-4 text-gray-400" />
@@ -779,6 +816,7 @@ const [tab, setTab] = useState("active");
                                 {comp.participants?.length || 0}
                               </span>
                             </div>
+
 
                             {/* 📅 Start Date */}
                             <div className="flex items-center gap-1 text-sm">
@@ -1226,6 +1264,13 @@ const [tab, setTab] = useState("active");
                 </span>
               </div>
 
+                            <div className="flex items-center gap-1 text-sm">
+                              <DollarSign className="h-4 w-4 text-green-500" />
+                              <span className="text-gray-600">
+                                Entry: ${comp.entryFee || 0}
+                              </span>
+                            </div>
+
               {/* 📅 START DATE */}
               <div className="flex items-center gap-1 text-sm">
                 <Clock className="h-4 w-4 text-gray-400" />
@@ -1246,12 +1291,6 @@ const [tab, setTab] = useState("active");
                 </span>
               </div>
 
-
-                 {/* <Typography sx={{color:colors.textSecondary}}> */}
-{/* //                   {comp.competitionStatus==="upcoming" */}
-{/* //                     ? getCountdown(comp.startDate) */}
-{/* //                     : "-"} */}
-{/* //                 </Typography> */}
 
             </div>
           </div>
@@ -1319,6 +1358,52 @@ const [tab, setTab] = useState("active");
               </div>
             </div>
           )}
+
+
+{insufficientDialogOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+    
+    <div className="bg-white p-6 rounded-xl shadow-lg text-center w-[360px]">
+      
+      <h2 className="text-xl font-bold text-red-600 mb-4">
+        ❌ Insufficient Balance
+      </h2>
+
+      <p className="text-gray-700 mb-4">
+        You don't have enough balance to join this competition.
+      </p>
+
+      <p className="text-sm text-gray-500">
+        Please add funds to your wallet and try again.
+      </p>
+
+      <div className="flex gap-3 mt-5">
+        
+        {/* Close Button */}
+        <button
+          onClick={() => setInsufficientDialogOpen(false)}
+          className="flex-1 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+        >
+          Cancel
+        </button>
+
+        {/* Add Funds Button */}
+        <button
+          onClick={() => {
+            setInsufficientDialogOpen(false);
+            navigate("/wallet"); // 🔥 change route if needed
+          }}
+          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Add Funds
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
+          
 
             {/* 🔥 LEADERBOARD HEADER */}
             {/* <div className="border border-gray-200 shadow-sm rounded-2xl p-5 bg-white">
