@@ -2892,130 +2892,6 @@
 //         </div>
 //       )}
 
-//       {/* Kill Switch Modal */}
-//       {showKillSwitchModal && (
-//         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
-//           <div className="w-full sm:w-96 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
-//             {/* Header */}
-//             <div className="px-4 py-4 text-center border-b border-gray-700/50">
-//               <div className="text-4xl mb-2">🛑</div>
-//               <h3 className="text-white text-lg font-semibold">Kill Switch</h3>
-//               <p className="text-gray-400 text-sm mt-1">
-//                 Block all trading for a set period to prevent emotional decisions
-//               </p>
-//             </div>
-            
-//             {/* Duration Selection */}
-//             <div className="p-4 space-y-4">
-//               {/* Value Input */}
-//               <div>
-//                 <label className="text-gray-400 text-xs mb-2 block">Duration</label>
-//                 <div className="flex gap-2">
-//                   <input
-//                     type="number"
-//                     min="1"
-//                     max="999"
-//                     value={killSwitchDuration.value}
-//                     onChange={(e) => setKillSwitchDuration(prev => ({ ...prev, value: parseInt(e.target.value) || 1 }))}
-//                     className="flex-1 bg-[#2c2c2e] text-white px-3 py-2 rounded-lg text-center text-lg font-mono"
-//                   />
-//                   <select
-//                     value={killSwitchDuration.unit}
-//                     onChange={(e) => setKillSwitchDuration(prev => ({ ...prev, unit: e.target.value }))}
-//                     className="bg-[#2c2c2e] text-white px-3 py-2 rounded-lg"
-//                   >
-//                     <option value="seconds">Seconds</option>
-//                     <option value="minutes">Minutes</option>
-//                     <option value="hours">Hours</option>
-//                     <option value="days">Days</option>
-//                   </select>
-//                 </div>
-//               </div>
-              
-//               {/* Quick Select Buttons */}
-//               <div>
-//                 <label className="text-gray-400 text-xs mb-2 block">Quick Select</label>
-//                 <div className="grid grid-cols-4 gap-2">
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 30, unit: 'seconds' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     30s
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 5, unit: 'minutes' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     5m
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 30, unit: 'minutes' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     30m
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 1, unit: 'hours' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     1h
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 4, unit: 'hours' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     4h
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 12, unit: 'hours' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     12h
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 1, unit: 'days' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     1d
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 7, unit: 'days' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     7d
-//                   </button>
-//                 </div>
-//               </div>
-              
-//               {/* Warning */}
-//               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
-//                 <p className="text-orange-400 text-xs">
-//                   ⚠️ Once activated, you won't be able to open new trades until the timer expires. You can still close existing trades.
-//                 </p>
-//               </div>
-//             </div>
-            
-//             {/* Actions */}
-//             <div className="border-t border-gray-700/50">
-//               <button
-//                 onClick={activateKillSwitch}
-//                 className="w-full py-4 text-red-500 font-semibold text-lg hover:bg-[#2c2c2e] transition-colors"
-//               >
-//                 Activate Kill Switch
-//               </button>
-//             </div>
-//             <div className="border-t border-gray-700/50">
-//               <button
-//                 onClick={() => setShowKillSwitchModal(false)}
-//                 className="w-full py-4 text-blue-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-//               >
-//                 Cancel
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-
 //       <style>{`
 //         @keyframes slide-up {
 //           from {
@@ -3045,7 +2921,7 @@
 import { API_URL } from '../config/api'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Star, X, Plus, Minus, Settings, Home, Wallet, LayoutGrid, BarChart3, Pencil, Trophy, AlertTriangle, Sun, Moon, Clock, ChevronDown, Check } from 'lucide-react'
+import { Search, Star, X, Plus, Minus, Settings, Home, Wallet, LayoutGrid, BarChart3, Pencil, Trophy, AlertTriangle, Sun, Moon, Clock, ChevronDown, Check, ShieldAlert, Lock, ShieldCheck, ShieldX } from 'lucide-react'
 import marketDataApiService from '../services/marketDataApi'
 import priceStreamService, { getPriceEvents } from '../services/priceStream'
 import { getAdminMarkupValue, getRetailPrice } from '../utils/priceUtils';
@@ -3092,7 +2968,7 @@ const AnimatedTradeRow = ({ trade, rawBid, rawAsk, fallbackPnl, priceDecimals, i
   return (
     <tr className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
       <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.openedAt).toLocaleTimeString()}</td>
-      <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
+      <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{String(trade.symbol || '').toUpperCase().replace(/\.I$/i, '')}</td>
       <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
       <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
       <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{fmt(trade.openPrice)}</td>
@@ -3325,8 +3201,10 @@ const TradingPage = () => {
   const [showKillSwitchModal, setShowKillSwitchModal] = useState(false)
   const [killSwitchActive, setKillSwitchActive] = useState(false)
   const [killSwitchEndTime, setKillSwitchEndTime] = useState(null)
-  const [killSwitchDuration, setKillSwitchDuration] = useState({ value: 30, unit: 'minutes' })
   const [killSwitchTimeLeft, setKillSwitchTimeLeft] = useState('')
+  const [showKillSwitchPopover, setShowKillSwitchPopover] = useState(false)
+  const [killSwitchInputTime, setKillSwitchInputTime] = useState('')
+  const [killSwitchDuration, setKillSwitchDuration] = useState({ value: 4, unit: 'hours' })
   const [globalNotification, setGlobalNotification] = useState('')
 
   const categories = ['All', 'Forex', 'Metals', 'Crypto', 'Indices']
@@ -3597,55 +3475,97 @@ const TradingPage = () => {
       }
     }
     checkAuthStatus()
+  }, [navigate, user._id])
 
-    // Check if kill switch is active from localStorage
-    const savedKillSwitch = localStorage.getItem(`killSwitch_${accountId}`)
-    if (savedKillSwitch) {
-      const endTime = parseInt(savedKillSwitch)
-      if (endTime > Date.now()) {
-        setKillSwitchActive(true)
-        setKillSwitchEndTime(endTime)
-      } else {
-        localStorage.removeItem(`killSwitch_${accountId}`)
-      }
-    }
-  }, [accountId])
-
-  // Kill Switch countdown timer
+  // Kill Switch synced timer - securely tracks against backend-provided UTC end time
   useEffect(() => {
-    if (!killSwitchActive || !killSwitchEndTime) return
+    // Sync state immediately upon valid accountSummary presence holding a lock block
+    if (accountSummary?.killSwitchUntil) {
+      const dbUntilTime = new Date(accountSummary.killSwitchUntil).getTime();
+      if (dbUntilTime > Date.now()) {
+        setKillSwitchActive(true);
+        setKillSwitchEndTime(dbUntilTime);
+      } else {
+        setKillSwitchActive(false);
+        setKillSwitchEndTime(null);
+      }
+    } else {
+        setKillSwitchActive(false);
+        setKillSwitchEndTime(null);
+    }
+  }, [accountSummary?.killSwitchUntil]);
+
+  // Tick the Kill Switch UI countdown smoothly without hitting backend
+  useEffect(() => {
+    if (!killSwitchActive || !killSwitchEndTime) return;
     
     const updateTimer = () => {
-      const now = Date.now()
-      const remaining = killSwitchEndTime - now
+      const now = Date.now();
+      const remaining = killSwitchEndTime - now;
       
       if (remaining <= 0) {
-        setKillSwitchActive(false)
-        setKillSwitchEndTime(null)
-        setKillSwitchTimeLeft('')
-        localStorage.removeItem(`killSwitch_${accountId}`)
-        return
+        setKillSwitchActive(false);
+        setKillSwitchEndTime(null);
+        setKillSwitchTimeLeft('');
+        // Refresh the backend block to confirm explicitly
+        fetchAccountSummary();
+        return;
       }
       
-      // Format time remaining
-      const days = Math.floor(remaining / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((remaining % (1000 * 60)) / 1000)
+      const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
       
-      let timeStr = ''
-      if (days > 0) timeStr += `${days}d `
-      if (hours > 0 || days > 0) timeStr += `${hours}h `
-      if (minutes > 0 || hours > 0 || days > 0) timeStr += `${minutes}m `
-      timeStr += `${seconds}s`
+      let timeStr = '';
+      if (days > 0) timeStr += `${days}d `;
+      if (hours > 0 || days > 0) timeStr += `${hours}h `;
+      if (minutes > 0 || hours > 0 || days > 0) timeStr += `${minutes}m `;
+      timeStr += `${seconds}s`;
       
-      setKillSwitchTimeLeft(timeStr.trim())
-    }
+      setKillSwitchTimeLeft(timeStr.trim());
+    };
     
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
-    return () => clearInterval(interval)
-  }, [killSwitchActive, killSwitchEndTime, accountId])
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [killSwitchActive, killSwitchEndTime]);
+
+  // Backend Lock action for Kill Switch
+  const activateBackendKillSwitch = async (durationType) => {
+    try {
+      const payload = {
+        tradingAccountId: accountId,
+        durationType // 'nextDay' or 'custom'
+      };
+      
+      if (durationType === 'custom') {
+        if (!killSwitchInputTime) {
+          setTradeError('Please select a valid future time');
+          return;
+        }
+        payload.unlockTimestamp = killSwitchInputTime;
+      }
+
+      const res = await fetch(`${API_URL}/trade/kill-switch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setTradeSuccess('Secure Kill Switch Activated!');
+        setShowKillSwitchPopover(false);
+        fetchAccountSummary(); // Immediately pull new lockdown status
+      } else {
+        setTradeError(data.message || 'Kill switch activation failed');
+      }
+    } catch (err) {
+      console.error(err);
+      setTradeError('Server error while activating Kill Switch');
+    }
+  };
 
   // Update account summary when prices change (for real-time equity/margin)
   useEffect(() => {
@@ -4432,13 +4352,9 @@ const TradingPage = () => {
 
   // Open close confirmation modal
   const openCloseModal = async (trade) => {
-    if (oneClickTrading) {
-      await closeTrade(trade._id)
-    } else {
-      setSelectedTradeForClose(trade)
-      setPartialQuantity(trade.quantity.toString())
-      setShowCloseModal(true)
-    }
+    setSelectedTradeForClose(trade)
+    setPartialQuantity(trade.quantity.toString())
+    setShowCloseModal(true)
   }
 
   // Confirm close trade
@@ -4749,6 +4665,77 @@ const TradingPage = () => {
             </>
           )}
           <div className="flex-1" />
+          
+          {/* Kill Switch Toggle Button */}
+          <div className="relative mr-2">
+            <button 
+              onClick={() => setShowKillSwitchPopover(!showKillSwitchPopover)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                killSwitchActive 
+                  ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20' 
+                  : (isDarkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+              }`}
+              title={killSwitchActive ? `Locked for ${killSwitchTimeLeft}` : "Kill Switch - Block Trading"}
+            >
+              <ShieldAlert size={12} className={killSwitchActive ? 'animate-bounce' : ''} />
+              {!isMobile && (killSwitchActive ? killSwitchTimeLeft : "KILL SWITCH")}
+            </button>
+
+            {/* Kill Switch Popover */}
+            {showKillSwitchPopover && (
+              <div className={`absolute top-full right-0 mt-2 w-64 rounded-xl shadow-2xl border z-[60] overflow-hidden animate-slide-up ${
+                isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-white border-gray-200'
+              }`}>
+                <div className="p-3 border-b border-white/5 flex items-center justify-between">
+                  <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-white/40' : 'text-gray-400'}`}>
+                    Account Security
+                  </h3>
+                  <button onClick={() => setShowKillSwitchPopover(false)} className="text-gray-500 hover:text-white">
+                    <X size={14} />
+                  </button>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  <p className={`text-[10px] leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Prevent emotional trading by locking your account. This action is <span className="text-red-500 font-bold underline">AUTHORITATIVE</span> and cannot be undone.
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    <button 
+                      onClick={() => activateBackendKillSwitch('nextDay')}
+                      className="group flex items-center justify-between p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all text-left"
+                    >
+                      <div>
+                        <div className="text-blue-400 text-xs font-bold">Next Trading Day</div>
+                        <div className="text-[9px] text-blue-400/60">Unlocks at 00:00 UTC Tomorrow</div>
+                      </div>
+                      <Clock size={14} className="text-blue-500" />
+                    </button>
+
+                    <div className="space-y-2">
+                       <div className={`text-[10px] font-medium px-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Or Select Custom Time</div>
+                       <input 
+                         type="datetime-local"
+                         value={killSwitchInputTime}
+                         onChange={(e) => setKillSwitchInputTime(e.target.value)}
+                         className={`w-full p-2 rounded-lg text-xs font-mono outline-none border ${
+                           isDarkMode ? 'bg-black/40 border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                         }`}
+                       />
+                       <button 
+                         onClick={() => activateBackendKillSwitch('custom')}
+                         disabled={!killSwitchInputTime}
+                         className="w-full py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:grayscale transition-all text-white text-[10px] font-bold flex items-center justify-center gap-2"
+                       >
+                         <Lock size={12} /> ACTIVATE CUSTOM LOCK
+                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <span className="text-red-500 font-mono text-xs sm:text-sm mr-1 sm:mr-2">{selectedInstrument.bid?.toFixed(2)}</span>
           <span className="text-green-500 font-mono text-xs sm:text-sm mr-2 sm:mr-4">{selectedInstrument.ask?.toFixed(2)}</span>
           <button 
@@ -4757,29 +4744,73 @@ const TradingPage = () => {
           >
             {isMobile ? 'Order' : 'New Order'}
           </button>
-          {/* Kill Switch Button - One click to activate (30min default), long press for options */}
-          <button 
-            onClick={() => killSwitchActive ? deactivateKillSwitch() : quickActivateKillSwitch()}
-            onContextMenu={(e) => { e.preventDefault(); if (!killSwitchActive) setShowKillSwitchModal(true) }}
-            className={`ml-2 text-xs px-2 sm:px-3 py-1 rounded flex items-center gap-1 ${
-              killSwitchActive 
-                ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
-                : 'bg-orange-500 hover:bg-orange-600 text-white'
-            }`}
-            title={killSwitchActive ? `Click to deactivate (${killSwitchTimeLeft} left)` : 'Click: Activate 30min | Right-click: Custom duration'}
-          >
-            {killSwitchActive ? (
-              <>
-                <span className="hidden sm:inline">🛑 {killSwitchTimeLeft}</span>
-                <span className="sm:hidden">🛑</span>
-              </>
-            ) : (
-              <>
-                <span className="hidden sm:inline">🛑 Kill Switch</span>
-                <span className="sm:hidden">🛑</span>
-              </>
+          {/* Secure Backend Kill Switch Component */}
+          <div className="relative z-50">
+            <button 
+              onClick={() => {
+                if (killSwitchActive) {
+                  setTradeError('Kill Switch is strictly enforced by the server and cannot be manually disabled here until the time expires.');
+                } else {
+                  setShowKillSwitchPopover(!showKillSwitchPopover)
+                }
+              }}
+              className={`ml-2 text-xs px-2 sm:px-3 py-1 rounded flex items-center gap-1 transition-all ${
+                killSwitchActive 
+                  ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm'
+              }`}
+              title={killSwitchActive ? `Trading locked on server (${killSwitchTimeLeft} left)` : 'Activate Server-Grade Kill Switch'}
+            >
+              {killSwitchActive ? (
+                <>
+                  <span className="hidden sm:inline">🛑 {killSwitchTimeLeft}</span>
+                  <span className="sm:hidden">🛑</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">🛑 Kill Switch</span>
+                  <span className="sm:hidden">🛑</span>
+                </>
+              )}
+            </button>
+            
+            {/* Popover Card */}
+            {showKillSwitchPopover && !killSwitchActive && (
+              <div className={`absolute right-0 mt-2 w-64 p-3 rounded-md shadow-xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
+                <h4 className={`text-sm font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Activate Kill Switch</h4>
+                
+                {/* Next Day Option */}
+                <button 
+                  onClick={() => activateBackendKillSwitch('nextDay')}
+                  className="w-full text-left bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-3 py-2 rounded mb-3 transition-colors flex items-center justify-between"
+                >
+                  <span>Next Trading Day (00:00 UTC)</span>
+                  <span className="text-xl">🌙</span>
+                </button>
+                
+                {/* Custom Time Option */}
+                <div className="pt-2 border-t border-zinc-800">
+                  <label className={`block text-xs mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Custom Time:</label>
+                  <input 
+                    type="datetime-local" 
+                    value={killSwitchInputTime}
+                    onChange={(e) => setKillSwitchInputTime(e.target.value)}
+                    className={`w-full text-xs p-1.5 rounded border mb-2 outline-none ${
+                        isDarkMode 
+                          ? 'bg-zinc-950 border-zinc-700 text-white focus:border-orange-500' 
+                          : 'bg-white border-gray-300 text-gray-900 focus:border-orange-500'
+                    }`}
+                  />
+                  <button 
+                    onClick={() => activateBackendKillSwitch('custom')}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1.5 rounded transition-colors font-medium"
+                  >
+                    Lock Until Custom Time
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
           <button onClick={() => setShowOrderPanel(!showOrderPanel)} className="ml-1 sm:ml-2 text-gray-400 hover:text-white">
             <Settings size={16} />
           </button>
@@ -5164,19 +5195,23 @@ const TradingPage = () => {
                   ) : (
                     openTrades.map(trade => {
                       const targetSym = trade.symbol;
+                      const baseSym = getBaseSymbol(targetSym);
                       //Sanket v2.0 - Use lastValidPricesRef cache as fallback to prevent PnL flicker to $0
                       const livePrice = livePrices[targetSym] || 
                                       livePrices[targetSym.toUpperCase()] || 
                                       livePrices[targetSym.toLowerCase()] ||
-                                      livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
+                                      livePrices[baseSym] ||
                                       lastValidPricesRef.current[targetSym] ||
-                                      lastValidPricesRef.current[targetSym.toUpperCase()];
+                                      lastValidPricesRef.current[baseSym];
 
-                      const inst = instruments.find(i => i.symbol === trade.symbol) || selectedInstrument;
+                      const inst = instruments.find(i => i.symbol === targetSym) || 
+                                   instruments.find(i => getBaseSymbol(i.symbol) === baseSym) || 
+                                   (getBaseSymbol(selectedInstrument?.symbol) === baseSym ? selectedInstrument : null);
+                      
                       //Sanket v2.0 - Resolve raw bid/ask with all fallbacks; passed to AnimatedTradeRow
                       // which interpolates them internally at 60fps so current-price and P/L columns
                       // never jump. TradingPage re-renders only at the normal 300ms price-stream rate.
-                      const cachePrices = lastValidPricesRef.current[targetSym.toUpperCase()];
+                      const cachePrices = lastValidPricesRef.current[targetSym] || lastValidPricesRef.current[baseSym];
                       const rawBid = (livePrice?.rawBid || livePrice?.bid) || (cachePrices?.rawBid || cachePrices?.bid) || (inst?.rawBid || inst?.bid) || 0;
                       const rawAsk = (livePrice?.rawAsk || livePrice?.ask) || (cachePrices?.rawAsk || cachePrices?.ask) || (inst?.rawAsk || inst?.ask) || 0;
                       const priceDecimals = isJpyPair(trade.symbol) ? 3
@@ -5477,7 +5512,7 @@ const TradingPage = () => {
                           return (
                             <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
                               <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.closedAt).toLocaleString()}</td>
-                              <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
+                              <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{String(trade.symbol || '').toUpperCase().replace(/\.I$/i, '')}</td>
                               <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
                               <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
                               <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
@@ -5607,7 +5642,7 @@ const TradingPage = () => {
                     pendingOrders.map(order => (
                       <tr key={order._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
                         <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(order.createdAt).toLocaleTimeString()}</td>
-                        <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{order.symbol}</td>
+                        <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{String(order.symbol || '').toUpperCase().replace(/\.I$/i, '')}</td>
                         <td className={`py-2 px-3 text-xs font-medium ${order.orderType.includes('BUY') ? 'text-blue-500' : 'text-red-500'}`}>{order.orderType}</td>
                         <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.quantity}</td>
                         <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.pendingPrice?.toFixed(5)}</td>
@@ -5638,7 +5673,25 @@ const TradingPage = () => {
 
         {/* Right Panel - Order */}
         {showOrderPanel && (
-          <div className={`${isMobile ? 'absolute inset-0 z-20' : 'w-72'} border-l flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
+          <div className={`${isMobile ? 'absolute inset-0 z-20' : 'w-72'} relative border-l flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
+            
+            {/* Kill Switch Lockdown Overlay */}
+            {killSwitchActive && (
+              <div className="absolute inset-0 z-[30] backdrop-blur-[2px] bg-black/40 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4 border border-red-500/40 animate-pulse">
+                  <Lock size={32} className="text-red-500" />
+                </div>
+                <h3 className="text-white font-bold text-sm uppercase tracking-widest mb-1">Trading Locked</h3>
+                <p className="text-red-400 font-mono text-lg mb-4">{killSwitchTimeLeft}</p>
+                <p className="text-gray-400 text-[10px] leading-relaxed">
+                  The Kill Switch is currently active. New orders are disabled to protect your capital.
+                </p>
+                <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                  <p className="text-[9px] text-gray-500 italic">Unlocking automatically when timer expires</p>
+                </div>
+              </div>
+            )}
+
             <div className={`px-4 py-4 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
               <span className={`text-base font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedInstrument.symbol} order</span>
               <button onClick={() => setShowOrderPanel(false)} className={isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}>

@@ -200,6 +200,10 @@ const challengeAccountSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  killSwitchUntil: {
+    type: Date,
+    default: null
   }
 })
 

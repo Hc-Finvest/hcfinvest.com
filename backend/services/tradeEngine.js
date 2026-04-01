@@ -109,7 +109,8 @@ class TradeEngine {
 
     for (const trade of openTrades) {
       usedMargin += trade.marginUsed
-      const prices = currentPrices[trade.symbol]
+      const targetSym = this.normalizeSymbol(trade.symbol)
+      const prices = currentPrices[targetSym] || currentPrices[trade.symbol]
       if (prices) {
         floatingPnl += this.calculateFloatingPnl(trade, prices.bid, prices.ask, prices.rawBid, prices.rawAsk)
       }
@@ -140,6 +141,10 @@ class TradeEngine {
 
     if (account.status !== 'Active') {
       return { valid: false, error: `Account is ${account.status}` }
+    }
+
+    if (account.killSwitchUntil && account.killSwitchUntil > new Date()) {
+      return { valid: false, error: `Trading blocked! Kill Switch active until ${account.killSwitchUntil.toLocaleString()}` }
     }
 
     // CRITICAL: Check if account has any balance at all
@@ -202,7 +207,8 @@ class TradeEngine {
   }
 
   // Open a new trade
-  async openTrade(userId, tradingAccountId, symbol, segment, side, orderType, quantity, bid, ask, sl = null, tp = null, userLeverage = null, pendingPriceInput = null, rawBid = null, rawAsk = null) {
+  async openTrade(userId, tradingAccountId, rawSymbol, segment, side, orderType, quantity, bid, ask, sl = null, tp = null, userLeverage = null, pendingPriceInput = null, rawBid = null, rawAsk = null) {
+    const symbol = this.normalizeSymbol(rawSymbol);
     const account = await TradingAccount.findById(tradingAccountId).populate('accountTypeId')
     if (!account) throw new Error('Trading account not found')
 

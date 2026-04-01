@@ -487,6 +487,7 @@ export class TradeLineManager {
                     linewidth: cfg.width,
                     linestyle: cfg.style,
                     showLabel: true,
+                    showPrice: false,
                     text: cfg.text,
                     horzLabelsAlign: 'left',
                 }

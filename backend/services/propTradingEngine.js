@@ -104,6 +104,14 @@ class PropTradingEngine {
       return { valid: false, error: 'Challenge account is not active', code: this.ERROR_CODES.ACCOUNT_NOT_ACTIVE }
     }
 
+    if (account.killSwitchUntil && account.killSwitchUntil > new Date()) {
+      return { 
+        valid: false, 
+        error: `Trading blocked! Kill Switch active until ${account.killSwitchUntil.toLocaleString()}`, 
+        code: 'KILL_SWITCH_ACTIVE' 
+      }
+    }
+
     // Check expiry
     if (new Date() > account.expiresAt) {
       account.status = 'EXPIRED'
