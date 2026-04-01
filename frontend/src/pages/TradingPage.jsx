@@ -2923,7 +2923,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Search, Star, X, Plus, Minus, Settings, Home, Wallet, LayoutGrid, BarChart3, Pencil, Trophy, AlertTriangle, Sun, Moon, Clock, ChevronDown, Check, ShieldAlert, Lock, ShieldCheck, ShieldX } from 'lucide-react'
 import marketDataApiService from '../services/marketDataApi'
-import priceStreamService, { getPriceEvents } from '../services/priceStream'
+import { API_URL } from '../config/api'
+import priceStreamService from '../services/priceStream'
+import { getPriceEvents } from '../services/eventSystem'
 import { getAdminMarkupValue, getRetailPrice } from '../utils/priceUtils';
 import Datafeed from '../services/datafeed';
 import { useTheme } from '../context/ThemeContext'

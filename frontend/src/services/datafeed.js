@@ -1,7 +1,8 @@
 import { API_URL } from "../config/api";
-import priceStreamService from "./priceStream";
 import { getRetailPrice, wrapOHLC } from "../utils/priceUtils";
 import { normalizeSymbol } from "../utils/symbolUtils";
+import priceStreamService from "./priceStream";
+import { getPriceEvents } from "./eventSystem";
 
 /**
  * Custom Datafeed for TradingView Charting Library
@@ -9,8 +10,7 @@ import { normalizeSymbol } from "../utils/symbolUtils";
  */
 
 /* Event system used by TradingPage.jsx to receive live price updates */
-const priceEventTarget = new EventTarget();
-export const getPriceEvents = () => priceEventTarget;
+// Moved to shared eventSystem.js to break circular dependency
 
 const configurationData = {
   supported_resolutions: ["1", "5", "15", "30", "60", "120", "240", "1D", "1W", "1M"]
@@ -214,7 +214,10 @@ const Datafeed = {
 
       //Sanket v2.0 - Differentiate sessions to prevent timeline gaps
       const isCrypto = s.includes("BTC") || s.includes("ETH") || s.includes("BNB") || s.includes("SOL") || s.includes("LTC") || s.includes("XRP") || s.includes("ADA") || s.includes("DOGE");
-      const session = "24x7"; 
+      
+      // Standard 24/7 session string with day indicators for maximum library compatibility.
+      // 1234567 represents Sunday to Saturday.
+      const session = "0000-2400:1234567"; 
 
       const symbolInfo = {
         name: normalizedName,
