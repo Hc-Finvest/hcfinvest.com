@@ -257,7 +257,7 @@ const defaultTemplates = [
                                                                                             border-radius:8px;
                                                                                             display:inline-block;
                                                                                           ">
-                                                                                            {{OTP}}
+                                                                                            {{otp}}
                                                                                           </span>
                                                                                         </div>
 
@@ -1560,7 +1560,7 @@ const defaultTemplates = [
                                                                                         <p
                                                                                           style="margin:0;padding:0">
                                                                                           Hello,
-                                                                                          <<strong>{{NAME}}</strong>
+                                                                                          <<strong>{{user_name}}</strong>
                                                                                         </p>
                                                                                         <p
                                                                                           style="margin:0;padding:0">
@@ -1582,27 +1582,27 @@ const defaultTemplates = [
 
                                                                                       <tr>
                                                                                         <td><strong>Full Name :</strong></td>
-                                                                                        <td>{{NAME}}</td>
+                                                                                        <td>{{user_name}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Email :</strong></td>
-                                                                                        <td>{{EMAIL}}</td>
+                                                                                        <td>{{email}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Amount :</strong></td>
-                                                                                        <td>{{AMOUNT}}</td>
+                                                                                        <td>{{amount}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Payment Method :</strong></td>
-                                                                                        <td>{{METHOD}}</td>
+                                                                                        <td>{{method}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Transaction ID :</strong></td>
-                                                                                        <td>{{TXN_ID}}</td>
+                                                                                        <td>{{txn_id}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
@@ -2134,7 +2134,7 @@ const defaultTemplates = [
                                                                                         <p
                                                                                           style="margin:0;padding:0">
                                                                                           Hello,
-                                                                                          <<strong>{{NAME}}</strong>
+                                                                                          <<strong>{{user_name}}</strong>
                                                                                         </p>
                                                                                         <p
                                                                                           style="margin:0;padding:0">
@@ -2156,22 +2156,22 @@ const defaultTemplates = [
 
                                                                                       <tr>
                                                                                         <td><strong>Full Name :</strong></td>
-                                                                                        <td>{{NAME}}</td>
+                                                                                        <td>{{user_name}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Email :</strong></td>
-                                                                                        <td>{{EMAIL}}</td>
+                                                                                        <td>{{email}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Amount :</strong></td>
-                                                                                        <td>{{AMOUNT}}</td>
+                                                                                        <td>{{amount}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Payment Method :</strong></td>
-                                                                                        <td>{{METHOD}}</td>
+                                                                                        <td>{{method}}</td>
                                                                                       </tr>
 
                                                                                       
@@ -2705,7 +2705,7 @@ const defaultTemplates = [
                                                                                         <p
                                                                                           style="margin:0;padding:0">
                                                                                           Hello,
-                                                                                          <strong>{{NAME}}</strong>
+                                                                                          <strong>{{user_name}}</strong>
                                                                                         </p>
                                                                                         <p
                                                                                           style="margin:0;padding:0">
@@ -2730,27 +2730,27 @@ const defaultTemplates = [
 
                                                                                       <tr>
                                                                                         <td><strong>Full Name :</strong></td>
-                                                                                        <td>{{NAME}}</td>
+                                                                                        <td>{{user_name}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Email :</strong></td>
-                                                                                        <td>{{EMAIL}}</td>
+                                                                                        <td>{{email}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Amount :</strong></td>
-                                                                                        <td>{{AMOUNT}}</td>
+                                                                                        <td>{{amount}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Payment Method :</strong></td>
-                                                                                        <td>{{METHOD}}</td>
+                                                                                        <td>{{method}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Transaction ID :</strong></td>
-                                                                                        <td>{{TXN_ID}}</td>
+                                                                                        <td>{{txn_id}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
@@ -3277,7 +3277,7 @@ const defaultTemplates = [
                                                                                         <p
                                                                                           style="margin:0;padding:0">
                                                                                           Hello,
-                                                                                          <strong>{{NAME}}</strong>
+                                                                                          <strong>{{user_name}}</strong>
                                                                                         </p>
                                                                                         <p
                                                                                           style="margin:0;padding:0">
@@ -3302,27 +3302,27 @@ const defaultTemplates = [
 
                                                                                       <tr>
                                                                                         <td><strong>Full Name :</strong></td>
-                                                                                        <td>{{NAME}}</td>
+                                                                                        <td>{{user_name}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Email :</strong></td>
-                                                                                        <td>{{EMAIL}}</td>
+                                                                                        <td>{{email}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Amount :</strong></td>
-                                                                                        <td>{{AMOUNT}}</td>
+                                                                                        <td>{{amount}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Payment Method :</strong></td>
-                                                                                        <td>{{METHOD}}</td>
+                                                                                        <td>{{method}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
                                                                                         <td><strong>Transaction ID :</strong></td>
-                                                                                        <td>{{TXN_ID}}</td>
+                                                                                        <td>{{txn_id}}</td>
                                                                                       </tr>
 
                                                                                       <tr>
@@ -3848,7 +3848,7 @@ const defaultTemplates = [
                                                                                         style="margin:0;padding:20px 30px;color:#333;font-size:14px;line-height:1.6">
                                                                                         <p
                                                                                           style="margin:0;padding:0">
-                                                                                          Hello, <strong>{{NAME}}</strong>
+                                                                                          Hello, <strong>{{user_name}}</strong>
                                                                                         </p>
                                                                                         <p
                                                                                           style="margin:0;padding:0">
@@ -3870,22 +3870,22 @@ const defaultTemplates = [
 
                                                                                                 <tr>
                                                                                                   <td><strong>Full Name :</strong></td>
-                                                                                                  <td>{{NAME}}</td>
+                                                                                                  <td>{{user_name}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
                                                                                                   <td><strong>Email :</strong></td>
-                                                                                                  <td>{{EMAIL}}</td>
+                                                                                                  <td>{{email}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
                                                                                                   <td><strong>Document Type :</strong></td>
-                                                                                                  <td>{{DOC_TYPE}}</td>
+                                                                                                  <td>{{doc_type}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
                                                                                                   <td><strong>Document Number :</strong></td>
-                                                                                                  <td>{{DOC_NUMBER}}</td>
+                                                                                                  <td>{{doc_number}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
@@ -4424,7 +4424,7 @@ const defaultTemplates = [
                                                                                         style="margin:0;padding:20px 30px;color:#333;font-size:14px;line-height:1.6">
                                                                                         <p
                                                                                           style="margin:0;padding:0">
-                                                                                          Hello, <strong>{{NAME}}</strong>
+                                                                                          Hello, <strong>{{user_name}}</strong>
                                                                                         </p>
                                                                                         <p
                                                                                           style="margin:0;padding:0">
@@ -4446,22 +4446,22 @@ const defaultTemplates = [
 
                                                                                                 <tr>
                                                                                                   <td><strong>Full Name :</strong></td>
-                                                                                                  <td>{{NAME}}</td>
+                                                                                                  <td>{{user_name}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
                                                                                                   <td><strong>Email :</strong></td>
-                                                                                                  <td>{{EMAIL}}</td>
+                                                                                                  <td>{{email}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
                                                                                                   <td><strong>Document Type :</strong></td>
-                                                                                                  <td>{{DOC_TYPE}}</td>
+                                                                                                  <td>{{doc_type}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
                                                                                                   <td><strong>Document Number :</strong></td>
-                                                                                                  <td>{{DOC_NUMBER}}</td>
+                                                                                                  <td>{{doc_number}}</td>
                                                                                                 </tr>
 
                                                                                                 <tr>
@@ -5004,7 +5004,7 @@ const defaultTemplates = [
                                                                                           style="margin:0;padding:0">
                                                                                           Congratulations,
                                                                                           <strong
-                                                                                            >{{NAME}}</strong
+                                                                                            >{{user_name}}</strong
                                                                                           >
                                                                                         </p>
                                                                                         <p
@@ -5027,27 +5027,27 @@ const defaultTemplates = [
 
                                                                                               <tr>
                                                                                                 <td><strong>Participant Name :</strong></td>
-                                                                                                <td>{{NAME}}</td>
+                                                                                                <td>{{user_name}}</td>
                                                                                               </tr>
 
                                                                                               <tr>
                                                                                                 <td><strong>Email :</strong></td>
-                                                                                                <td>{{EMAIL}}</td>
+                                                                                                <td>{{email}}</td>
                                                                                               </tr>
 
                                                                                               <tr>
                                                                                                 <td><strong>Competition Name :</strong></td>
-                                                                                                <td>{{COMPETITION_NAME}}</td>
+                                                                                                <td>{{competition_name}}</td>
                                                                                               </tr>
 
                                                                                               <tr>
                                                                                                 <td><strong>Start Date :</strong></td>
-                                                                                                <td>{{START_DATE}}</td>
+                                                                                                <td>{{start_date}}</td>
                                                                                               </tr>
 
                                                                                               <tr>
                                                                                                 <td><strong>End Date :</strong></td>
-                                                                                                <td>{{END_DATE}}</td>
+                                                                                                <td>{{end_date}}</td>
                                                                                               </tr>
 
                                                                                               <tr>

@@ -76,7 +76,8 @@ emailTemplateSchema.methods.render = function(data) {
 
   // Replace placeholders
   Object.keys(data).forEach(key => {
-    const placeholder = new RegExp(`{{${key}}}`, 'g')
+    // Case-insensitive match for placeholders: {{key}}, {{KEY}}, {{Key}}
+    const placeholder = new RegExp(`{{${key}}}`, 'gi')
     html = html.replace(placeholder, data[key] || '')
     text = text.replace(placeholder, data[key] || '')
     subject = subject.replace(placeholder, data[key] || '')
