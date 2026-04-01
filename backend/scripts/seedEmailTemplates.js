@@ -634,7 +634,9 @@ const defaultTemplates = [
     placeholders: [
       { key: 'user_name', description: 'User first name', example: 'John' },
       { key: 'email', description: 'User email address', example: 'john@example.com' },
+      { key: 'password', description: 'User password', example: '********' },
       { key: 'app_name', description: 'Application name', example: 'HC Finvest' }
+
     ],
     htmlContent: `<!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -848,8 +850,7 @@ const defaultTemplates = [
                                                                                           style="margin:0;padding:0">
                                                                                           Congratulations,
                                                                                           <strong
-                                                                                            >Nilesh
-                                                                                            Rathod</strong
+                                                                                            >{{user_name}}</strong
                                                                                           >
                                                                                         </p>
                                                                                         <p
@@ -924,8 +925,7 @@ const defaultTemplates = [
                                                                                                     style="margin:0;padding:0">
                                                                                                     <p
                                                                                                       style="margin:0;padding:0">
-                                                                                                      Nilesh
-                                                                                                      Rathod
+                                                                                                      {{user_name}}
                                                                                                     </p>
                                                                                                   </td>
                                                                                                 </tr>
@@ -947,7 +947,7 @@ const defaultTemplates = [
                                                                                                     style="margin:0;padding:0">
                                                                                                     <p
                                                                                                       style="margin:0;padding:0">
-                                                                                                      Nilesh@email.com
+                                                                                                      {{email}}
                                                                                                     </p>
                                                                                                   </td>
                                                                                                 </tr>
@@ -969,7 +969,7 @@ const defaultTemplates = [
                                                                                                     style="margin:0;padding:0">
                                                                                                     <p
                                                                                                       style="margin:0;padding:0">
-                                                                                                      123456789
+                                                                                                      {{password}}
                                                                                                     </p>
                                                                                                   </td>
                                                                                                 </tr>
