@@ -212,14 +212,17 @@ const Datafeed = {
         pricescale = 100000; // 5 decimals (Crypto micros)
       }
 
-      //Sanket v2.0 - Use 24x7 for all instruments so TradingView never drops candles
-      // AllTick only delivers data during actual market hours, so no fake weekend candles
+      //Sanket v2.0 - Differentiate sessions to prevent timeline gaps
+      // Crypto is true 24/7; most other market sessions have a 1-hour reset/pause
+      const isCrypto = s.includes("BTC") || s.includes("ETH") || s.includes("BNB") || s.includes("SOL") || s.includes("LTC") || s.includes("XRP") || s.includes("ADA") || s.includes("DOGE");
+      const session = isCrypto ? "24x7" : "2200-2100:23456,1700-1600:7,1700-1600:1"; // Standard Forex session (Sun-Fri)
+
       const symbolInfo = {
         name: normalizedName,
         ticker: normalizedName,
         description: normalizedName,
-        type: "forex",
-        session: "24x7",
+        type: isCrypto ? "crypto" : "forex",
+        session: session,
         timezone: "Etc/UTC",
         exchange: "AllTick",
         minmov: 1,

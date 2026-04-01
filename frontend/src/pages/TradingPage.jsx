@@ -2945,6 +2945,21 @@ const AnimatedPrice = ({ target, decimals }) => {
   return <>{num.toFixed(decimals)}</>;
 };
 
+const AnimatedPNL = ({ value }) => {
+  const pnl = useInterpolation(value ?? 0, 0.15);
+  const isPositive = pnl >= 0;
+  return (
+    <span className={isPositive ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>
+      {isPositive ? '+' : ''}${pnl.toFixed(2)}
+    </span>
+  );
+};
+
+const AnimatedValue = ({ value, decimals = 2 }) => {
+  const val = useInterpolation(value ?? 0, 0.15);
+  return <>{val.toFixed(decimals)}</>;
+};
+
 //Sanket v2.0 - Animated positions table row. The whole <tr> re-renders at 60fps driven by
 // useInterpolation on the live bid/ask for this trade's symbol. Only the current-price and
 // P/L cells visually change; all other cells render the same static trade fields.
@@ -5157,7 +5172,7 @@ const TradingPage = () => {
                     )}
                   </>
                 )}
-                <span className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">P/L: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{accountSummary.floatingPnl >= 0 ? '+' : ''}${(accountSummary.floatingPnl || 0).toFixed(2)}</span></span>
+                <span className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">P/L: <AnimatedPNL value={accountSummary.floatingPnl} /></span>
                 <button
                   onClick={() => setIsBottomPanelMinimized(!isBottomPanelMinimized)}
                   className={`ml-0.5 p-0.5 rounded-md transition-all duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'} ${isBottomPanelMinimized ? 'rotate-180' : ''}`}
@@ -6141,13 +6156,13 @@ const TradingPage = () => {
         {/* Bottom Status Bar */}
         <footer className={`h-6 border-t flex items-center px-2 sm:px-3 text-[10px] sm:text-xs shrink-0 overflow-x-auto ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
           <span className={`font-medium shrink-0 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedInstrument.symbol}</span>
-          <span className="text-gray-500 ml-2 sm:ml-4 shrink-0">Bal: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>${accountSummary.balance?.toFixed(2) || '0.00'}</span></span>
+          <span className="text-gray-500 ml-2 sm:ml-4 shrink-0">Bal: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>$<AnimatedValue value={accountSummary.balance} /></span></span>
           {!isMobile && (
             <>
-              <span className="text-gray-500 ml-4 shrink-0">Credit: <span className="text-purple-400">${accountSummary.credit?.toFixed(2) || '0.00'}</span></span>
-              <span className="text-gray-500 ml-4 shrink-0">Eq: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500' : 'text-red-500'}>${accountSummary.equity?.toFixed(2) || '0.00'}</span></span>
-              <span className="text-gray-500 ml-4 shrink-0">Margin: <span className="text-yellow-500">${accountSummary.usedMargin?.toFixed(2) || '0.00'}</span></span>
-              <span className="text-gray-500 ml-4 shrink-0">Free: <span className={accountSummary.freeMargin >= 0 ? 'text-blue-400' : 'text-red-500'}>${accountSummary.freeMargin?.toFixed(2) || '0.00'}</span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Credit: <span className="text-purple-400">$<AnimatedValue value={accountSummary.credit} /></span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Eq: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500' : 'text-red-500'}>$<AnimatedValue value={accountSummary.equity} /></span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Margin: <span className="text-yellow-500">$<AnimatedValue value={accountSummary.usedMargin} /></span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Free: <span className={accountSummary.freeMargin >= 0 ? 'text-blue-400' : 'text-red-500'}>$<AnimatedValue value={accountSummary.freeMargin} /></span></span>
             </>
           )}
           <div className="flex-1" />
@@ -6287,7 +6302,7 @@ const TradingPage = () => {
                 <p className="text-[10px] text-white/40 uppercase font-bold mb-2">Batch Actions</p>
                 <div className="grid grid-cols-3 gap-2">
                   <button 
-                    onClick={() => { setShowCloseModal(false); confirmCloseAll(); }}
+                    onClick={() => { setShowCloseModal(false); handleCloseAllTrades('all'); }}
                     className="py-2 bg-red-500/10 text-red-400 text-[10px] font-semibold border border-red-500/20 rounded active:scale-95 transition-all hover:bg-red-500/20"
                   >
                     Close All
