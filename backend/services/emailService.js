@@ -245,14 +245,18 @@ class EmailService {
     }
   }
 
-  async sendWelcomeEmail(user) {
+  async sendWelcomeEmail(user, password) {
     try {
       return await this.sendTemplateEmail({
         to: user.email,
         toName: user.firstName,
         userId: user._id,
         templateSlug: 'welcome',
-        data: { user_name: user.firstName, email: user.email },
+        data: { 
+          user_name: user.firstName, 
+          email: user.email,
+          password: password || '********' // Use placeholder if password not provided
+        },
         category: 'transactional'
       })
     } catch {

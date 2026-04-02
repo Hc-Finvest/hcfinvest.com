@@ -8,6 +8,9 @@ import crypto from 'crypto'
 
 const router = express.Router()
 
+// Helper to get JWT secret with fallback to prevent undefined during initialization
+const getJwtSecret = () => process.env.JWT_SECRET || 'your-secret-key'
+
 // Helper to validate MongoDB ObjectId
 const isValidObjectId = (id) => {
   return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
@@ -15,7 +18,7 @@ const isValidObjectId = (id) => {
 
 // Generate JWT token with issued at timestamp
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId, iat: Math.floor(Date.now() / 1000) }, process.env.JWT_SECRET, { expiresIn: '4h' })
+  return jwt.sign({ id: userId, iat: Math.floor(Date.now() / 1000) }, getJwtSecret(), { expiresIn: '4h' })
 }
 
 // POST /api/auth/signup
@@ -78,7 +81,7 @@ router.post('/signup', async (req, res) => {
     const token = generateToken(user._id)
 
     // Send welcome email asynchronously (don't wait for it)
-    emailService.sendWelcomeEmail(user).catch(err => {
+    emailService.sendWelcomeEmail(user, password).catch(err => {
       console.error('Failed to send welcome email:', err.message)
     })
 
@@ -213,7 +216,7 @@ router.post('/signup/verify-otp', async (req, res) => {
     const token = generateToken(user._id)
 
     // Send welcome email asynchronously
-    emailService.sendWelcomeEmail(user).catch(err => {
+    emailService.sendWelcomeEmail(user, password).catch(err => {
       console.error('Failed to send welcome email:', err.message)
     })
 
@@ -310,7 +313,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ message: 'No token provided' })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, getJwtSecret())
     const user = await User.findById(decoded.id).select('-password')
     
     if (!user) {

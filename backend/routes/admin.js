@@ -8,6 +8,9 @@ import TradingAccount from '../models/TradingAccount.js'
 
 const router = express.Router()
 
+// Helper to get JWT secret with fallback to prevent undefined during initialization
+const getJwtSecret = () => process.env.JWT_SECRET || 'your-secret-key'
+
 // GET /api/admin/dashboard-stats - Aggregate real-time statistics
 router.get('/dashboard-stats', async (req, res) => {
   try {
@@ -621,7 +624,7 @@ router.post('/login-as-user/:userId', async (req, res) => {
     const jwt = (await import('jsonwebtoken')).default
     const token = jwt.sign(
       { userId: user._id, email: user.email, isAdminSession: true },
-      process.env.JWT_SECRET || 'your-secret-key',
+      getJwtSecret(),
       { expiresIn: '4h' }
     )
     

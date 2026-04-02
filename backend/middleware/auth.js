@@ -89,6 +89,7 @@ export const adminMiddleware = async (req, res, next) => {
     const user = await User.findById(decoded.id).select('-password')
     
     if (!user) {
+      console.warn('Admin middleware - Admin and User not found for ID:', decoded.id || decoded.adminId)
       return res.status(401).json({ success: false, message: 'Unauthorized' })
     }
 
