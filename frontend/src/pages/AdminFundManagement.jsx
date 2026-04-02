@@ -106,7 +106,8 @@ const AdminFundManagement = () => {
   }
 
   const filteredTransactions = transactions.filter(txn => {
-    const matchesSearch = txn.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const txnId = txn.transactionId || txn._id || ''
+    const matchesSearch = txnId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       txn.userId?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       txn.userId?.email?.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSearch
@@ -229,7 +230,7 @@ const AdminFundManagement = () => {
                       </div>
                       <div>
                         <p className="text-slate-900 font-medium">{txn.userId?.firstName || txn.userId?.email}</p>
-                        <p className="text-slate-500 text-xs">{txn.transactionId}</p>
+                        <p className="text-slate-500 text-xs">{txn.transactionId || `#${txn._id.toString().slice(-6).toUpperCase()}`}</p>
                       </div>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(txn.status)}`}>
@@ -280,7 +281,11 @@ const AdminFundManagement = () => {
                 <tbody>
                   {filteredTransactions.map((txn) => (
                     <tr key={txn._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="py-4 px-4 text-slate-900 font-mono text-sm">{txn.transactionId}</td>
+                      <td className="py-4 px-4 text-slate-900 font-mono text-sm">
+                        {txn.transactionId || (
+                          <span className="text-slate-400">#{txn._id.toString().slice(-6).toUpperCase()}</span>
+                        )}
+                      </td>
                       <td className="py-4 px-4 text-slate-900">{txn.userId?.firstName || txn.userId?.email}</td>
                       <td className="py-4 px-4">
                         <span className={`flex items-center gap-1 ${txn.type?.toUpperCase() === 'DEPOSIT' ? 'text-green-600' : 'text-red-600'}`}>

@@ -31,6 +31,10 @@ export default {
           loss: 'var(--theme-lossColor, #EF4444)',
         }
       },
+      fontFamily: {
+        sans: ['Manrope', 'sans-serif'],
+        heading: ['Poppins', 'sans-serif'],
+      },
       animation: {
         'slide-up': 'slideUp 0.3s ease-out',
         'slide-down': 'slideDown 0.3s ease-out',

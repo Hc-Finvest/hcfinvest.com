@@ -51,6 +51,11 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  transactionId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   transactionRef: {
     type: String,
     default: ''
@@ -76,5 +81,15 @@ const transactionSchema = new mongoose.Schema({
     ref: 'User'
   }
 }, { timestamps: true })
+
+// Pre-save hook to generate a unique readable transaction ID
+transactionSchema.pre('save', async function(next) {
+  if (!this.transactionId) {
+    const timestamp = Date.now().toString(36).toUpperCase()
+    const random = Math.floor(Math.random() * 1000).toString(36).toUpperCase().padStart(3, '0')
+    this.transactionId = `HCF-${timestamp}${random}`
+  }
+  next()
+})
 
 export default mongoose.model('Transaction', transactionSchema)
