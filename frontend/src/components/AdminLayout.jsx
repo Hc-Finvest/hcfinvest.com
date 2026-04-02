@@ -88,11 +88,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
   }
 
   return (
-    <div className="min-h-screen bg-light-900 flex">
+    <div className="min-h-screen bg-slate-50 flex">
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-white/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/40 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -101,45 +101,48 @@ const AdminLayout = ({ children, title, subtitle }) => {
       <aside 
         className={`
           fixed lg:static inset-y-0 left-0 z-50
-          ${sidebarExpanded ? 'w-64' : 'w-16'} 
+          ${sidebarExpanded ? 'w-64' : 'w-20'} 
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          bg-light-900 border-r border-gray-800 flex flex-col 
-          transition-all duration-300 ease-in-out
+          bg-white border-r border-slate-200 flex flex-col 
+          transition-all duration-300 ease-in-out shadow-lg lg:shadow-none
         `}
       >
-        {/* Logo */}
-        <div className="p-4 flex items-center justify-between border-b border-gray-800">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* Logo Section */}
+        <div className="h-24 flex items-center justify-center relative border-b border-slate-100 bg-white">
+          <div className="flex items-center justify-center p-4">
             <img 
               src="/hcfinvest_orange_logo.png" 
               alt="hcfinvest" 
-              className="w-8 h-8 object-contain flex-shrink-0"
+              className={`${sidebarExpanded ? 'w-16 h-16' : 'w-10 h-10'} object-contain flex-shrink-0 transition-all duration-300`}
               onError={(e) => {
                 e.target.style.display = 'none'
-                e.target.nextSibling.style.display = 'flex'
+                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'
               }}
             />
-            <div className="w-8 h-8 bg-orange-500 rounded items-center justify-center flex-shrink-0 hidden">
+            <div className={`${sidebarExpanded ? 'w-16 h-16' : 'w-10 h-10'} bg-orange-500 rounded-xl items-center justify-center flex-shrink-0 hidden transition-all duration-300`}>
               <span className="text-white font-bold text-sm">HCF</span>
             </div>
-            {sidebarExpanded && <span className="text-white font-semibold whitespace-nowrap truncate">hcfinvest Admin</span>}
           </div>
+          
+          {/* Desktop Toggle Button */}
           <button 
             onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            className="hidden lg:block p-1 hover:bg-light-700 rounded transition-colors"
+            className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center shadow-sm hover:shadow-md hover:border-blue-300 transition-all z-10"
           >
-            <Menu size={18} className="text-gray-400" />
+            {sidebarExpanded ? <ChevronDown className="-rotate-90 w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
           </button>
+
+          {/* Mobile Close Button */}
           <button 
             onClick={() => setMobileMenuOpen(false)}
-            className="lg:hidden p-1 hover:bg-light-700 rounded transition-colors"
+            className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-50 rounded-xl transition-colors"
           >
-            <X size={18} className="text-gray-400" />
+            <X size={20} className="text-slate-400" />
           </button>
         </div>
 
         {/* Menu */}
-        <nav className="flex-1 px-2 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
+        <nav className="flex-1 px-3 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
           {menuItems.map((item) => (
             <button
               key={item.name}
@@ -147,58 +150,58 @@ const AdminLayout = ({ children, title, subtitle }) => {
                 navigate(item.path)
                 setMobileMenuOpen(false)
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1.5 transition-all duration-200 ${
                 isActive(item.path)
-                  ? 'bg-red-500 text-white' 
-                  : 'text-gray-400 hover:text-white hover:bg-light-700'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200 border border-blue-500' 
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
               }`}
               title={!sidebarExpanded ? item.name : ''}
             >
-              <item.icon size={18} className="flex-shrink-0" />
+              <item.icon size={20} className={`${isActive(item.path) ? 'text-white' : 'text-slate-400'} flex-shrink-0`} />
               {sidebarExpanded && (
-                <span className="text-sm font-medium whitespace-nowrap truncate">{item.name}</span>
+                <span className="text-sm font-semibold tracking-wide whitespace-nowrap truncate">{item.name}</span>
               )}
             </button>
           ))}
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t border-gray-800">
+        <div className="p-3 border-t border-slate-100">
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white hover:bg-light-700 transition-colors rounded-lg"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all rounded-xl border border-transparent"
             title={!sidebarExpanded ? 'Log Out' : ''}
           >
-            <LogOut size={18} className="flex-shrink-0" />
-            {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">Log Out</span>}
+            <LogOut size={20} className="flex-shrink-0" />
+            {sidebarExpanded && <span className="text-sm font-semibold whitespace-nowrap">Log Out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto min-w-0">
+      <main className="flex-1 overflow-auto min-w-0 flex flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-light-900/95 backdrop-blur-sm flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-800">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md flex items-center justify-between px-6 py-5 border-b border-slate-200 shadow-sm shadow-slate-100/50">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 hover:bg-light-700 rounded-lg transition-colors"
+              className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
             >
-              <Menu size={20} className="text-gray-400" />
+              <Menu size={20} className="text-slate-600" />
             </button>
             <div>
-              <h1 className="text-lg sm:text-xl font-semibold text-white">{title || 'Admin Dashboard'}</h1>
-              {subtitle && <p className="text-gray-500 text-sm hidden sm:block">{subtitle}</p>}
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{title || 'Admin Dashboard'}</h1>
+              {subtitle && <p className="text-slate-500 text-sm font-medium mt-0.5">{subtitle}</p>}
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 text-red-500 rounded-full text-xs sm:text-sm">
-            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-            <span className="hidden sm:inline">Admin Mode</span>
+          <div className="flex items-center gap-3 px-4 py-1.5 bg-slate-100 text-slate-600 rounded-full text-sm font-bold border border-slate-200">
+            <span className="w-2.5 h-2.5 bg-slate-400 rounded-full animate-pulse"></span>
+            <span>SYSTEM SECURE</span>
           </div>
         </header>
 
         {/* Page Content */}
-        <div className="p-4 sm:p-6">
+        <div className="p-6 lg:p-8 flex-1">
           {children}
         </div>
       </main>

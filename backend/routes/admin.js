@@ -1,8 +1,70 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
+import Transaction from '../models/Transaction.js'
+import Trade from '../models/Trade.js'
+import KYC from '../models/KYC.js'
+import TradingAccount from '../models/TradingAccount.js'
 
 const router = express.Router()
+
+// GET /api/admin/dashboard-stats - Aggregate real-time statistics
+router.get('/dashboard-stats', async (req, res) => {
+  try {
+    const now = new Date()
+    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const [
+      totalUsers,
+      activeToday,
+      newThisWeek,
+      totalDeposits,
+      totalWithdrawals,
+      activeTrades,
+      pendingKYC,
+      pendingWithdrawals,
+      recentUsers
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ updatedAt: { $gte: last24h } }),
+      User.countDocuments({ createdAt: { $gte: last7d } }),
+      // Deposits sum
+      Transaction.aggregate([
+        { $match: { type: 'Deposit', status: 'Approved' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // Withdrawals sum
+      Transaction.aggregate([
+        { $match: { type: 'Withdrawal', status: 'Approved' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Trade.countDocuments({ status: 'OPEN' }),
+      KYC.countDocuments({ status: 'pending' }),
+      Transaction.countDocuments({ type: 'Withdrawal', status: 'Pending' }),
+      User.find().select('firstName email createdAt').sort({ createdAt: -1 }).limit(5)
+    ])
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        activeToday,
+        newThisWeek,
+        totalDeposits: totalDeposits[0]?.total || 0,
+        totalWithdrawals: totalWithdrawals[0]?.total || 0,
+        activeTrades,
+        pendingKYC,
+        pendingWithdrawals,
+        platformVolume: 0 // Could be added later if needed
+      },
+      recentUsers
+    })
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error)
+    res.status(500).json({ success: false, message: 'Error fetching stats', error: error.message })
+  }
+})
 
 // Helper to validate MongoDB ObjectId
 const isValidObjectId = (id) => {

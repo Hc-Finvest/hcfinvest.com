@@ -18,6 +18,26 @@ class TradeEngine {
     return String(symbol).toUpperCase().replace(/\.I$/i, '')
   }
 
+  // Scales the admin spread input into actual price math based on asset class
+  getScaledSpreadValue(symbol, spreadValue) {
+    if (!spreadValue || isNaN(spreadValue)) return 0;
+    
+    // Normalize symbol to strip suffixes like .i
+    const normalizedSymbol = this.normalizeSymbol(symbol);
+
+    if (normalizedSymbol.includes('JPY')) {
+      return spreadValue * 0.01; // JPY pairs: 1 pip = 0.01
+    } else if (['XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'USOIL', 'UKOIL', 'NGAS', 'COPPER'].includes(normalizedSymbol)) {
+      return spreadValue * 0.01; // Metals & Commodities: cents to dollars
+    } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD', 'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD'].includes(normalizedSymbol)) {
+      return spreadValue; // Crypto: USD value as-is
+    } else if (['US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35'].includes(normalizedSymbol)) {
+      return spreadValue; // Indices: points as-is
+    } else {
+      return spreadValue * 0.0001; // Standard Forex: 1 pip = 0.0001
+    }
+  }
+
   // Get contract size based on symbol type
   getContractSize(symbol) {
     const normalizedSymbol = this.normalizeSymbol(symbol)
@@ -31,13 +51,13 @@ class TradeEngine {
   }
 
   // Calculate execution price with Retail Markup (if any)
-  calculateExecutionPrice(side, bid, ask, spreadValue, spreadType) {
+  calculateExecutionPrice(symbol, side, bid, ask, spreadValue, spreadType) {
     // ELITE: Start with raw market prices (Transparent Pricing)
     let executionPrice = (side === 'BUY') ? ask : bid;
     
     // Apply administrative markup if configured
     if (spreadValue > 0) {
-      let markup = spreadValue;
+      let markup = this.getScaledSpreadValue(symbol, spreadValue);
       if (spreadType === 'PERCENTAGE') {
         markup = (ask - bid) * (spreadValue / 100);
       }
@@ -236,7 +256,7 @@ class TradeEngine {
       // Use raw values for the opening price if possible
       const bidToUse = rawBid !== null ? rawBid : bid
       const askToUse = rawAsk !== null ? rawAsk : ask
-      openPrice = this.calculateExecutionPrice(side, bidToUse, askToUse, charges.spreadValue, charges.spreadType)
+      openPrice = this.calculateExecutionPrice(symbol, side, bidToUse, askToUse, charges.spreadValue, charges.spreadType)
     }
 
     // Get contract size based on symbol

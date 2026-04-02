@@ -10,31 +10,62 @@ import {
   X,
   RefreshCw,
   Search,
-  User,
+  User as UserIcon,
   Info,
   TrendingUp,
-  Moon
+  Moon,
+  Filter,
+  ArrowRight,
+  ShieldAlert,
+  Layers
 } from 'lucide-react'
+
+// Level hierarchy configuration
+const LEVEL_CONFIG = {
+  'USER': { priority: 1, label: 'Specific User', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  'INSTRUMENT': { priority: 2, label: 'Asset Specific', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+  'ACCOUNT_TYPE': { priority: 3, label: 'Account Tier', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  'SEGMENT': { priority: 4, label: 'Market Segment', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
+  'GLOBAL': { priority: 5, label: 'Global Base', color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' }
+}
+
+const getSpreadPlaceholder = (segment) => {
+  switch (segment?.toLowerCase()) {
+    case 'forex': return 'Enter pips (e.g. 1.5)';
+    case 'metals': return 'Enter cents (e.g. 50)';
+    case 'crypto': return 'Enter in USD (e.g. 10)';
+    case 'indices': return 'Enter points (e.g. 2)';
+    case 'stocks': return 'Enter cents (e.g. 5)';
+    default: return 'Enter raw value';
+  }
+}
 
 const AdminForexCharges = () => {
   const [charges, setCharges] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modalType, setModalType] = useState(null) // 'commission', 'spread', 'swap'
+  const [modalOpen, setModalOpen] = useState(false)
   const [editingCharge, setEditingCharge] = useState(null)
+  
+  // Data sources
   const [users, setUsers] = useState([])
   const [accountTypes, setAccountTypes] = useState([])
+  const [supportedSymbols, setSupportedSymbols] = useState([])
+  
+  // Search & Filters
   const [userSearch, setUserSearch] = useState('')
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedAccountType, setSelectedAccountType] = useState(null)
-  const [supportedSymbols, setSupportedSymbols] = useState([])
-  const [form, setForm] = useState({
+  
+  const [filterLevel, setFilterLevel] = useState('ALL')
+
+  const initialFormState = {
     level: 'SEGMENT',
     segment: 'Forex',
     instrumentSymbol: '',
     userId: '',
     accountTypeId: '',
-    spreadType: 'FIXED',
+    spreadType: 'FIXED', // PERCENTAGE removed for core mathematical safety
     spreadValue: '',
     commissionType: 'PER_LOT',
     commissionValue: '',
@@ -43,7 +74,9 @@ const AdminForexCharges = () => {
     commissionOnClose: false,
     swapLong: '',
     swapShort: ''
-  })
+  }
+  
+  const [form, setForm] = useState(initialFormState)
 
   useEffect(() => {
     fetchCharges()
@@ -56,12 +89,8 @@ const AdminForexCharges = () => {
     try {
       const res = await fetch(`${API_URL}/prices/symbols`)
       const data = await res.json()
-      if (data.success) {
-        setSupportedSymbols(data.symbols || [])
-      }
-    } catch (error) {
-      console.error('Error fetching symbols:', error)
-    }
+      if (data.success) setSupportedSymbols(data.symbols || [])
+    } catch (error) { console.error('Error fetching symbols:', error) }
   }
 
   const fetchAccountTypes = async () => {
@@ -69,43 +98,31 @@ const AdminForexCharges = () => {
       const res = await fetch(`${API_URL}/account-types/all`)
       const data = await res.json()
       setAccountTypes(data.accountTypes || [])
-    } catch (error) {
-      console.error('Error fetching account types:', error)
-    }
+    } catch (error) { console.error('Error fetching account types:', error) }
   }
 
   const fetchUsers = async () => {
     try {
       const res = await fetch(`${API_URL}/admin/users`)
       const data = await res.json()
-      if (data.success) {
-        setUsers(data.users || [])
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error)
-    }
+      if (data.success) setUsers(data.users || [])
+    } catch (error) { console.error('Error fetching users:', error) }
   }
 
   const fetchCharges = async () => {
     setLoading(true)
     try {
-      // Remove segment=Forex filter to show all pairs
       const res = await fetch(`${API_URL}/charges`)
       const data = await res.json()
-      if (data.success) {
-        setCharges(data.charges || [])
-      }
-    } catch (error) {
-      console.error('Error fetching charges:', error)
-    }
+      if (data.success) setCharges(data.charges || [])
+    } catch (error) { console.error('Error fetching charges:', error) }
     setLoading(false)
   }
 
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    e.preventDefault();
     try {
-      const url = editingCharge 
-        ? `${API_URL}/charges/${editingCharge._id}`
-        : `${API_URL}/charges`
+      const url = editingCharge ? `${API_URL}/charges/${editingCharge._id}` : `${API_URL}/charges`
       const method = editingCharge ? 'PUT' : 'POST'
 
       const payload = {
@@ -115,6 +132,7 @@ const AdminForexCharges = () => {
         swapLong: form.swapLong !== '' ? parseFloat(form.swapLong) : 0,
         swapShort: form.swapShort !== '' ? parseFloat(form.swapShort) : 0,
       }
+      
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -122,665 +140,487 @@ const AdminForexCharges = () => {
       })
       const data = await res.json()
       if (data.success) {
-        alert(editingCharge ? 'Charge updated successfully!' : 'New charge added successfully!')
-        setModalType(null)
-        setEditingCharge(null)
+        setModalOpen(false)
         resetForm()
         fetchCharges()
       } else {
-        alert('Failed to save charge: ' + data.message)
+        alert('Failed to save charge rule: ' + data.message)
       }
     } catch (error) {
       console.error('Save error:', error)
-      alert('An error occurred while saving the charge.')
+      alert('An error occurred while saving the charge rule.')
     }
   }
 
   const handleDelete = async (chargeId) => {
-    if (window.confirm('Are you sure you want to delete this charge? This cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this rule? It will be removed immediately.')) {
       try {
         const res = await fetch(`${API_URL}/charges/${chargeId}`, { method: 'DELETE' })
         const data = await res.json()
-        if (data.success) {
-          alert('Charge deleted successfully')
-          fetchCharges()
-        } else {
-          alert('Delete failed: ' + data.message)
-        }
+        if (data.success) fetchCharges()
+        else alert('Delete failed: ' + data.message)
       } catch (e) {
         console.error('Delete error:', e)
-        alert('An error occurred while deleting.')
       }
     }
   }
 
-  const openEditModal = (charge, type) => {
-    setEditingCharge(charge)
-    setForm({
-      level: charge.level || 'SEGMENT',
-      segment: charge.segment || 'Forex',
-      instrumentSymbol: charge.instrumentSymbol || '',
-      userId: charge.userId?._id || charge.userId || '',
-      accountTypeId: charge.accountTypeId?._id || charge.accountTypeId || '',
-      spreadType: charge.spreadType || 'FIXED',
-      spreadValue: charge.spreadValue != null ? String(charge.spreadValue) : '',
-      commissionType: charge.commissionType || 'PER_LOT',
-      commissionValue: charge.commissionValue != null ? String(charge.commissionValue) : '',
-      commissionOnBuy: charge.commissionOnBuy !== false,
-      commissionOnSell: charge.commissionOnSell !== false,
-      commissionOnClose: charge.commissionOnClose || false,
-      swapLong: charge.swapLong != null ? String(charge.swapLong) : '',
-      swapShort: charge.swapShort != null ? String(charge.swapShort) : ''
-    })
-    if (charge.level === 'USER' && charge.userId) {
-      const user = users.find(u => u._id === (charge.userId?._id || charge.userId))
-      setSelectedUser(user || null)
+  const openModal = (charge = null) => {
+    if (charge) {
+      setEditingCharge(charge)
+      setForm({
+        level: charge.level || 'SEGMENT',
+        segment: charge.segment || 'Forex',
+        instrumentSymbol: charge.instrumentSymbol || '',
+        userId: charge.userId?._id || charge.userId || '',
+        accountTypeId: charge.accountTypeId?._id || charge.accountTypeId || '',
+        spreadType: 'FIXED', 
+        spreadValue: charge.spreadValue != null ? String(charge.spreadValue) : '',
+        commissionType: charge.commissionType || 'PER_LOT',
+        commissionValue: charge.commissionValue != null ? String(charge.commissionValue) : '',
+        commissionOnBuy: charge.commissionOnBuy !== false,
+        commissionOnSell: charge.commissionOnSell !== false,
+        commissionOnClose: charge.commissionOnClose || false,
+        swapLong: charge.swapLong != null ? String(charge.swapLong) : '',
+        swapShort: charge.swapShort != null ? String(charge.swapShort) : ''
+      })
+      if (charge.level === 'USER' && charge.userId) {
+        const user = users.find(u => u._id === (charge.userId?._id || charge.userId))
+        setSelectedUser(user || null)
+      } else setSelectedUser(null)
+      
+      if (charge.level === 'ACCOUNT_TYPE' && charge.accountTypeId) {
+        const accType = accountTypes.find(a => a._id === (charge.accountTypeId?._id || charge.accountTypeId))
+        setSelectedAccountType(accType || null)
+      } else setSelectedAccountType(null)
     } else {
-      setSelectedUser(null)
+      resetForm()
     }
-    if (charge.level === 'ACCOUNT_TYPE' && charge.accountTypeId) {
-      const accType = accountTypes.find(a => a._id === (charge.accountTypeId?._id || charge.accountTypeId))
-      setSelectedAccountType(accType || null)
-    } else {
-      setSelectedAccountType(null)
-    }
-    setModalType(type)
+    setModalOpen(true)
   }
 
   const resetForm = () => {
-    setForm({
-      level: 'SEGMENT',
-      segment: 'Forex',
-      instrumentSymbol: '',
-      userId: '',
-      accountTypeId: '',
-      spreadType: 'FIXED',
-      spreadValue: 0,
-      commissionType: 'PER_LOT',
-      commissionValue: 0,
-      commissionOnBuy: true,
-      commissionOnSell: true,
-      commissionOnClose: false,
-      swapLong: 0,
-      swapShort: 0
-    })
+    setEditingCharge(null)
+    setForm(initialFormState)
     setSelectedUser(null)
     setSelectedAccountType(null)
     setUserSearch('')
   }
 
-  const selectUser = (user) => {
-    setSelectedUser(user)
-    setForm({ ...form, userId: user._id })
-    setShowUserDropdown(false)
-    setUserSearch('')
+  // Visual Helper for Table Row Target
+  const parseTarget = (c) => {
+    if (c.level === 'GLOBAL') return 'Entire Platform'
+    if (c.level === 'SEGMENT') return `${c.segment} Pairs`
+    if (c.level === 'ACCOUNT_TYPE') return `${c.accountTypeId?.name || 'Account Type'}` + (c.segment ? ` (${c.segment})` : ' (All Assets)')
+    if (c.level === 'INSTRUMENT') return `${c.instrumentSymbol}`
+    if (c.level === 'USER') return `${c.userId?.name || c.userId?.email || 'User'}` + (c.instrumentSymbol ? ` on ${c.instrumentSymbol}` : ' (All Assets)')
+    return 'Unknown'
   }
 
-  const filteredUsers = users.filter(user => {
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase()
-    const searchLower = userSearch.toLowerCase()
-    return fullName.includes(searchLower) ||
-      user.email?.toLowerCase().includes(searchLower) ||
-      user.phone?.includes(userSearch) ||
-      user._id?.includes(userSearch)
-  })
-
-  const getLevelLabel = (charge) => {
-    if (charge.level === 'USER') {
-      const userName = charge.userId?.firstName 
-        ? `${charge.userId.firstName} ${charge.userId.lastName || ''}`.trim()
-        : charge.userId?.email || 'Unknown User'
-      return `${userName} - ${charge.instrumentSymbol || 'All Instruments'}`
-    }
-    if (charge.level === 'INSTRUMENT') return charge.instrumentSymbol
-    if (charge.level === 'SEGMENT') return charge.segment
-    if (charge.level === 'GLOBAL') return 'Global'
-    return charge.level
-  }
-
-  const renderSymbolOptions = () => {
-    // Categorize symbols
-    const categories = {
-      'Forex': [],
-      'Metals': [],
-      'Crypto': [],
-      'Indices': [],
-      'Commodities': [],
-      'Other': []
-    }
-
-    supportedSymbols.forEach(sym => {
-      const s = sym.toUpperCase()
-      if (s.startsWith('XAU') || s.startsWith('XAG')) categories['Metals'].push(sym)
-      else if (s.startsWith('BTC') || s.startsWith('ETH') || s.startsWith('LTC') || s.startsWith('XRP') || s.startsWith('SOL') || s.startsWith('ADA') || s.startsWith('BNB') || s.startsWith('DOGE') || s.includes('USDT')) categories['Crypto'].push(sym)
-      else if (s.includes('OIL') || s.includes('GAS') || s.includes('COPPER')) categories['Commodities'].push(sym)
-      else if (s.includes('US30') || s.includes('US500') || s.includes('US100') || s.includes('UK100') || s.includes('GER30') || s.includes('FRA40') || s.includes('SPA35') || s.includes('NAS100')) categories['Indices'].push(sym)
-      else if (s.includes('USD') || s.includes('JPY') || s.includes('EUR') || s.includes('GBP') || s.includes('AUD') || s.includes('CAD') || s.includes('CHF') || s.includes('NZD')) categories['Forex'].push(sym)
-      else categories['Other'].push(sym)
-    })
-
-    return Object.entries(categories).map(([name, syms]) => {
-      if (syms.length === 0) return null
-      return (
-        <optgroup key={name} label={name}>
-          {syms.sort().map(s => (
-            <option key={s} value={s.replace('.i', '')}>{s.replace('.i', '')}</option>
-          ))}
-        </optgroup>
-      )
-    })
-  }
+  const filteredCharges = charges
+    .filter(c => filterLevel === 'ALL' || c.level === filterLevel)
+    .sort((a, b) => LEVEL_CONFIG[a.level].priority - LEVEL_CONFIG[b.level].priority)
 
   return (
-    <AdminLayout title="Forex Charges" subtitle="Manage trading fees and spreads">
-      <div className="space-y-6">
-        
-        {/* COMMISSION SECTION */}
-        <div className="bg-dark-800 rounded-xl border border-gray-800">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
-                <DollarSign size={20} className="text-white" />
+    <AdminLayout 
+      title="Trading Fees & Spreads" 
+      subtitle="Standardized platform charges and customer-specific overrides."
+    >
+      <div className="bg-slate-50 min-h-screen -m-6 lg:-m-8 p-6 lg:p-8 animate-in fade-in duration-500">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Header Action Card */}
+          <div className="bg-white rounded-2xl p-6 mb-8 border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                <DollarSign className="text-blue-600 w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-white font-semibold">Commission</h2>
-                <p className="text-gray-500 text-sm">Trading fees per lot/trade</p>
+                <h2 className="text-xl font-bold text-slate-900">Active Fee Structure</h2>
+                <p className="text-slate-500 text-sm mt-0.5">Define your global spreads or set specific rules for assets and traders.</p>
               </div>
             </div>
             <button 
-              onClick={() => { resetForm(); setEditingCharge(null); setModalType('commission') }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              onClick={() => openModal()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all font-bold shadow-lg shadow-blue-200"
             >
-              <Plus size={16} />
-              <span>Add Commission</span>
+              <Plus className="w-5 h-5" />
+              Add New Rule
             </button>
           </div>
-          <div className="p-4">
-            {loading ? (
-              <p className="text-gray-500 text-center py-4">Loading...</p>
-            ) : charges.filter(c => c.commissionValue > 0).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No commission charges configured</p>
-            ) : (
-              <div className="space-y-2">
-                {charges.filter(c => c.commissionValue > 0).map((charge) => (
-                  <div key={charge._id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">{charge.level}</span>
-                      <span className="text-white">{getLevelLabel(charge)}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-white font-medium">${charge.commissionValue} <span className="text-gray-500 text-sm">({charge.commissionType})</span></span>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditModal(charge, 'commission')} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-white"><Edit size={14} /></button>
-                        <button onClick={() => handleDelete(charge._id)} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* SPREAD SECTION */}
-        <div className="bg-dark-800 rounded-xl border border-gray-800">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
-                <TrendingUp size={20} className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-white font-semibold">Spread</h2>
-                <p className="text-gray-500 text-sm">Bid/Ask price difference</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => { resetForm(); setEditingCharge(null); setModalType('spread') }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              <Plus size={16} />
-              <span>Add Spread</span>
-            </button>
-          </div>
-          <div className="p-4">
-            {loading ? (
-              <p className="text-gray-500 text-center py-4">Loading...</p>
-            ) : charges.filter(c => c.spreadValue > 0).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No spread charges configured</p>
-            ) : (
-              <div className="space-y-2">
-                {charges.filter(c => c.spreadValue > 0).map((charge) => (
-                  <div key={charge._id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">{charge.level}</span>
-                      <span className="text-white">{getLevelLabel(charge)}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-white font-medium">{charge.spreadValue} <span className="text-gray-500 text-sm">({charge.spreadType})</span></span>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditModal(charge, 'spread')} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-white"><Edit size={14} /></button>
-                        <button onClick={() => handleDelete(charge._id)} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+          {/* Setting Levels Guide / Filters */}
+          <div className="mb-8 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-4 min-w-max">
+              {/* Show All Button */}
+              <button 
+                onClick={() => setFilterLevel('ALL')}
+                className={`flex items-center gap-3 px-6 py-3 rounded-xl border transition-all duration-200 ${
+                  filterLevel === 'ALL' 
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm'
+                }`}
+              >
+                <Layers className={`w-4 h-4 ${filterLevel === 'ALL' ? 'text-white' : 'text-slate-400'}`} />
+                <span className="text-sm font-bold">All Configurations</span>
+              </button>
 
-        {/* SWAP SECTION */}
-        <div className="bg-dark-800 rounded-xl border border-gray-800">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
-                <Moon size={20} className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-white font-semibold">Swap</h2>
-                <p className="text-gray-500 text-sm">Overnight holding fees</p>
-              </div>
+              <div className="w-px h-8 bg-slate-200 mx-2 self-center" />
+
+              {Object.entries(LEVEL_CONFIG).map(([key, config]) => {
+                const isSelected = filterLevel === key;
+                return (
+                  <button 
+                    key={key}
+                    onClick={() => setFilterLevel(key)}
+                    className={`flex items-center gap-3 px-5 py-3 rounded-xl border transition-all duration-200 ${
+                      isSelected 
+                      ? 'bg-white border-blue-500 text-slate-900 shadow-md ring-2 ring-blue-50' 
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full ${config.color.includes('emerald') ? 'bg-emerald-500' : config.color.includes('purple') ? 'bg-purple-500' : config.color.includes('blue') ? 'bg-blue-500' : config.color.includes('orange') ? 'bg-orange-500' : 'bg-slate-400'}`}></div>
+                    <span className={`text-sm font-extrabold ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
+                      {config.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <button 
-              onClick={() => { resetForm(); setEditingCharge(null); setModalType('swap') }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              <Plus size={16} />
-              <span>Add Swap</span>
-            </button>
           </div>
-          <div className="p-4">
-            {loading ? (
-              <p className="text-gray-500 text-center py-4">Loading...</p>
-            ) : charges.filter(c => c.swapLong !== 0 || c.swapShort !== 0).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No swap charges configured</p>
-            ) : (
-              <div className="space-y-2">
-                {charges.filter(c => c.swapLong !== 0 || c.swapShort !== 0).map((charge) => (
-                  <div key={charge._id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">{charge.level}</span>
-                      <span className="text-white">{getLevelLabel(charge)}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-white font-medium">Long: {charge.swapLong} | Short: {charge.swapShort}</span>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditModal(charge, 'swap')} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-white"><Edit size={14} /></button>
-                        <button onClick={() => handleDelete(charge._id)} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+
+          {/* Main Table Card */}
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm shadow-slate-100">
+            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-400" />
+                Current Configuration
+              </h2>
+              <button 
+                onClick={fetchCharges} 
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500"
+                title="Refresh Rules"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-50/80 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                    <th className="px-8 py-5">Setting Level</th>
+                    <th className="px-8 py-5">Applied To</th>
+                    <th className="px-8 py-5">Spread Margin</th>
+                    <th className="px-8 py-5">Commission</th>
+                    <th className="px-8 py-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredCharges.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-8 py-20 text-center text-slate-400 font-medium">
+                        {loading ? 'Fetching rule configuration...' : 'No charging rules defined yet.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCharges.map(charge => {
+                      const levelCfg = LEVEL_CONFIG[charge.level] || LEVEL_CONFIG['GLOBAL']
+                      return (
+                        <tr key={charge._id} className="hover:bg-slate-50/80 transition-colors group">
+                          <td className="px-8 py-5">
+                            <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${levelCfg.color.replace('zinc', 'slate').replace('white', 'slate')}`}>
+                              {charge.level}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-2 font-bold text-slate-700">
+                              {parseTarget(charge)}
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            {(charge.spreadValue !== null && charge.spreadValue !== undefined) ? (
+                              <div className="flex flex-col">
+                                <span className="text-slate-900 font-bold text-base">{charge.spreadValue}</span>
+                                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-tight">Fixed Offset</span>
+                              </div>
+                            ) : <span className="text-slate-300 text-xs italic">Default</span>}
+                          </td>
+                          <td className="px-8 py-5">
+                            {(charge.commissionValue !== null && charge.commissionValue !== undefined) ? (
+                              <div className="flex flex-col">
+                                <span className="text-slate-900 font-bold flex items-center gap-1">
+                                  ${charge.commissionValue} <span className="text-slate-400 text-[10px] uppercase">{charge.commissionType === 'PER_LOT' ? 'Lot' : 'Trade'}</span>
+                                </span>
+                                <div className="flex gap-1.5 mt-1.5">
+                                  {charge.commissionOnBuy && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Applied on Buy" />}
+                                  {charge.commissionOnSell && <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="Applied on Sell" />}
+                                </div>
+                              </div>
+                            ) : <span className="text-slate-300 text-xs italic">Default</span>}
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => openModal(charge)} className="p-2.5 bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-400 rounded-xl transition-all border border-slate-200">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDelete(charge._id)} className="p-2.5 bg-slate-50 hover:bg-red-600 hover:text-white text-slate-400 rounded-xl transition-all border border-slate-200">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* COMMISSION MODAL - Cascading Hierarchy */}
-      {modalType === 'commission' && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-dark-800">
-              <h2 className="text-lg font-semibold text-white">{editingCharge ? 'Edit Commission' : 'Add Commission'}</h2>
-              <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-white"><X size={20} /></button>
+      {/* Editor Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative my-8 border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900">
+                  {editingCharge ? 'Edit Charge Rule' : 'New Charge Rule'}
+                </h3>
+                <p className="text-slate-500 text-sm mt-1 font-medium">Define how this rule should be applied to transactions.</p>
+              </div>
+              <button onClick={() => setModalOpen(false)} className="p-2 hover:bg-slate-200 text-slate-400 rounded-full transition-colors">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="p-4 space-y-4">
-              {/* Step 1: Account Type */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">1. Account Type <span className="text-gray-600">(optional)</span></label>
-                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Account Types (Global)</option>
-                  {accountTypes.map(acc => <option key={acc._id} value={acc._id}>{acc.name}</option>)}
-                </select>
-              </div>
 
-              {/* Step 2: Segment */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">2. Segment <span className="text-gray-600">(optional)</span></label>
-                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, level: e.target.value ? 'SEGMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Segments</option>
-                  <option value="Forex">Forex</option>
-                  <option value="Metals">Metals</option>
-                  <option value="Crypto">Crypto</option>
-                  <option value="Indices">Indices</option>
-                </select>
-              </div>
-
-              {/* Step 3: Instrument - Filtered by Segment */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">3. Instrument <span className="text-gray-600">(optional{form.segment ? ` - showing ${form.segment} only` : ''})</span></label>
-                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Instruments</option>
-                  {renderSymbolOptions()}
-                </select>
-              </div>
-
-              {/* Step 4: User (Optional - Highest Priority) */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">4. Specific User <span className="text-gray-600">(optional - highest priority)</span></label>
-                {selectedUser ? (
-                  <div className="flex items-center justify-between p-2 bg-dark-700 border border-gray-600 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs">{selectedUser.firstName?.charAt(0)}</div>
-                      <div>
-                        <p className="text-white text-sm">{selectedUser.firstName} {selectedUser.lastName}</p>
-                        <p className="text-gray-500 text-xs">{selectedUser.email}</p>
-                      </div>
-                    </div>
-                    <button onClick={() => { setSelectedUser(null); setForm({ ...form, userId: '', level: form.instrumentSymbol ? 'INSTRUMENT' : form.segment ? 'SEGMENT' : form.accountTypeId ? 'ACCOUNT_TYPE' : 'GLOBAL' }) }} className="text-gray-400 hover:text-white"><X size={16} /></button>
+            <form onSubmit={handleSave} className="p-8 space-y-8">
+              
+              {/* Step 1: Context Definition */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                  <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Target Context</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1">Setting Level</label>
+                    <select 
+                      value={form.level}
+                      onChange={(e) => setForm({...form, level: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    >
+                      <option value="GLOBAL">Global Baseline</option>
+                      <option value="SEGMENT">Market Segment</option>
+                      <option value="ACCOUNT_TYPE">Account Tier</option>
+                      <option value="INSTRUMENT">Specific Asset</option>
+                      <option value="USER">Specific User</option>
+                    </select>
                   </div>
-                ) : (
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" placeholder="Search user to override..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className="w-full pl-9 pr-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" />
-                    {showUserDropdown && userSearch && (
-                      <div className="absolute z-10 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg max-h-40 overflow-y-auto">
-                        {filteredUsers.length === 0 ? (
-                          <p className="p-2 text-gray-500 text-sm">No users found</p>
-                        ) : (
-                          filteredUsers.slice(0, 10).map(user => (
-                            <button key={user._id} onClick={() => { setSelectedUser(user); setForm({ ...form, userId: user._id, level: 'USER' }); setShowUserDropdown(false); setUserSearch('') }} className="w-full flex items-center gap-2 p-2 hover:bg-dark-600 text-left">
-                              <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs">{user.firstName?.charAt(0)}</div>
-                              <div>
-                                <p className="text-white text-sm">{user.firstName} {user.lastName}</p>
-                                <p className="text-gray-500 text-xs">{user.email}</p>
-                              </div>
+
+                  {['SEGMENT', 'ACCOUNT_TYPE'].includes(form.level) && (
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1">Market Segment</label>
+                      <select 
+                        value={form.segment}
+                        onChange={(e) => setForm({...form, segment: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      >
+                        <option value="Forex">Forex (Currencies)</option>
+                        <option value="Metals">Metals (XAU, XAG)</option>
+                        <option value="Crypto">Crypto</option>
+                        <option value="Indices">Indices</option>
+                        <option value="Stocks">Stocks</option>
+                        {form.level === 'ACCOUNT_TYPE' && <option value="">All Segments</option>}
+                      </select>
+                    </div>
+                  )}
+
+                  {form.level === 'ACCOUNT_TYPE' && (
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1">Account Tier</label>
+                      <select
+                        value={form.accountTypeId}
+                        onChange={(e) => setForm({...form, accountTypeId: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required
+                      >
+                        <option value="">Select Tier</option>
+                        {accountTypes.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {['INSTRUMENT', 'USER'].includes(form.level) && (
+                    <div className="space-y-2 relative">
+                      <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1">Target Symbol {form.level === 'USER' && '(Optional)'}</label>
+                      <select
+                        value={form.instrumentSymbol}
+                        onChange={(e) => {
+                          setForm({...form, instrumentSymbol: e.target.value});
+                          const t = e.target.value;
+                          if (t.includes('XAU') || t.includes('XAG')) setForm(f => ({...f, segment: 'Metals'}));
+                          else if (t.includes('USD') && t.length === 6) setForm(f => ({...f, segment: 'Forex'}));
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required={form.level === 'INSTRUMENT'}
+                      >
+                        <option value="">{form.level === 'USER' ? 'All Assets' : 'Select Asset'}</option>
+                        {supportedSymbols.map((sym, idx) => <option key={idx} value={sym}>{sym}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {form.level === 'USER' && (
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1">Target User</label>
+                      <div className="relative">
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                          <Search className="w-4 h-4 text-slate-400 mr-2" />
+                          <input
+                            type="text"
+                            placeholder="Search by name or email..."
+                            value={selectedUser ? (selectedUser.name || selectedUser.email) : userSearch}
+                            onChange={(e) => {
+                              setUserSearch(e.target.value)
+                              setSelectedUser(null)
+                              setShowUserDropdown(true)
+                            }}
+                            onFocus={() => setShowUserDropdown(true)}
+                            className="bg-transparent border-none text-slate-900 font-medium outline-none w-full placeholder-slate-300"
+                            required
+                          />
+                          {selectedUser && (
+                            <button type="button" onClick={() => { setSelectedUser(null); setUserSearch(''); setForm({...form, userId: ''}) }}>
+                              <X className="w-4 h-4 text-slate-400" />
                             </button>
-                          ))
+                          )}
+                        </div>
+                        {showUserDropdown && !selectedUser && userSearch.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto z-10 p-2">
+                            {users.filter(u => 
+                              (u.name && u.name.toLowerCase().includes(userSearch.toLowerCase())) ||
+                              (u.email && u.email.toLowerCase().includes(userSearch.toLowerCase()))
+                            ).slice(0, 10).map(u => (
+                              <div
+                                key={u._id}
+                                className="px-4 py-3 hover:bg-slate-50 cursor-pointer flex flex-col rounded-xl transition-colors"
+                                onClick={() => {
+                                  setSelectedUser(u)
+                                  setForm({...form, userId: u._id})
+                                  setShowUserDropdown(false)
+                                }}
+                              >
+                                <span className="text-slate-900 text-sm font-bold">{u.name || 'Unnamed User'}</span>
+                                <span className="text-slate-400 text-xs">{u.email}</span>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Applied Level Indicator */}
-              <div className="bg-dark-700 rounded-lg p-2 text-xs">
-                <span className="text-gray-400">Applies to: </span>
-                <span className="text-white font-medium">
-                  {form.userId ? `User: ${selectedUser?.firstName || 'Selected'}` : ''}
-                  {form.userId && form.instrumentSymbol ? ' → ' : ''}
-                  {form.instrumentSymbol ? `${form.instrumentSymbol}` : ''}
-                  {(form.userId || form.instrumentSymbol) && form.segment ? ' → ' : ''}
-                  {form.segment ? `${form.segment}` : ''}
-                  {(form.userId || form.instrumentSymbol || form.segment) && form.accountTypeId ? ' → ' : ''}
-                  {form.accountTypeId ? accountTypes.find(a => a._id === form.accountTypeId)?.name : ''}
-                  {!form.userId && !form.instrumentSymbol && !form.segment && !form.accountTypeId ? 'Global (All)' : ''}
-                </span>
-              </div>
-              
-              {/* Commission Settings */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-400 text-xs mb-1">Commission Type</label>
-                  <select value={form.commissionType} onChange={(e) => setForm({ ...form, commissionType: e.target.value })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                    <option value="PER_LOT">Per Lot ($)</option>
-                    <option value="PER_TRADE">Per Trade ($)</option>
-                    <option value="PERCENTAGE">Percentage (%)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-xs mb-1">Value</label>
-                  <input type="number" step="any" min="0" value={form.commissionValue === 0 ? '' : form.commissionValue} onChange={(e) => setForm({ ...form, commissionValue: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. 7 per lot" />
-                </div>
-              </div>
-              
-              {/* Charge On */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-2">Charge on:</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.commissionOnBuy} onChange={(e) => setForm({ ...form, commissionOnBuy: e.target.checked })} className="w-4 h-4 rounded bg-dark-600 border-gray-600" />
-                    <span className="text-white text-sm">Buy</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.commissionOnSell} onChange={(e) => setForm({ ...form, commissionOnSell: e.target.checked })} className="w-4 h-4 rounded bg-dark-600 border-gray-600" />
-                    <span className="text-white text-sm">Sell</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.commissionOnClose} onChange={(e) => setForm({ ...form, commissionOnClose: e.target.checked })} className="w-4 h-4 rounded bg-dark-600 border-gray-600" />
-                    <span className="text-white text-sm">Close</span>
-                  </label>
-                </div>
-              </div>
-              
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
-                <button onClick={handleSave} className="flex-1 py-2 bg-white text-black hover:bg-gray-200 rounded-lg text-sm font-medium">Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SPREAD MODAL - Account Type first, then Instrument selection */}
-      {modalType === 'spread' && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-dark-800">
-              <h2 className="text-lg font-semibold text-white">{editingCharge ? 'Edit Spread' : 'Add Spread'}</h2>
-              <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-white"><X size={20} /></button>
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Step 1: Account Type */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">1. Account Type <span className="text-gray-600">(optional)</span></label>
-                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Account Types (Global)</option>
-                  {accountTypes.map(acc => <option key={acc._id} value={acc._id}>{acc.name}</option>)}
-                </select>
-              </div>
-
-              {/* Step 2: Segment Filter */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">2. Segment <span className="text-gray-600">(filter instruments)</span></label>
-                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, instrumentSymbol: '' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Segments</option>
-                  <option value="Forex">Forex</option>
-                  <option value="Metals">Metals</option>
-                  <option value="Crypto">Crypto</option>
-                  <option value="Indices">Indices</option>
-                </select>
-              </div>
-
-              {/* Step 3: Instrument - Filtered by Segment */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">3. Instrument <span className="text-gray-600">(optional{form.segment ? ` - showing ${form.segment} only` : ''})</span></label>
-                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Instruments</option>
-                  {renderSymbolOptions()}
-                </select>
-              </div>
-
-              {/* Step 4: User Override (Optional) */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">4. User Override <span className="text-gray-600">(optional - for specific user only)</span></label>
-                {selectedUser ? (
-                  <div className="flex items-center justify-between p-2 bg-dark-700 border border-gray-600 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs">{selectedUser.firstName?.charAt(0)}</div>
-                      <div>
-                        <p className="text-white text-sm">{selectedUser.firstName} {selectedUser.lastName}</p>
-                        <p className="text-gray-500 text-xs">{selectedUser.email}</p>
-                      </div>
                     </div>
-                    <button onClick={() => { setSelectedUser(null); setForm({ ...form, userId: '', level: form.instrumentSymbol ? 'INSTRUMENT' : form.accountTypeId ? 'ACCOUNT_TYPE' : 'GLOBAL' }) }} className="text-gray-400 hover:text-white"><X size={16} /></button>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" placeholder="Search user for custom spread..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className="w-full pl-9 pr-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" />
-                    {showUserDropdown && userSearch && (
-                      <div className="absolute z-10 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg max-h-40 overflow-y-auto">
-                        {filteredUsers.length === 0 ? (
-                          <p className="p-2 text-gray-500 text-sm">No users found</p>
-                        ) : (
-                          filteredUsers.slice(0, 10).map(user => (
-                            <button key={user._id} onClick={() => { setSelectedUser(user); setForm({ ...form, userId: user._id, level: 'USER' }); setShowUserDropdown(false); setUserSearch('') }} className="w-full flex items-center gap-2 p-2 hover:bg-dark-600 text-left">
-                              <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs">{user.firstName?.charAt(0)}</div>
-                              <div>
-                                <p className="text-white text-sm">{user.firstName} {user.lastName}</p>
-                                <p className="text-gray-500 text-xs">{user.email}</p>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {/* Applied Level Indicator */}
-              <div className="bg-dark-700 rounded-lg p-2 text-xs">
-                <span className="text-gray-400">Applies to: </span>
-                <span className="text-white font-medium">
-                  {form.userId ? `User: ${selectedUser?.firstName || 'Selected'}` : ''}
-                  {form.userId && form.instrumentSymbol ? ' → ' : ''}
-                  {form.instrumentSymbol ? `${form.instrumentSymbol}` : ''}
-                  {(form.userId || form.instrumentSymbol) && form.accountTypeId ? ' → ' : ''}
-                  {form.accountTypeId ? accountTypes.find(a => a._id === form.accountTypeId)?.name : ''}
-                  {!form.userId && !form.instrumentSymbol && !form.accountTypeId ? 'Global (All)' : ''}
-                </span>
-              </div>
-              
-              {/* Spread Settings */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-400 text-xs mb-1">Spread Type</label>
-                  <select value={form.spreadType} onChange={(e) => setForm({ ...form, spreadType: e.target.value })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                    <option value="FIXED">Fixed (Pips/Cents)</option>
-                    <option value="PERCENTAGE">Percentage (%)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-xs mb-1">Spread Value</label>
-                  <input type="number" step="any" min="0" value={form.spreadValue === 0 ? '' : form.spreadValue} onChange={(e) => setForm({ ...form, spreadValue: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. 50 for gold, 1.5 for forex" />
                 </div>
               </div>
-              
-              <p className="text-gray-500 text-xs">Forex: pips (e.g., 1.5) | Gold: cents (e.g., 50) | Crypto: USD (e.g., 10)</p>
-              
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
-                <button onClick={handleSave} className="flex-1 py-2 bg-white text-black hover:bg-gray-200 rounded-lg text-sm font-medium">Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* SWAP MODAL - Cascading Hierarchy */}
-      {modalType === 'swap' && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-dark-800">
-              <h2 className="text-lg font-semibold text-white">{editingCharge ? 'Edit Swap' : 'Add Swap'}</h2>
-              <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-white"><X size={20} /></button>
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Step 1: Account Type */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">1. Account Type <span className="text-gray-600">(optional)</span></label>
-                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Account Types (Global)</option>
-                  {accountTypes.map(acc => <option key={acc._id} value={acc._id}>{acc.name}</option>)}
-                </select>
-              </div>
+              {/* Step 2: Values */}
+              <div className="space-y-6 pt-6 border-t border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                  <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Adjustment Values</h4>
+                </div>
 
-              {/* Step 2: Segment Filter */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">2. Segment <span className="text-gray-600">(filter instruments)</span></label>
-                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, instrumentSymbol: '' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Segments</option>
-                  <option value="Forex">Forex</option>
-                  <option value="Metals">Metals</option>
-                  <option value="Crypto">Crypto</option>
-                  <option value="Indices">Indices</option>
-                </select>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1 flex items-center gap-2">
+                      <TrendingUp className="w-3 h-3 text-blue-500" /> Spread Margin
+                    </label>
+                    <input 
+                      type="number" step="0.01"
+                      value={form.spreadValue}
+                      onChange={(e) => setForm({...form, spreadValue: e.target.value})}
+                      placeholder={getSpreadPlaceholder(form.segment)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-slate-300"
+                    />
+                  </div>
 
-              {/* Step 3: Instrument - Filtered by Segment */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">3. Instrument <span className="text-gray-600">(optional{form.segment ? ` - showing ${form.segment} only` : ''})</span></label>
-                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
-                  <option value="">All Instruments</option>
-                  {renderSymbolOptions()}
-                </select>
-              </div>
-
-              {/* Step 4: User Override (Optional) */}
-              <div>
-                <label className="block text-gray-400 text-xs mb-1">4. User Override <span className="text-gray-600">(optional - for specific user only)</span></label>
-                {selectedUser ? (
-                  <div className="flex items-center justify-between p-2 bg-dark-700 border border-gray-600 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs">{selectedUser.firstName?.charAt(0)}</div>
-                      <div>
-                        <p className="text-white text-sm">{selectedUser.firstName} {selectedUser.lastName}</p>
-                        <p className="text-gray-500 text-xs">{selectedUser.email}</p>
-                      </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-tight ml-1 flex items-center gap-2">
+                      <DollarSign className="w-3 h-3 text-emerald-500" /> Base Commission
+                    </label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="number" step="0.01"
+                        value={form.commissionValue}
+                        onChange={(e) => setForm({...form, commissionValue: e.target.value})}
+                        placeholder="e.g. 5.00"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-slate-300"
+                      />
+                      <select
+                        value={form.commissionType}
+                        onChange={(e) => setForm({...form, commissionType: e.target.value})}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 text-slate-700 font-bold text-xs outline-none shrink-0"
+                      >
+                        <option value="PER_LOT">Lot</option>
+                        <option value="PER_TRADE">Trade</option>
+                        <option value="PERCENTAGE">% Vol</option>
+                      </select>
                     </div>
-                    <button onClick={() => { setSelectedUser(null); setForm({ ...form, userId: '', level: form.instrumentSymbol ? 'INSTRUMENT' : form.accountTypeId ? 'ACCOUNT_TYPE' : 'GLOBAL' }) }} className="text-gray-400 hover:text-white"><X size={16} /></button>
                   </div>
-                ) : (
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" placeholder="Search user for custom swap..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className="w-full pl-9 pr-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" />
-                    {showUserDropdown && userSearch && (
-                      <div className="absolute z-10 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg max-h-40 overflow-y-auto">
-                        {filteredUsers.length === 0 ? (
-                          <p className="p-2 text-gray-500 text-sm">No users found</p>
-                        ) : (
-                          filteredUsers.slice(0, 10).map(user => (
-                            <button key={user._id} onClick={() => { setSelectedUser(user); setForm({ ...form, userId: user._id, level: 'USER' }); setShowUserDropdown(false); setUserSearch('') }} className="w-full flex items-center gap-2 p-2 hover:bg-dark-600 text-left">
-                              <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-white text-xs">{user.firstName?.charAt(0)}</div>
-                              <div>
-                                <p className="text-white text-sm">{user.firstName} {user.lastName}</p>
-                                <p className="text-gray-500 text-xs">{user.email}</p>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                    <Moon className="w-4 h-4 text-indigo-500" /> Overnight Swap Fees
                   </div>
-                )}
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase ml-1">Buy Side (Long)</label>
+                      <input 
+                        type="number" step="0.01"
+                        value={form.swapLong}
+                        onChange={(e) => setForm({...form, swapLong: e.target.value})}
+                        placeholder="e.g. -5.2"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase ml-1">Sell Side (Short)</label>
+                      <input 
+                        type="number" step="0.01"
+                        value={form.swapShort}
+                        onChange={(e) => setForm({...form, swapShort: e.target.value})}
+                        placeholder="e.g. 1.5"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-200"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Applied Level Indicator */}
-              <div className="bg-dark-700 rounded-lg p-2 text-xs">
-                <span className="text-gray-400">Applies to: </span>
-                <span className="text-white font-medium">
-                  {form.userId ? `User: ${selectedUser?.firstName || 'Selected'}` : ''}
-                  {form.userId && form.instrumentSymbol ? ' → ' : ''}
-                  {form.instrumentSymbol ? `${form.instrumentSymbol}` : ''}
-                  {(form.userId || form.instrumentSymbol) && form.accountTypeId ? ' → ' : ''}
-                  {form.accountTypeId ? accountTypes.find(a => a._id === form.accountTypeId)?.name : ''}
-                  {!form.userId && !form.instrumentSymbol && !form.accountTypeId ? 'Global (All)' : ''}
-                </span>
+              {/* Actions */}
+              <div className="pt-8 flex justify-end gap-4">
+                <button 
+                  type="button" 
+                  onClick={() => setModalOpen(false)} 
+                  className="px-8 py-3.5 text-slate-500 hover:text-slate-900 font-bold transition-colors"
+                >
+                  Discard Changes
+                </button>
+                <button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3.5 rounded-xl flex items-center gap-2 transition-all shadow-xl shadow-blue-100 font-bold"
+                >
+                  <Save className="w-5 h-5" />
+                  Apply Rule
+                </button>
               </div>
-              
-              {/* Swap Settings */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-400 text-xs mb-1">Swap Long (points)</label>
-                  <input type="number" step="any" value={form.swapLong === 0 ? '' : form.swapLong} onChange={(e) => setForm({ ...form, swapLong: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. -2.5" />
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-xs mb-1">Swap Short (points)</label>
-                  <input type="number" step="any" value={form.swapShort === 0 ? '' : form.swapShort} onChange={(e) => setForm({ ...form, swapShort: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="e.g. 1.5" />
-                </div>
-              </div>
-              
-              <p className="text-gray-500 text-xs">Overnight fees charged for holding positions (negative = charge, positive = credit)</p>
-              
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
-                <button onClick={handleSave} className="flex-1 py-2 bg-white text-black hover:bg-gray-200 rounded-lg text-sm font-medium">Save</button>
-              </div>
-            </div>
+
+            </form>
           </div>
         </div>
       )}

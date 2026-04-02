@@ -2259,21 +2259,24 @@ const AdminUserManagement = () => {
                   <User size={20} className="text-green-500" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Add New User</h3>
-                  <p className="text-gray-500 text-sm">Create a new user account</p>
+                  <User size={20} className="text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-slate-900 font-semibold">Add New User</h3>
+                  <p className="text-slate-500 text-sm">Create a new user account</p>
                 </div>
               </div>
               <button 
                 onClick={() => { setShowAddUserModal(false); setAddUserForm({ firstName: '', lastName: '', email: '', phone: '', password: '' }) }}
-                className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X size={18} className="text-gray-400" />
+                <X size={18} className="text-slate-400" />
               </button>
             </div>
             <div className="p-4 space-y-4">
               {message.text && (
                 <div className={`p-3 rounded-lg flex items-center gap-2 ${
-                  message.type === 'success' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                  message.type === 'success' ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
                 }`}>
                   {message.type === 'success' ? <Check size={18} /> : <AlertTriangle size={18} />}
                   <span className="text-sm">{message.text}</span>
@@ -2281,7 +2284,7 @@ const AdminUserManagement = () => {
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-400 text-sm mb-1 block">First Name *</label>
+                  <label className="text-slate-500 text-sm mb-1 block">First Name *</label>
                   <input
                     type="text"
                     value={addUserForm.firstName}

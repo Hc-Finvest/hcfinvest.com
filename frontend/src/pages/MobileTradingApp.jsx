@@ -8,7 +8,7 @@ import {
   Plus, Minus, Settings, RefreshCw, ChevronDown, Bell, User,
   ArrowDownCircle, ArrowUpCircle, Check, Pencil, Trash2
 } from 'lucide-react'
-import priceStreamService, { getPriceEvents } from '../services/priceStream'
+import priceStreamService from '../services/priceStream'
 import marketDataApiService from '../services/marketDataApi'
 
 const MobileTradingApp = () => {

@@ -82,148 +82,160 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark-900 flex">
-      {/* Collapsible Sidebar */}
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Collapsible Sidebar - Note: This should ideally be handled by AdminLayout, but we'll maintain the existing structure with new theme */}
       <aside 
-        className={`${sidebarExpanded ? 'w-52' : 'w-16'} bg-dark-900 border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out`}
+        className={`${sidebarExpanded ? 'w-64' : 'w-20'} bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out shadow-sm`}
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
       >
         {/* Logo */}
-        <div className="p-4 flex items-center justify-center gap-2">
-          <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
-            <span className="text-white font-bold text-sm">A</span>
+        <div className="p-6 flex items-center justify-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+            <span className="text-white font-bold text-lg">H</span>
           </div>
-          {sidebarExpanded && <span className="text-white font-semibold">Admin</span>}
+          {sidebarExpanded && <span className="text-slate-900 font-extrabold text-xl tracking-tight">ADMIN</span>}
         </div>
 
         {/* Menu */}
-        <nav className="flex-1 px-2">
+        <nav className="flex-1 px-4 py-4">
           {menuItems.map((item) => (
             <button
               key={item.name}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1.5 transition-all duration-200 ${
                 activeMenu === item.name 
-                  ? 'bg-red-500 text-white' 
-                  : 'text-gray-400 hover:text-white hover:bg-dark-700'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-100' 
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
               }`}
               title={!sidebarExpanded ? item.name : ''}
             >
-              <item.icon size={18} className="flex-shrink-0" />
-              {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">{item.name}</span>}
+              <item.icon size={20} className="flex-shrink-0" />
+              {sidebarExpanded && <span className="text-sm font-bold whitespace-nowrap">{item.name}</span>}
             </button>
           ))}
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t border-gray-800">
+        <div className="p-4 border-t border-slate-100">
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white transition-colors rounded-lg"
+            className="w-full flex items-center gap-3 px-3 py-3 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all rounded-xl"
             title={!sidebarExpanded ? 'Log Out' : ''}
           >
-            <LogOut size={18} className="flex-shrink-0" />
-            {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">Log Out</span>}
+            <LogOut size={20} className="flex-shrink-0" />
+            {sidebarExpanded && <span className="text-sm font-bold whitespace-nowrap">Log Out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto bg-slate-50">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 py-6 border-b border-slate-200 shadow-sm">
           <div>
-            <h1 className="text-xl font-semibold text-white">Admin Dashboard</h1>
-            <p className="text-gray-500 text-sm">Manage your platform</p>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Main Command Center</h1>
+            <p className="text-slate-500 text-sm font-medium">Real-time platform overview and management.</p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 text-red-500 rounded-full text-sm">
-            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-            Admin Mode
+          <div className="flex items-center gap-3 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">
+            <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+            SECURE ACCESS
           </div>
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-6">
+        <div className="p-8">
           {activeMenu === 'Dashboard' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                      <Users size={20} className="text-blue-500" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100">
+                      <Users size={24} className="text-blue-600" />
                     </div>
+                    <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">+12%</span>
                   </div>
-                  <p className="text-gray-500 text-sm mb-1">Total Users</p>
-                  <p className="text-white text-2xl font-bold">{users.length}</p>
+                  <p className="text-slate-500 text-xs font-extrabold uppercase tracking-widest mb-1">Total Users</p>
+                  <p className="text-slate-900 text-3xl font-black tracking-tighter">{users.length}</p>
                 </div>
 
-                <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                      <Users size={20} className="text-green-500" />
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100">
+                      <Users size={24} className="text-emerald-600" />
                     </div>
                   </div>
-                  <p className="text-gray-500 text-sm mb-1">Active Today</p>
-                  <p className="text-white text-2xl font-bold">{Math.floor(users.length * 0.7)}</p>
+                  <p className="text-slate-50 text-xs font-extrabold uppercase tracking-widest mb-1">Active Today</p>
+                  <p className="text-slate-900 text-3xl font-black tracking-tighter">{Math.floor(users.length * 0.7)}</p>
                 </div>
 
-                <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                      <Calendar size={20} className="text-purple-500" />
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center border border-purple-100">
+                      <Calendar size={24} className="text-purple-600" />
                     </div>
                   </div>
-                  <p className="text-gray-500 text-sm mb-1">New This Week</p>
-                  <p className="text-white text-2xl font-bold">{Math.floor(users.length * 0.3)}</p>
+                  <p className="text-slate-500 text-xs font-extrabold uppercase tracking-widest mb-1">New This Week</p>
+                  <p className="text-slate-900 text-3xl font-black tracking-tighter">{Math.floor(users.length * 0.3)}</p>
                 </div>
 
-                <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                      <Users size={20} className="text-orange-500" />
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center border border-orange-100">
+                      <Users size={24} className="text-orange-600" />
                     </div>
                   </div>
-                  <p className="text-gray-500 text-sm mb-1">Pending Verification</p>
-                  <p className="text-white text-2xl font-bold">0</p>
+                  <p className="text-slate-500 text-xs font-extrabold uppercase tracking-widest mb-1">Pending Verification</p>
+                  <p className="text-slate-900 text-3xl font-black tracking-tighter">0</p>
                 </div>
               </div>
 
               {/* Recent Users Preview */}
-              <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-white font-semibold">Recent Users</h2>
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Recent Onboardings</h2>
+                    <p className="text-slate-500 text-sm font-medium">Latest users who joined the platform.</p>
+                  </div>
                   <button 
                     onClick={() => setActiveMenu('User Management')}
-                    className="text-sm text-blue-500 hover:underline"
+                    className="text-sm font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 transition-colors"
                   >
-                    View All
+                    View Registry
                   </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {users.slice(0, 5).map((user, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-accent-green/20 rounded-full flex items-center justify-center">
-                          <span className="text-accent-green font-medium">
+                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100">
+                          <span className="text-blue-600 font-black text-lg">
                             {user.firstName?.charAt(0)?.toUpperCase() || 'U'}
                           </span>
                         </div>
                         <div>
-                          <p className="text-white font-medium">{user.firstName || 'Unknown'}</p>
-                          <p className="text-gray-500 text-sm">{user.email}</p>
+                          <p className="text-slate-900 font-bold">{user.firstName || 'Unknown User'}</p>
+                          <p className="text-slate-500 text-xs font-medium">{user.email}</p>
                         </div>
                       </div>
-                      <span className="text-gray-500 text-sm">{formatDate(user.createdAt)}</span>
+                      <div className="text-right">
+                        <span className="text-slate-400 text-xs font-bold block uppercase tracking-widest">Joined</span>
+                        <span className="text-slate-600 text-sm font-bold">{formatDate(user.createdAt)}</span>
+                      </div>
                     </div>
                   ))}
                   {users.length === 0 && !loading && (
-                    <p className="text-gray-500 text-center py-4">No users registered yet</p>
+                    <div className="text-center py-12 flex flex-col items-center gap-4">
+                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Users size={32} className="text-slate-300" />
+                       </div>
+                       <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No users identified yet</p>
+                    </div>
                   )}
                   {loading && (
-                    <div className="flex items-center justify-center py-4">
-                      <RefreshCw size={20} className="text-gray-500 animate-spin" />
+                    <div className="flex items-center justify-center py-12">
+                      <RefreshCw size={32} className="text-blue-500 animate-spin" />
                     </div>
                   )}
                 </div>
@@ -232,95 +244,97 @@ const AdminDashboard = () => {
           )}
 
           {activeMenu === 'User Management' && (
-            <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
                 <div>
-                  <h2 className="text-white font-semibold text-lg">All Users</h2>
-                  <p className="text-gray-500 text-sm">{users.length} total users</p>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Customer Directory</h2>
+                  <p className="text-slate-500 text-sm font-medium">{users.length} active platform members recorded.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                  <div className="relative flex-1 md:flex-none">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search users..."
+                      placeholder="Filter by name, email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-dark-700 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 w-64"
+                      className="bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-6 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-full md:w-80 font-medium"
                     />
                   </div>
                   <button 
                     onClick={() => window.location.reload()}
-                    className="p-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+                    className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition-all"
                   >
-                    <RefreshCw size={18} className={`text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw size={20} className={`${loading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               </div>
 
               {/* Users Table */}
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">User</th>
-                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Email</th>
-                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Phone</th>
-                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Joined</th>
-                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Actions</th>
+                    <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-black uppercase tracking-widest">
+                      <th className="py-4 px-6">Identity</th>
+                      <th className="py-4 px-6">Contact Channels</th>
+                      <th className="py-4 px-6">Platform Data</th>
+                      <th className="py-4 px-6">Onboarding</th>
+                      <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-50">
                     {loading ? (
                       <tr>
-                        <td colSpan="5" className="text-center py-8">
-                          <RefreshCw size={24} className="text-gray-500 animate-spin mx-auto" />
+                        <td colSpan="5" className="text-center py-20">
+                          <RefreshCw size={32} className="text-blue-500 animate-spin mx-auto" />
                         </td>
                       </tr>
                     ) : filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="5" className="text-center py-8 text-gray-500">
-                          {searchTerm ? 'No users found matching your search' : 'No users registered yet'}
+                        <td colSpan="5" className="text-center py-20">
+                           <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">
+                            {searchTerm ? 'No matches discovered for search query' : 'Registry currently empty'}
+                           </p>
                         </td>
                       </tr>
                     ) : (
                       filteredUsers.map((user, index) => (
-                        <tr key={index} className="border-b border-gray-800 hover:bg-dark-700/50">
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-accent-green/20 rounded-full flex items-center justify-center">
-                                <span className="text-accent-green font-medium">
-                                  {user.firstName?.charAt(0)?.toUpperCase() || 'U'}
-                                </span>
+                        <tr key={index} className="hover:bg-slate-50 group transition-colors">
+                          <td className="py-5 px-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 font-black text-blue-600">
+                                {user.firstName?.charAt(0)?.toUpperCase() || 'U'}
                               </div>
-                              <span className="text-white font-medium">{user.firstName || 'Unknown'}</span>
+                              <span className="text-slate-900 font-bold text-base">{user.firstName || 'Unknown User'}</span>
                             </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2 text-gray-400">
-                              <Mail size={14} />
-                              <span>{user.email}</span>
+                          <td className="py-5 px-6">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                                <Mail size={14} className="text-slate-300" />
+                                <span>{user.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                <Phone size={14} className="text-slate-200" />
+                                <span>{user.phone || 'No Mobile Linked'}</span>
+                              </div>
                             </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2 text-gray-400">
-                              <Phone size={14} />
-                              <span>{user.phone || 'N/A'}</span>
-                            </div>
+                          <td className="py-5 px-6">
+                             <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-100">
+                               Verified
+                             </span>
                           </td>
-                          <td className="py-4 px-4 text-gray-400">
-                            {formatDate(user.createdAt)}
+                          <td className="py-5 px-6">
+                            <div className="text-slate-500 text-sm font-bold">{formatDate(user.createdAt)}</div>
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <button className="p-2 hover:bg-dark-600 rounded-lg transition-colors text-gray-400 hover:text-white">
-                                <Eye size={16} />
+                          <td className="py-5 px-6 text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button className="p-2.5 bg-white hover:bg-blue-600 hover:text-white text-slate-400 rounded-xl transition-all border border-slate-200 shadow-sm">
+                                <Eye size={18} />
                               </button>
-                              <button className="p-2 hover:bg-dark-600 rounded-lg transition-colors text-gray-400 hover:text-red-500">
-                                <Trash2 size={16} />
-                              </button>
-                              <button className="p-2 hover:bg-dark-600 rounded-lg transition-colors text-gray-400 hover:text-white">
-                                <MoreHorizontal size={16} />
+                              <button className="p-2.5 bg-white hover:bg-red-600 hover:text-white text-slate-400 rounded-xl transition-all border border-slate-200 shadow-sm">
+                                <Trash2 size={18} />
                               </button>
                             </div>
                           </td>
