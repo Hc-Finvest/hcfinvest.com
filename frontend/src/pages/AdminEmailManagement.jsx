@@ -22,7 +22,8 @@ const AdminEmailManagement = () => {
   const [previewHtml, setPreviewHtml] = useState('')
   const [showPreview, setShowPreview] = useState(false)
 
-  const adminToken = localStorage.getItem('adminToken')
+  const rawToken = localStorage.getItem('adminToken')
+  const adminToken = (rawToken === 'undefined' || rawToken === 'null') ? null : rawToken
 
   useEffect(() => {
     fetchTemplates()

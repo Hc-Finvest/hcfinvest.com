@@ -100,12 +100,13 @@ export const adminMiddleware = async (req, res, next) => {
     next()
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
+      console.warn('Admin middleware - JWT Error:', error.message, 'Secret used length:', getJwtSecret().length)
       return res.status(401).json({ success: false, message: 'Invalid token' })
     }
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ success: false, message: 'Token expired' })
     }
-    console.error('Admin middleware error:', error)
+    console.error('Admin middleware - Unexpected error:', error)
     res.status(500).json({ success: false, message: 'Authentication error' })
   }
 }

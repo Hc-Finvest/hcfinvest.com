@@ -67,7 +67,9 @@ const AdminLayout = ({ children, title, subtitle }) => {
 
   useEffect(() => {
     const adminToken = localStorage.getItem('adminToken')
-    if (!adminToken) {
+    // Handle both missing token and the literal string "undefined"
+    if (!adminToken || adminToken === 'undefined' || adminToken === 'null') {
+      localStorage.removeItem('adminToken') // Clear if it's the "undefined" string
       navigate('/admin')
     }
   }, [navigate])
