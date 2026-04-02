@@ -9,42 +9,26 @@ const router = express.Router();
 
 // Calculate competition status
 
-// const getCompetitionStatus = (startDate, endDate) => {
-
-//   const now = new Date();
-
-//   const start = new Date(startDate);
-//   const end = new Date(endDate);
-
-//   // Completed
-//   if (end < now) {
-//     return "completed";
-//   }
-
-//   // Upcoming
-//   if (start > now) {
-//     return "upcoming";
-//   }
-
-//   // Ongoing
-//   return "live";
-
-// };
-
 const getCompetitionStatus = (startDate, endDate) => {
+
   const now = new Date();
+
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  // 🔥 Convert to DATE ONLY (ignore time completely)
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  // Completed
+  if (end < now) {
+    return "completed";
+  }
 
-  if (endDay < today) return "completed";
-  if (startDay > today) return "upcoming";
+  // Upcoming
+  if (start > now) {
+    return "upcoming";
+  }
 
+  // Ongoing
   return "live";
+
 };
 
 // DELETE COMPETITION
@@ -116,66 +100,26 @@ router.post("/join/:competitionId", async (req, res) => {
 
 
 // GET ALL COMPETITIONS
-// router.get("/getall", async (req, res) => {
-
-//   try {
-
-//     const competitions = await Competition.find();
-
-//     res.json({
-//       success: true,
-//       data: competitions
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: "Server error"
-//     });
-
-//   }
-
-// });
-
 router.get("/getall", async (req, res) => {
+
   try {
-    // 🔥 STEP 1: Fetch all competitions
+
     const competitions = await Competition.find();
 
-    // 🔥 STEP 2: Update status using your function
-    const updatedCompetitions = await Promise.all(
-      competitions.map(async (comp) => {
-
-        const newStatus = getCompetitionStatus(
-          comp.startDate,
-          comp.endDate
-        );
-
-        // ✅ Only update if status changed
-        if (comp.competitionStatus !== newStatus) {
-          comp.competitionStatus = newStatus;
-          await comp.save();
-        }
-
-        return comp;
-      })
-    );
-
-    // 🔥 STEP 3: Return updated data
     res.json({
       success: true,
-      data: updatedCompetitions
+      data: competitions
     });
 
   } catch (error) {
-    console.error("GET ALL ERROR:", error);
 
     res.status(500).json({
       success: false,
       message: "Server error"
     });
+
   }
+
 });
   
 
@@ -375,56 +319,51 @@ router.post("/createParticipant", async (req, res) => {
   }
 });
 
-// ✅ GET TOTAL WINNINGS OF USER
-router.get("/total-winnings/:userId", async (req, res) => {
-  try {
-    const { userId } = req.params;
 
-    // 🔒 Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "Invalid userId" });
+// UPDATE COMPETITION
+router.put("/update/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = req.body;
+
+    // 🔥 Recalculate status
+    const status = getCompetitionStatus(
+      data.startDate,
+      data.endDate
+    );
+
+    const updatedCompetition = await Competition.findByIdAndUpdate(
+      id,
+      {
+        ...data,
+        competitionStatus: status
+      },
+      { new: true } // return updated data
+    );
+
+    if (!updatedCompetition) {
+      return res.status(404).json({
+        success: false,
+        message: "Competition not found"
+      });
     }
 
-    const result = await CompetitionParticipant.aggregate([
-      {
-        $match: {
-          userId: new mongoose.Types.ObjectId(userId),
-          prize: { $ne: null } // only users who actually won
-        }
-      },
-
-      // ⚠️ Convert string → number (only if prize is string in DB)
-      {
-        $addFields: {
-          prizeAmount: { $toDouble: "$prize" }
-        }
-      },
-
-      {
-        $group: {
-          _id: "$userId",
-          totalWinnings: { $sum: "$prizeAmount" }
-        }
-      }
-    ]);
-
-    const totalWinnings =
-      result.length > 0 ? result[0].totalWinnings : 0;
-
-    res.status(200).json({
+    res.json({
       success: true,
-      totalWinnings
+      message: "Competition updated successfully",
+      data: updatedCompetition
     });
 
   } catch (error) {
-    console.error("Total Winnings Error:", error);
+    console.error("UPDATE ERROR:", error);
+
     res.status(500).json({
       success: false,
-      message: "Server Error"
+      message: "Server error"
     });
   }
 });
-
 
 
 

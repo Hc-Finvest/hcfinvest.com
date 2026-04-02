@@ -21,12 +21,15 @@ export const getAdminMarkupValue = (symbol, adminSpreads) => {
   }
 
   // FIXED spread - convert from pips/cents/USD to actual price units
+  //Sanket v2.0 - Handle all asset classes: forex, JPY, metals, commodities, crypto, indices
   if (symbol.includes('JPY')) {
     return spreadValue * 0.01; // JPY pairs: 1 pip = 0.01
-  } else if (['XAUUSD', 'XAGUSD'].includes(symbol)) {
-    return spreadValue / 100; // Metals: cents to dollars
-  } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(symbol)) {
+  } else if (['XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'USOIL', 'UKOIL', 'NGAS', 'COPPER'].includes(symbol)) {
+    return spreadValue * 0.01; // Metals & commodities: cents to dollars
+  } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD', 'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD'].includes(symbol)) {
     return spreadValue; // Crypto: USD value as-is
+  } else if (['US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35'].includes(symbol)) {
+    return spreadValue; // Indices: points as-is
   } else {
     return spreadValue * 0.0001; // Standard Forex: 1 pip = 0.0001
   }

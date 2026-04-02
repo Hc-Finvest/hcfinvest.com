@@ -14,14 +14,40 @@ router.get('/spreads', async (req, res) => {
     // Build a map of symbol -> spread (respecting hierarchy)
     const spreadMap = {}
     
-    // All supported symbols - used for global/segment expansion
-    const allSymbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD']
+    //Sanket v2.0 - Complete symbol list matching all instruments in the trading UI
+    const allSymbols = [
+      // Forex majors & crosses
+      'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+      'EURGBP', 'EURJPY', 'GBPJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURNZD',
+      'AUDJPY', 'CADJPY', 'CHFJPY', 'NZDJPY',
+      'AUDNZD', 'AUDCAD', 'AUDCHF', 'CADCHF', 'NZDCAD', 'NZDCHF',
+      'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD',
+      // Metals & Commodities
+      'XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'USOIL', 'UKOIL', 'NGAS', 'COPPER',
+      // Crypto
+      'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD',
+      'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD',
+      'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD',
+      // Indices
+      'US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35'
+    ]
     
     const segmentSymbols = {
-      'Forex': ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP', 'EURJPY', 'GBPJPY'],
-      'Metals': ['XAUUSD', 'XAGUSD'],
-      'Crypto': ['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'],
-      'Indices': ['US30', 'US500', 'NAS100']
+      'Forex': [
+        'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+        'EURGBP', 'EURJPY', 'GBPJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURNZD',
+        'AUDJPY', 'CADJPY', 'CHFJPY', 'NZDJPY',
+        'AUDNZD', 'AUDCAD', 'AUDCHF', 'CADCHF', 'NZDCAD', 'NZDCHF',
+        'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD'
+      ],
+      'Metals': ['XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD'],
+      'Commodities': ['USOIL', 'UKOIL', 'NGAS', 'COPPER'],
+      'Crypto': [
+        'BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD',
+        'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD',
+        'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD'
+      ],
+      'Indices': ['US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35']
     }
     
     // Priority order: USER > INSTRUMENT > ACCOUNT_TYPE > SEGMENT > GLOBAL
@@ -32,104 +58,84 @@ router.get('/spreads', async (req, res) => {
     
     const normalizeSymbol = (s = '') => String(s).toUpperCase().replace(/\.I$/i, '')
 
-    for (const charge of sortedCharges) {
-      // 1. Specific USER + INSTRUMENT (Highest priority)
-      if (charge.level === 'USER' && charge.instrumentSymbol && userId && charge.userId?.toString() === userId) {
-        const normSymbol = normalizeSymbol(charge.instrumentSymbol)
+    // Create a helper to apply a charge to a symbol
+    const applyChargeToSymbol = (sym, charge) => {
+      const normSymbol = normalizeSymbol(sym)
+      if (!spreadMap[normSymbol]) {
         spreadMap[normSymbol] = {
-          spread: charge.spreadValue,
-          spreadType: charge.spreadType,
-          commission: charge.commissionValue,
-          commissionType: charge.commissionType,
-          swapLong: charge.swapLong,
-          swapShort: charge.swapShort,
-          level: 'USER'
+          spread: 0, spreadType: 'FIXED', 
+          commission: 0, commissionType: 'PER_LOT', 
+          swapLong: 0, swapShort: 0, 
+          level: 'GLOBAL',
+          _levels: { spread: 6, commission: 6, swap: 6 } // Track applied priority (1=highest)
         }
       }
-      // 2. USER level (applies to all symbols for this user)
-      else if (charge.level === 'USER' && !charge.instrumentSymbol && userId && charge.userId?.toString() === userId) {
-        for (const symbol of allSymbols) {
-          const normSymbol = normalizeSymbol(symbol)
-          spreadMap[normSymbol] = {
-            spread: charge.spreadValue,
-            spreadType: charge.spreadType,
-            commission: charge.commissionValue,
-            commissionType: charge.commissionType,
-            swapLong: charge.swapLong,
-            swapShort: charge.swapShort,
-            level: 'USER'
-          }
+      
+      const chargePriority = priorityOrder[charge.level]
+      const target = spreadMap[normSymbol]
+      
+      // Spread
+      if (charge.spreadValue !== undefined && charge.spreadValue !== null) {
+        const isHigherPriority = chargePriority < target._levels.spread
+        const isFillingEmpty = chargePriority === target._levels.spread && charge.spreadValue !== 0
+        if (isHigherPriority || isFillingEmpty) {
+          target.spread = charge.spreadValue
+          target.spreadType = charge.spreadType || 'FIXED'
+          target._levels.spread = chargePriority
         }
       }
-      // 3. INSTRUMENT level
+      
+      // Commission
+      if (charge.commissionValue !== undefined && charge.commissionValue !== null) {
+        const isHigherPriority = chargePriority < target._levels.commission
+        const isFillingEmpty = chargePriority === target._levels.commission && charge.commissionValue !== 0
+        if (isHigherPriority || isFillingEmpty) {
+          target.commission = charge.commissionValue
+          target.commissionType = charge.commissionType || 'PER_LOT'
+          target._levels.commission = chargePriority
+        }
+      }
+      
+      // Swap
+      if ((charge.swapLong !== undefined && charge.swapLong !== null) || (charge.swapShort !== undefined && charge.swapShort !== null)) {
+        const hasValue = (charge.swapLong || 0) !== 0 || (charge.swapShort || 0) !== 0
+        const isHigherPriority = chargePriority < target._levels.swap
+        const isFillingEmpty = chargePriority === target._levels.swap && hasValue
+        if (isHigherPriority || isFillingEmpty) {
+          target.swapLong = charge.swapLong || 0
+          target.swapShort = charge.swapShort || 0
+          target._levels.swap = chargePriority
+        }
+      }
+      
+      // Update displaying level (lowest number = highest priority)
+      const minPriority = Math.min(target._levels.spread, target._levels.commission, target._levels.swap)
+      target.level = Object.keys(priorityOrder).find(k => priorityOrder[k] === minPriority) || 'GLOBAL'
+    }
+
+    for (const charge of sortedCharges) {
+      if (charge.level === 'USER' && userId && charge.userId?.toString() === userId) {
+        if (charge.instrumentSymbol) applyChargeToSymbol(charge.instrumentSymbol, charge)
+        else allSymbols.forEach(sym => applyChargeToSymbol(sym, charge))
+      }
       else if (charge.level === 'INSTRUMENT' && charge.instrumentSymbol) {
-        const normSymbol = normalizeSymbol(charge.instrumentSymbol)
-        if (!spreadMap[normSymbol] || priorityOrder['INSTRUMENT'] <= priorityOrder[spreadMap[normSymbol].level]) {
-          spreadMap[normSymbol] = {
-            spread: charge.spreadValue,
-            spreadType: charge.spreadType,
-            commission: charge.commissionValue,
-            commissionType: charge.commissionType,
-            swapLong: charge.swapLong,
-            swapShort: charge.swapShort,
-            level: 'INSTRUMENT'
-          }
-        }
+        applyChargeToSymbol(charge.instrumentSymbol, charge)
       }
-      // 4. ACCOUNT_TYPE level
       else if (charge.level === 'ACCOUNT_TYPE' && accountTypeId && charge.accountTypeId?.toString() === accountTypeId) {
         const symbols = charge.segment ? (segmentSymbols[charge.segment] || []) : allSymbols
-        for (const symbol of symbols) {
-          const normSymbol = normalizeSymbol(symbol)
-          if (!spreadMap[normSymbol] || priorityOrder['ACCOUNT_TYPE'] <= priorityOrder[spreadMap[normSymbol].level]) {
-            spreadMap[normSymbol] = {
-              spread: charge.spreadValue,
-              spreadType: charge.spreadType,
-              commission: charge.commissionValue,
-              commissionType: charge.commissionType,
-              swapLong: charge.swapLong,
-              swapShort: charge.swapShort,
-              level: 'ACCOUNT_TYPE'
-            }
-          }
-        }
+        symbols.forEach(sym => applyChargeToSymbol(sym, charge))
       }
-      // 5. SEGMENT level
       else if (charge.level === 'SEGMENT' && charge.segment) {
         const symbols = segmentSymbols[charge.segment] || []
-        for (const symbol of symbols) {
-          const normSymbol = normalizeSymbol(symbol)
-          if (!spreadMap[normSymbol] || priorityOrder['SEGMENT'] <= priorityOrder[spreadMap[normSymbol].level]) {
-            spreadMap[normSymbol] = {
-              spread: charge.spreadValue,
-              spreadType: charge.spreadType,
-              commission: charge.commissionValue,
-              commissionType: charge.commissionType,
-              swapLong: charge.swapLong,
-              swapShort: charge.swapShort,
-              level: 'SEGMENT'
-            }
-          }
-        }
+        symbols.forEach(sym => applyChargeToSymbol(sym, charge))
       }
-      // 6. GLOBAL level
       else if (charge.level === 'GLOBAL') {
-        for (const symbol of allSymbols) {
-          const normSymbol = normalizeSymbol(symbol)
-          if (!spreadMap[normSymbol] || priorityOrder['GLOBAL'] <= priorityOrder[spreadMap[normSymbol].level]) {
-            spreadMap[normSymbol] = {
-              spread: charge.spreadValue,
-              spreadType: charge.spreadType,
-              commission: charge.commissionValue,
-              commissionType: charge.commissionType,
-              swapLong: charge.swapLong,
-              swapShort: charge.swapShort,
-              level: 'GLOBAL'
-            }
-          }
-        }
+        allSymbols.forEach(sym => applyChargeToSymbol(sym, charge))
       }
     }
+    
+    // Clean up internal tracking fields
+    Object.keys(spreadMap).forEach(key => delete spreadMap[key]._levels)
     
     res.json({ success: true, spreads: spreadMap })
   } catch (error) {

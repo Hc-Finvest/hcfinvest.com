@@ -9,7 +9,6 @@ import copyTradingEngine from '../services/copyTradingEngine.js'
 import ibEngine from '../services/ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
 import redisClient from '../services/redisClient.js'
-import alltickApiService from '../services/alltickApiService.js'
 import { isMarketOpen, isPriceFresh } from '../utils/marketHours.js'
 
 const router = express.Router()
@@ -59,16 +58,16 @@ router.post('/open', async (req, res) => {
       })
     }
 
-    // ≡ƒ¢í∩╕Å Price Freshness Guard (60s Rule)
+    // Price Freshness Guard (60s Rule)
     try {
-      // Use centralized service for robust lookup (Redis + Memory fallback)
-      const cachedPrice = await alltickApiService.getLivePrice(symbol);
-      
-      if (cachedPrice) {
+      //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase().replace(/\.I$/i, ''));
+      if (priceStr) {
+        const cachedPrice = JSON.parse(priceStr);
         // Relaxed to 300s (5 minutes) for opening trades
-        const priceTime = cachedPrice.timestamp || cachedPrice.time;
-        if (!isPriceFresh(priceTime, 300)) {
-          console.warn(`[Trade Route] Stale price detected for ${symbol}: ${priceTime}`);
+        //Sanket v2.0 - Use receivedAt (server receive time) for freshness, fallback to exchange timestamp
+        if (!isPriceFresh(cachedPrice.receivedAt || cachedPrice.timestamp || cachedPrice.time, 300)) {
+          console.warn(`[Trade Route] Stale price detected for ${symbol}: ${cachedPrice.time}`);
           return res.status(400).json({
             success: false,
             message: 'Market data is stale or delayed. Please wait for a live price update.',
@@ -76,16 +75,15 @@ router.post('/open', async (req, res) => {
           });
         }
       } else {
-        // No price found even with memory fallback
+        // No price in Redis at all
         return res.status(400).json({
           success: false,
-          message: 'Market data not yet available for this instrument. Please wait a few seconds.',
+          message: 'Market data not yet available for this instrument.',
           code: 'NO_DATA_FEED'
         });
       }
-    } catch (err) {
-      console.error('[Trade Route] Price guard error:', err);
-      // Non-blocking for now, follow with bid/ask validation below
+    } catch (redisErr) {
+      console.error('[Trade Route] Redis price check error:', redisErr);
     }
 
     // Check for stale prices (if bid equals ask exactly, likely no real data)
@@ -119,20 +117,22 @@ router.post('/open', async (req, res) => {
     let rawBidVal = null
     let rawAskVal = null
 
-    // ≡ƒ¢í∩╕Å Fetch server-side source of truth
+    // Fetch server-side source of truth from Redis
     try {
-      const cachedPrice = await alltickApiService.getLivePrice(symbol);
-      if (cachedPrice) {
-        // Prioritize raw values from cache for backend math
+      //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+      const priceStr = await redisClient.hget('live_prices', symbol.toUpperCase().replace(/\.I$/i, ''));
+      if (priceStr) {
+        const cachedPrice = JSON.parse(priceStr);
+        // Prioritize raw values from Redis for backend math
         rawBidVal = cachedPrice.rawBid || cachedPrice.bid;
         rawAskVal = cachedPrice.rawAsk || cachedPrice.ask;
         
-        // Use authoritative execution price to prevent frontend manipulation
+        // Use Redis prices as the authoritative execution price to prevent frontend manipulation
         serverSafeBid = rawBidVal;
         serverSafeAsk = rawAskVal;
       }
     } catch (err) {
-      console.warn(`[Trade Route] Non-critical: Failed to sync with price source for ${symbol}`);
+      console.warn(`[Trade Route] Non-critical: Failed to sync with Redis price source for ${symbol}`);
     }
 
     // Check if this is a challenge account first
@@ -246,7 +246,7 @@ router.post('/open', async (req, res) => {
 // POST /api/trade/close - Close a trade
 router.post('/close', async (req, res) => {
   try {
-    const { tradeId, bid, ask } = req.body
+    const { tradeId, bid, ask, quantity } = req.body
 
     if (!tradeId) {
       return res.status(400).json({ 
@@ -268,10 +268,12 @@ router.post('/close', async (req, res) => {
     try {
       const tradeObj = await Trade.findById(tradeId);
       if (tradeObj) {
-        const cachedPrice = await alltickApiService.getLivePrice(tradeObj.symbol);
-        if (cachedPrice) {
-          // Check both .timestamp and .time for compatibility
-          if (!isPriceFresh(cachedPrice.timestamp || cachedPrice.time, 600)) { // Relaxed 600s for closing
+        //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+        const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase().replace(/\.I$/i, ''));
+        if (priceStr) {
+          const cachedPrice = JSON.parse(priceStr);
+          //Sanket v2.0 - Use receivedAt (server receive time) for freshness, fallback to exchange timestamp
+          if (!isPriceFresh(cachedPrice.receivedAt || cachedPrice.timestamp || cachedPrice.time, 600)) { // Relaxed 600s for closing
             console.warn(`[Trade Route] Stale price detected on CLOSE for ${tradeObj.symbol}: ${cachedPrice.time}`);
             return res.status(400).json({
               success: false,
@@ -298,10 +300,12 @@ router.post('/close', async (req, res) => {
     let serverRawBid = null
     let serverRawAsk = null
 
-    // Fetch server-side source of truth from Redis (via alltickApiService to support memory fallback)
+    // Fetch server-side source of truth from Redis
     try {
-      const cachedPrice = await alltickApiService.getLivePrice(tradeObj.symbol);
-      if (cachedPrice) {
+      //Sanket v2.0 - Strip .i suffix for consistent Redis key lookup
+      const priceStr = await redisClient.hget('live_prices', tradeObj.symbol.toUpperCase().replace(/\.I$/i, ''));
+      if (priceStr) {
+        const cachedPrice = JSON.parse(priceStr);
         // Prioritize high-precision raw values from Redis for closing
         serverRawBid = cachedPrice.rawBid || cachedPrice.bid;
         serverRawAsk = cachedPrice.rawAsk || cachedPrice.ask;
@@ -316,41 +320,24 @@ router.post('/close', async (req, res) => {
     const challengeAccount = await ChallengeAccount.findById(tradeObj.tradingAccountId)
     
     if (challengeAccount) {
-      // Close trade for challenge account
-      // Use refined server prices for closing
-      const closePrice = tradeObj.side === 'BUY' ? serverBid : serverAsk
-      const pnl = tradeObj.side === 'BUY'
-        ? (closePrice - tradeObj.openPrice) * tradeObj.quantity * tradeObj.contractSize
-        : (tradeObj.openPrice - closePrice) * tradeObj.quantity * tradeObj.contractSize
+      const result = await propTradingEngine.closeTrade(tradeId, serverBid, serverAsk, 'USER', null, serverRawBid, serverRawAsk, quantity)
       
-      // Update trade
-      tradeObj.status = 'CLOSED'
-      tradeObj.closePrice = closePrice
-      tradeObj.closedAt = new Date()
-      tradeObj.realizedPnl = pnl
-      tradeObj.closeReason = 'USER'
-      await tradeObj.save()
-      
-      // Update challenge account
-      await propTradingEngine.onTradeClosed(challengeAccount._id, tradeObj, pnl)
-      
-      // Emit WebSocket event
       const io = req.app.get('io');
       if (io) {
-        io.to(`account:${challengeAccount._id}`).emit('tradeClosed', tradeObj);
+        io.to(`account:${challengeAccount._id}`).emit('tradeClosed', result.trade);
       }
 
       return res.json({
         success: true,
         message: 'Challenge trade closed successfully',
-        trade: tradeObj,
-        realizedPnl: pnl,
+        trade: result.trade,
+        realizedPnl: result.realizedPnl,
         isChallengeAccount: true
       })
     }
 
     // Regular trading account
-    const result = await tradeEngine.closeTrade(tradeId, serverBid, serverAsk, 'USER', null, serverRawBid, serverRawAsk)
+    const result = await tradeEngine.closeTrade(tradeId, serverBid, serverAsk, 'USER', null, serverRawBid, serverRawAsk, quantity)
 
     // Note: Copy trading close is now handled inside tradeEngine.closeTrade()
     // This ensures SL/TP triggered closes also propagate to followers
@@ -741,7 +728,8 @@ router.post('/summary/:tradingAccountId', async (req, res) => {
         usedMargin: Math.round(usedMargin * 100) / 100,
         freeMargin: Math.round(freeMargin * 100) / 100,
         floatingPnl: Math.round(floatingPnl * 100) / 100,
-        marginLevel: Math.round(marginLevel * 100) / 100
+        marginLevel: Math.round(marginLevel * 100) / 100,
+        killSwitchUntil: account.killSwitchUntil
       },
       openTradesCount: openTrades.length
     })
@@ -753,6 +741,53 @@ router.post('/summary/:tradingAccountId', async (req, res) => {
     })
   }
 })
+
+// POST /api/trade/kill-switch - Activate kill switch (Next Day or Custom Time)
+router.post('/kill-switch', async (req, res) => {
+  try {
+    const { tradingAccountId, unlockTimestamp, durationType } = req.body;
+
+    if (!tradingAccountId) {
+      return res.status(400).json({ success: false, message: 'Trading account ID required' });
+    }
+
+    const account = await TradingAccount.findById(tradingAccountId);
+    if (!account) {
+      return res.status(404).json({ success: false, message: 'Trading account not found' });
+    }
+
+    let killSwitchUntil = null;
+
+    if (durationType === 'nextDay') {
+      // Direct start on next day (calculating exactly midnight server time/UTC)
+      const tomorrow = new Date();
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      tomorrow.setUTCHours(0, 0, 0, 0);
+      killSwitchUntil = tomorrow;
+    } else if (unlockTimestamp) {
+      // Safely parse the user-provided custom ISO timestamp
+      killSwitchUntil = new Date(unlockTimestamp);
+      if (isNaN(killSwitchUntil.getTime()) || killSwitchUntil <= new Date()) {
+        return res.status(400).json({ success: false, message: 'Invalid or past custom unlock time.' });
+      }
+    } else {
+      // Disabling kill switch explicitly
+      killSwitchUntil = null;
+    }
+
+    account.killSwitchUntil = killSwitchUntil;
+    await account.save();
+
+    res.json({
+      success: true,
+      killSwitchUntil,
+      message: killSwitchUntil ? `Kill Switch active until ${killSwitchUntil.toLocaleString()}` : 'Kill Switch deactivated'
+    });
+  } catch (error) {
+    console.error('Error activating kill switch:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // POST /api/trade/check-stopout - Check and execute stop out if needed
 router.post('/check-stopout', async (req, res) => {

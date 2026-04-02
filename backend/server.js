@@ -246,7 +246,8 @@ slTpCheckInterval = setInterval(async () => {
       });
     }
   } catch (err) {
-    // console.error('[TradeEngine] Auto SL/TP Check Error:', err.message);
+    //Sanket v2.0 - Re-enabled error logging for SL/TP debugging
+    console.error('[TradeEngine] Auto SL/TP Check Error:', err.message);
   }
 }, 1000);
 

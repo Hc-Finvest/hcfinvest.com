@@ -4,6 +4,7 @@ import User from '../models/User.js'
 import Admin from '../models/Admin.js'
 import EmailOTP from '../models/EmailOTP.js'
 import emailService from '../services/emailService.js'
+import crypto from 'crypto'
 
 const router = express.Router()
 
@@ -469,53 +470,165 @@ router.get('/user/:userId', async (req, res) => {
 })
 
 // POST /api/auth/forgot-password - Request password reset (admin will send new password)
+// router.post('/forgot-password', async (req, res) => {
+//   try {
+//     const { email, newEmail } = req.body
+
+//     if (!email) {
+//       return res.status(400).json({ success: false, message: 'Email is required' })
+//     }
+
+//     // Find user by email
+//     const user = await User.findOne({ email })
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: 'No account found with this email' })
+//     }
+
+//     // Create password reset request
+//     const PasswordResetRequest = (await import('../models/PasswordResetRequest.js')).default
+    
+//     // Check if there's already a pending request
+//     const existingRequest = await PasswordResetRequest.findOne({ 
+//       userId: user._id, 
+//       status: 'Pending' 
+//     })
+    
+//     if (existingRequest) {
+//       return res.status(400).json({ 
+//         success: false, 
+//         message: 'You already have a pending password reset request. Please wait for admin to process it.' 
+//       })
+//     }
+
+//     // Create new request
+//     await PasswordResetRequest.create({
+//       userId: user._id,
+//       email: user.email,
+//       newEmail: newEmail || null,
+//       status: 'Pending'
+//     })
+
+//     console.log(`[Password Reset Request] User: ${user.email}, New Email: ${newEmail || 'N/A'}`)
+
+//     res.json({ 
+//       success: true, 
+//       message: 'Password reset request submitted. Admin will send a new password to your email.' 
+//     })
+//   } catch (error) {
+//     console.error('Forgot password error:', error)
+//     res.status(500).json({ success: false, message: 'Error submitting request', error: error.message })
+//   }
+// })
+
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email, newEmail } = req.body
+    const { email } = req.body
 
     if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' })
-    }
-
-    // Find user by email
-    const user = await User.findOne({ email })
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'No account found with this email' })
-    }
-
-    // Create password reset request
-    const PasswordResetRequest = (await import('../models/PasswordResetRequest.js')).default
-    
-    // Check if there's already a pending request
-    const existingRequest = await PasswordResetRequest.findOne({ 
-      userId: user._id, 
-      status: 'Pending' 
-    })
-    
-    if (existingRequest) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You already have a pending password reset request. Please wait for admin to process it.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       })
     }
 
-    // Create new request
-    await PasswordResetRequest.create({
-      userId: user._id,
-      email: user.email,
-      newEmail: newEmail || null,
-      status: 'Pending'
+    const user = await User.findOne({ email })
+
+    // Security: always return success
+    if (!user) {
+      return res.json({ success: true })
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex')
+
+    // Hash token before saving
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex')
+
+    // Save token + expiry
+    user.resetPasswordToken = hashedToken
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000 // 1 hour
+    await user.save()
+
+    // Create reset URL
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`
+
+    // Send email (YOU ALREADY HAVE THIS FUNCTION)
+      try {
+        await emailService.sendPasswordResetEmail(
+          user.email,
+          resetToken,
+          resetUrl
+        )
+        console.log('Reset email sent')
+      } catch (emailError) {
+        console.error('Email failed:', emailError.message)
+      }
+
+    res.json({
+      success: true,
+      message: 'Password reset link sent to your email'
     })
 
-    console.log(`[Password Reset Request] User: ${user.email}, New Email: ${newEmail || 'N/A'}`)
-
-    res.json({ 
-      success: true, 
-      message: 'Password reset request submitted. Admin will send a new password to your email.' 
-    })
   } catch (error) {
     console.error('Forgot password error:', error)
-    res.status(500).json({ success: false, message: 'Error submitting request', error: error.message })
+    res.status(500).json({
+      success: false,
+      message: 'Error sending reset link'
+    })
+  }
+})
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and password are required'
+      })
+    }
+
+    // Hash token
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex')
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    })
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    // Update password
+    user.password = password
+    user.resetPasswordToken = undefined
+    user.resetPasswordExpires = undefined
+    user.passwordChangedAt = new Date()
+
+    await user.save()
+
+    res.json({
+      success: true,
+      message: 'Password reset successful'
+    })
+
+  } catch (error) {
+    console.error('Reset password error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password'
+    })
   }
 })
 

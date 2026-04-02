@@ -142,16 +142,13 @@ const Footer = () => {
             PLATFORMS
           </Typography>
           {[
-            { name: "MetaTrader 5 For PC", path: "/metaTrade5forPc" },
-            {
-              name: "MetaTrader 5 For Mobile(Android/IOS)",
-              path: "/metaTrade5Android",
-            },
+            { name: "Web Terminal", path: "https://trade.hcfinvest.com/user/login" },
           ].map(({ name, path }) => (
             <Typography key={name} sx={{ mb: 1 }}>
               <Link
                 href={path}
                 underline="none"
+                target="_blank"
                 sx={{
                   color: "#333",
                   fontSize: "15px",

@@ -8,7 +8,7 @@ import {
   Plus, Minus, Settings, RefreshCw, ChevronDown, Bell, User,
   ArrowDownCircle, ArrowUpCircle, Check, Pencil, Trash2
 } from 'lucide-react'
-import priceStreamService, { getPriceEvents } from '../services/priceStream'
+import priceStreamService from '../services/priceStream'
 import marketDataApiService from '../services/marketDataApi'
 
 const MobileTradingApp = () => {
@@ -96,16 +96,16 @@ const MobileTradingApp = () => {
 
   // Same instruments as TradingPage
   const defaultInstruments = [
-    { symbol: 'EURUSD.i', name: 'EUR/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
-    { symbol: 'GBPUSD.i', name: 'GBP/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
-    { symbol: 'USDJPY.i', name: 'USD/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCHF.i', name: 'USD/CHF', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDUSD.i', name: 'AUD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDUSD.i', name: 'NZD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCAD.i', name: 'USD/CAD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'EURGBP.i', name: 'EUR/GBP', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'EURJPY.i', name: 'EUR/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPJPY.i', name: 'GBP/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'EURUSD', name: 'EUR/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
+    { symbol: 'GBPUSD', name: 'GBP/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: true },
+    { symbol: 'USDJPY', name: 'USD/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCHF', name: 'USD/CHF', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDUSD', name: 'AUD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDUSD', name: 'NZD/USD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCAD', name: 'USD/CAD', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'EURGBP', name: 'EUR/GBP', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'EURJPY', name: 'EUR/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPJPY', name: 'GBP/JPY', bid: 0, ask: 0, spread: 0, category: 'Forex', starred: false },
     { symbol: 'XAUUSD', name: 'Gold', bid: 0, ask: 0, spread: 0, category: 'Metals', starred: true },
     { symbol: 'XAGUSD', name: 'Silver', bid: 0, ask: 0, spread: 0, category: 'Metals', starred: false },
     { symbol: 'BTCUSD', name: 'Bitcoin', bid: 0, ask: 0, spread: 0, category: 'Crypto', starred: true },
@@ -169,10 +169,10 @@ const MobileTradingApp = () => {
     }
   }, [selectedAccount])
 
-  // All symbols for price fetching
+  //Sanket v2.0 - All symbols without .i suffix for consistent price lookup
   const allSymbols = [
-    'EURUSD.i', 'GBPUSD.i', 'USDJPY.i', 'USDCHF.i', 'AUDUSD.i', 'NZDUSD.i', 'USDCAD.i',
-    'EURGBP.i', 'EURJPY.i', 'GBPJPY.i', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD',
+    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+    'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD',
     'BNBUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD',
     'LTCUSD', 'AVAXUSD', 'LINKUSD'
   ]

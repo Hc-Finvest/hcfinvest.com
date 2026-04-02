@@ -250,8 +250,17 @@ class PriceNormalizer {
    */
   getPipValue(symbol, lotSize = 1) {
     const config = this.getConfig(symbol)
-    // Standard lot = 100,000 units for forex
-    const contractSize = symbol.includes('JPY') ? 100000 : 100000
+    //Sanket v2.0 - Use correct contract sizes per asset class instead of hardcoded 100000
+    const upperSymbol = String(symbol).toUpperCase()
+    let contractSize = 100000 // default forex
+    if (upperSymbol === 'XAUUSD') contractSize = 100          // 100 troy oz
+    else if (upperSymbol === 'XAGUSD') contractSize = 5000    // 5000 troy oz
+    else if (upperSymbol === 'XPTUSD' || upperSymbol === 'XPDUSD') contractSize = 100
+    else if (upperSymbol === 'USOIL' || upperSymbol === 'UKOIL') contractSize = 1000 // 1000 barrels
+    else if (upperSymbol === 'NGAS') contractSize = 10000
+    else if (upperSymbol === 'COPPER') contractSize = 25000
+    else if (['BTCUSD','ETHUSD','LTCUSD','XRPUSD','BNBUSD','SOLUSD','ADAUSD','DOGEUSD','DOTUSD','MATICUSD','AVAXUSD','LINKUSD','UNIUSD','ATOMUSD','XLMUSD','TRXUSD','ETCUSD','NEARUSD','ALGOUSD'].includes(upperSymbol)) contractSize = 1 // crypto = 1 unit per lot
+    else if (['US30','US500','US100','UK100','GER40','FRA40','JP225','HK50','AUS200'].includes(upperSymbol)) contractSize = 1 // indices = 1 contract
     return config.pipSize * contractSize * lotSize
   }
 }

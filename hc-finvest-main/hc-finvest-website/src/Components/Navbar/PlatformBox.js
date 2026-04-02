@@ -5,8 +5,8 @@ const PlatformBox = () => {
       <Box
         sx={{
           width: { xs: "100%", sm: "90%", md: "310px" }, // fluid width for all devices
-          maxWidth: "310px", // max width for larger screens
-          p: 2,
+          maxWidth: "290px", // max width for larger screens
+          p: 1,
           backgroundColor: "#f9f9f9",
           borderRadius: "20px",
           textAlign: "left",
@@ -14,11 +14,7 @@ const PlatformBox = () => {
         }}
       >
         {[
-          { label: "MetaTrader 5 for PC", href: "metaTrade5forPc" },
-          {
-            label: "MetaTrader 5 for Mobile (Android/IOS)",
-            href: "metaTrade5Android",
-          },
+          { label: "Web Terminal", href: "https://trade.hcfinvest.com/user/login" },
         ].map((item, index) => (
           <Typography
             key={index}
@@ -33,17 +29,19 @@ const PlatformBox = () => {
               },
             }}
           >
-            <Link
-              underline="none"
-              style={{
-                textDecoration: "none", // remove underline
-                color: "black", // inherit black color
-                cursor: "pointer",
-              }}
-              href={item.href}
-            >
-              {item.label}
-            </Link>
+          <Link
+            underline="none"
+            href={item.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              textDecoration: "none",
+              color: "black",
+              cursor: "pointer",
+            }}
+          >
+            {item.label}
+          </Link>
           </Typography>
         ))}
       </Box>

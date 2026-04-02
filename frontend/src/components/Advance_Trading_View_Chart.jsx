@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Datafeed from "../services/datafeed.js";
-import { getPriceEvents } from '../services/priceStream';
+import { getPriceEvents } from '../services/eventSystem';
 import { TradeLineManager } from "../utils/TradeLineManager.js";
 import { useInterpolation } from "../hooks/useInterpolation";
 import { API_URL } from "../config/api";
@@ -21,7 +21,8 @@ const Advance_Trading_View_Chart = ({
   onTradeModify, 
   isDarkMode = false, 
   onSymbolChange, 
-  adminSpreads = {} 
+  adminSpreads = {},
+  selectedSide = 'MID'
 }) => {
   const normalizedSymbol = normalizeSymbol(symbol);
   
@@ -32,26 +33,34 @@ const Advance_Trading_View_Chart = ({
   const isInitializingRef = useRef(false);
   const lastSetSymbolRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  //Sanket v2.0 - Refs that always hold the latest trades/symbol props without stale closure.
+  // The onChartReady useEffect has empty deps [] so its inner setTimeout captures stale values
+  // from mount time (trades=[], symbol='XAUUSD'). If trades arrive after mount but before the
+  // chart finishes initializing, the 600ms timeout fires with empty trades and no lines draw.
+  // Refs update on every render synchronously — no stale-closure risk.
+  const tradesRef = useRef(trades);
+  tradesRef.current = trades;
+  const symbolRef = useRef(symbol);
+  symbolRef.current = symbol;
+  // Gate: prevents useEffect([trades, symbol, isChartReady]) from syncing before the initial
+  // 600ms TV-settle delay completes. Without this gate, the effect fires immediately on
+  // isChartReady transition (TV still mid-load after widget.load()) and createShape returns null.
+  const initialSyncDoneRef = useRef(false);
   
   const [isChartReady, setIsChartReady] = useState(false);
   const chartReadyRef = useRef(false);
   const [targetPrice, setTargetPrice] = useState(0);
-  const currentPriceRef = useRef(null);
 
   // ─── SMOOTH INTERPOLATION ──────────────────────────────────────────────────
   const displayPrice = useInterpolation(targetPrice, 0.2);
 
-  // Sync interpolated price to manager and datafeed for smooth updates
+  // Sync interpolated price to manager for smooth SL/TP/PnL label updates
   useEffect(() => {
-    if (isChartReady) {
-      // 1. Update order lines/PnL labels via manager
-      if (managerRef.current) {
-        managerRef.current.updateLivePrice(symbol, displayPrice);
-      }
-      // 2. Inject smooth price into TradingView candle updates
-      // Using mid-price for candles to keep display consistent with standard charts
-      const mid = typeof displayPrice === 'object' ? (displayPrice.bid + displayPrice.ask) / 2 : displayPrice;
-      Datafeed.updateInterpolatedTick?.(symbol, mid);
+    if (isChartReady && managerRef.current) {
+      //Sanket v2.0 - Only use interpolated price for trade line labels, NOT for TV candle updates.
+      // Pushing candles at 60fps via requestAnimationFrame overwhelms TV's bar queue and freezes the chart.
+      // TV candles are driven exclusively by real tick data via handlePriceUpdate in datafeed.js.
+      managerRef.current.updateLivePrice(symbol, displayPrice);
     }
   }, [displayPrice, symbol, isChartReady]);
 
@@ -73,12 +82,32 @@ const Advance_Trading_View_Chart = ({
 
     try {
       widgetRef.current.save((layoutJson) => {
+        //Sanket v2.0 - Strip 'sources' (price line shapes) from saved layout.
+        // Managed SL/TP/entry shapes have dynamic TV IDs that become stale on next session.
+        // Loading stale shape IDs causes TV schema errors and "Can't find source" floods.
+        // Trade lines are always re-created fresh by TradeLineManager on chart ready.
+        try {
+          if (layoutJson?.charts) {
+            layoutJson.charts.forEach(chart => {
+              if (chart.panes) {
+                chart.panes.forEach(pane => {
+                  if (pane.sources) {
+                    pane.sources = pane.sources.filter(s =>
+                      s.type !== 'HorzLine' && s.type !== 'PriceLine'
+                    );
+                  }
+                });
+              }
+            });
+          }
+        } catch (e) {}
+
         fetch(`${API_URL}/chart/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId,
-            symbol: 'GLOBAL', // Save to a global layout for full sync
+            symbol: 'GLOBAL',
             layoutJson
           })
         }).then(res => res.json())
@@ -89,7 +118,7 @@ const Advance_Trading_View_Chart = ({
       });
     } catch (err) {
     }
-  }, []);
+  }, [symbol]);
 
   const debouncedSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -105,7 +134,27 @@ const Advance_Trading_View_Chart = ({
       const data = await res.json();
       
       if (data.success && data.layoutJson) {
-        widget.load(data.layoutJson);
+        //Sanket v2.0 - Strip stale price line sources from saved layout before loading.
+        // Old sessions may have baked-in HorzLine/PriceLine shapes with dead IDs → schema errors on load.
+        try {
+          const layout = data.layoutJson;
+          if (layout?.charts) {
+            layout.charts.forEach(chart => {
+              if (chart.panes) {
+                chart.panes.forEach(pane => {
+                  if (pane.sources) {
+                    pane.sources = pane.sources.filter(s =>
+                      s.type !== 'HorzLine' && s.type !== 'PriceLine'
+                    );
+                  }
+                });
+              }
+            });
+          }
+          widget.load(layout);
+        } catch (e) {
+          widget.load(data.layoutJson);
+        }
       } else {
       }
     } catch (err) {
@@ -194,7 +243,20 @@ const Advance_Trading_View_Chart = ({
           (...args) => onTradeModify?.(...args)
         );
         managerRef.current.initialize(widget);
-        managerRef.current.syncTrades(trades, symbol);
+        //Sanket v2.0 - Delay initial syncTrades by 600ms. widget.load() causes TV to internally
+        // re-process the chart layout. createShape called during this window returns null because
+        // TV is still applying the layout state. The 600ms delay lets TV finish before we create
+        // any managed shapes.
+        // IMPORTANT: Read from tradesRef/symbolRef (not stale closure). The onChartReady callback
+        // is inside useEffect([]) so trades/symbol captured here are the MOUNT-TIME values (empty
+        // array). tradesRef.current is updated every render — always holds the latest trades.
+        initialSyncDoneRef.current = false;
+        setTimeout(() => {
+          if (managerRef.current) {
+            managerRef.current.syncTrades(tradesRef.current, symbolRef.current);
+            initialSyncDoneRef.current = true; // Unlock subsequent useEffect syncs
+          }
+        }, 600);
 
         isInitializingRef.current = false;
       });
@@ -249,32 +311,32 @@ const Advance_Trading_View_Chart = ({
       widgetRef.current.setSymbol(normalizedSymbol, widgetRef.current.activeChart().resolution(), () => {
         lastSetSymbolRef.current = normalizedSymbol;
         if (managerRef.current) {
-          managerRef.current.syncTrades(trades, symbol);
+          managerRef.current.syncTrades(trades, symbol, true); // force sync to clear fossils
         }
       });
     }
   }, [normalizedSymbol, isChartReady, trades, symbol]);
 
   // ─── Sync trades ──────────────────────────────────────────────────────────
+  // Sanket v2.0 - Added isChartReady as dep so this fires when chart becomes ready with
+  // already-loaded trades (handles the race where trades arrive before onChartReady fires).
+  // initialSyncDoneRef gate prevents premature sync before the 600ms TV-settle delay completes.
   useEffect(() => {
-    if (managerRef.current) {
-      managerRef.current.syncTrades(trades, symbol);
-    }
-  }, [trades, symbol]);
-
-  useEffect(() => {
-    if (managerRef.current) {
-      managerRef.current.setAdminSpreads(adminSpreads);
-      managerRef.current.syncTrades(trades, symbol);
-    }
-  }, [adminSpreads, trades, symbol]);
+    if (!managerRef.current || !isChartReady) return;
+    managerRef.current.setAdminSpreads(adminSpreads);
+    Datafeed.setChartPriceSide(selectedSide);
+    if (!initialSyncDoneRef.current) return; // Wait for 600ms initial sync to complete first
+    managerRef.current.syncTrades(trades, symbol);
+  }, [adminSpreads, trades, symbol, isChartReady, selectedSide]);
 
   // ─── Live price stream listener ───────────────────────────────────────────
   useEffect(() => {
     const handlePriceUpdate = (e) => {
-      if (e.detail?.symbol === symbol) {
+      //Sanket v2.0 - Normalize both sides so XAUUSD.i matches XAUUSD tick events
+      const tickSymbol = String(e.detail?.symbol || '').toUpperCase().replace(/\.I$/i, '');
+      const chartSymbol = String(symbol || '').toUpperCase().replace(/\.I$/i, '');
+      if (tickSymbol === chartSymbol) {
         const { bid, ask } = e.detail;
-        currentPriceRef.current = bid; // Keep bid as primary ref for simplicity
         setTargetPrice({ bid, ask });
       }
     };

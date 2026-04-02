@@ -2783,7 +2783,7 @@
 
 //       {/* iOS-Style Close Trade Confirmation Modal */}
 //       {showCloseModal && selectedTradeForClose && (
-//         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+//         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
 //           <div className="w-full sm:w-80 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
 //             {/* Header */}
 //             <div className="px-4 py-4 text-center">
@@ -2892,130 +2892,6 @@
 //         </div>
 //       )}
 
-//       {/* Kill Switch Modal */}
-//       {showKillSwitchModal && (
-//         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
-//           <div className="w-full sm:w-96 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
-//             {/* Header */}
-//             <div className="px-4 py-4 text-center border-b border-gray-700/50">
-//               <div className="text-4xl mb-2">🛑</div>
-//               <h3 className="text-white text-lg font-semibold">Kill Switch</h3>
-//               <p className="text-gray-400 text-sm mt-1">
-//                 Block all trading for a set period to prevent emotional decisions
-//               </p>
-//             </div>
-            
-//             {/* Duration Selection */}
-//             <div className="p-4 space-y-4">
-//               {/* Value Input */}
-//               <div>
-//                 <label className="text-gray-400 text-xs mb-2 block">Duration</label>
-//                 <div className="flex gap-2">
-//                   <input
-//                     type="number"
-//                     min="1"
-//                     max="999"
-//                     value={killSwitchDuration.value}
-//                     onChange={(e) => setKillSwitchDuration(prev => ({ ...prev, value: parseInt(e.target.value) || 1 }))}
-//                     className="flex-1 bg-[#2c2c2e] text-white px-3 py-2 rounded-lg text-center text-lg font-mono"
-//                   />
-//                   <select
-//                     value={killSwitchDuration.unit}
-//                     onChange={(e) => setKillSwitchDuration(prev => ({ ...prev, unit: e.target.value }))}
-//                     className="bg-[#2c2c2e] text-white px-3 py-2 rounded-lg"
-//                   >
-//                     <option value="seconds">Seconds</option>
-//                     <option value="minutes">Minutes</option>
-//                     <option value="hours">Hours</option>
-//                     <option value="days">Days</option>
-//                   </select>
-//                 </div>
-//               </div>
-              
-//               {/* Quick Select Buttons */}
-//               <div>
-//                 <label className="text-gray-400 text-xs mb-2 block">Quick Select</label>
-//                 <div className="grid grid-cols-4 gap-2">
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 30, unit: 'seconds' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     30s
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 5, unit: 'minutes' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     5m
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 30, unit: 'minutes' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     30m
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 1, unit: 'hours' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     1h
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 4, unit: 'hours' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     4h
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 12, unit: 'hours' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     12h
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 1, unit: 'days' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     1d
-//                   </button>
-//                   <button
-//                     onClick={() => setKillSwitchDuration({ value: 7, unit: 'days' })}
-//                     className="bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white py-2 rounded-lg text-xs"
-//                   >
-//                     7d
-//                   </button>
-//                 </div>
-//               </div>
-              
-//               {/* Warning */}
-//               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
-//                 <p className="text-orange-400 text-xs">
-//                   ⚠️ Once activated, you won't be able to open new trades until the timer expires. You can still close existing trades.
-//                 </p>
-//               </div>
-//             </div>
-            
-//             {/* Actions */}
-//             <div className="border-t border-gray-700/50">
-//               <button
-//                 onClick={activateKillSwitch}
-//                 className="w-full py-4 text-red-500 font-semibold text-lg hover:bg-[#2c2c2e] transition-colors"
-//               >
-//                 Activate Kill Switch
-//               </button>
-//             </div>
-//             <div className="border-t border-gray-700/50">
-//               <button
-//                 onClick={() => setShowKillSwitchModal(false)}
-//                 className="w-full py-4 text-blue-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-//               >
-//                 Cancel
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-
 //       <style>{`
 //         @keyframes slide-up {
 //           from {
@@ -3045,17 +2921,121 @@
 import { API_URL } from '../config/api'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Star, X, Plus, Minus, Settings, Home, Wallet, LayoutGrid, BarChart3, Pencil, Trophy, AlertTriangle, Sun, Moon, Clock, ChevronDown, Check } from 'lucide-react'
+import { Search, Star, X, Plus, Minus, Settings, Home, Wallet, LayoutGrid, BarChart3, Pencil, Trophy, AlertTriangle, Sun, Moon, Clock, ChevronDown, Check, ShieldAlert, Lock, ShieldCheck, ShieldX } from 'lucide-react'
 import marketDataApiService from '../services/marketDataApi'
-import priceStreamService, { getPriceEvents } from '../services/priceStream'
+import priceStreamService from '../services/priceStream'
+import { getPriceEvents } from '../services/eventSystem'
 import { getAdminMarkupValue, getRetailPrice } from '../utils/priceUtils';
 import Datafeed from '../services/datafeed';
 import { useTheme } from '../context/ThemeContext'
 import { normalizeSymbol, ensureISuffix } from '../utils/symbolUtils'
+import { useInterpolation } from '../hooks/useInterpolation'
 import TradingChart from '../components/TradingChart'
 import Advance_Trading_View_Chart from '../components/Advance_Trading_View_Chart'
 import All_Tick_Chart from '../components/All_Tick_Chart.jsx'
 import WebSocketTest from '../components/WebSocketTest.jsx'
+
+//Sanket v2.0 - Isolated child component — only this tiny element re-renders at 60 fps;
+// TradingPage itself is NOT triggered by the internal setDisplayPrice RAF calls.
+// Accepts a pre-computed numeric target price (already spread-adjusted) and
+// smoothly lerps toward it so the BUY/SELL button digits animate instead of jump.
+const AnimatedPrice = ({ target, decimals }) => {
+  const price = useInterpolation(target ?? 0, 0.15);
+  if (!target) return <>-</>;
+  const num = typeof price === 'number' ? price : (typeof price === 'object' ? (price?.bid ?? target) : target);
+  return <>{num.toFixed(decimals)}</>;
+};
+
+const AnimatedPNL = ({ value }) => {
+  const pnl = useInterpolation(value ?? 0, 0.15);
+  const isPositive = pnl >= 0;
+  return (
+    <span className={isPositive ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>
+      {isPositive ? '+' : ''}${pnl.toFixed(2)}
+    </span>
+  );
+};
+
+const AnimatedValue = ({ value, decimals = 2 }) => {
+  const val = useInterpolation(value ?? 0, 0.15);
+  return <>{val.toFixed(decimals)}</>;
+};
+
+//Sanket v2.0 - Animated positions table row. The whole <tr> re-renders at 60fps driven by
+// useInterpolation on the live bid/ask for this trade's symbol. Only the current-price and
+// P/L cells visually change; all other cells render the same static trade fields.
+// Isolated as a component so TradingPage itself is never triggered by the RAF loop.
+const AnimatedTradeRow = ({ trade, rawBid, rawAsk, fallbackPnl, priceDecimals, isDarkMode, onModify, onClose }) => {
+  const smooth = useInterpolation(
+    (rawBid > 0 || rawAsk > 0) ? { bid: rawBid || 0, ask: rawAsk || 0 } : 0,
+    0.15
+  );
+  const sb = typeof smooth === 'object' && smooth !== null ? smooth.bid : 0;
+  const sa = typeof smooth === 'object' && smooth !== null ? smooth.ask : 0;
+  const side = String(trade.side || '').toUpperCase();
+  const smoothPrice = side === 'BUY' ? sb : sa;
+  const validPrice = smoothPrice > 0 ? smoothPrice : null;
+  const pnl = validPrice !== null
+    ? (side === 'BUY'
+        ? (validPrice - trade.openPrice) * trade.quantity * trade.contractSize
+        : (trade.openPrice - validPrice) * trade.quantity * trade.contractSize)
+    : (fallbackPnl || 0);
+  const fmt = (p) => p ? p.toFixed(priceDecimals) : '-';
+  return (
+    <tr className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.openedAt).toLocaleTimeString()}</td>
+      <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{String(trade.symbol || '').toUpperCase().replace(/\.I$/i, '')}</td>
+      <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{fmt(trade.openPrice)}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{fmt(validPrice)}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.stopLoss ? fmt(trade.stopLoss) : '-'}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.takeProfit ? fmt(trade.takeProfit) : '-'}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.commission?.toFixed(2) || '0.00'}</td>
+      <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.swap?.toFixed(2) || '0.00'}</td>
+      <td className={`py-2 px-3 text-xs font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>${pnl.toFixed(2)}</td>
+      <td className="py-2 px-3">
+        <div className="flex items-center gap-1">
+          <button onClick={() => onModify(trade)} className="p-1.5 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors" title="Modify SL/TP"><Pencil size={12} /></button>
+          <button onClick={() => onClose(trade)} className="p-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors" title="Close Trade"><X size={12} /></button>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+//Sanket v2.0 - Animated bid / spread pill / ask for the instruments panel.
+// Only these three blocks re-render at 60fps; the outer <button> row does not.
+const AnimatedInstrumentPrices = ({ rawBid, rawAsk, markup, isJpyPairBool, isPointBased, isDarkMode }) => {
+  const smooth = useInterpolation(
+    (rawBid > 0 || rawAsk > 0) ? { bid: rawBid || 0, ask: rawAsk || 0 } : 0,
+    0.15
+  );
+  const sb = typeof smooth === 'object' && smooth !== null ? smooth.bid : 0;
+  const sa = typeof smooth === 'object' && smooth !== null ? smooth.ask : 0;
+  const retBid = sb > 0 ? sb - markup : 0;
+  const retAsk = sa > 0 ? sa + markup : 0;
+  const effectiveSpread = retBid > 0 && retAsk > 0 ? retAsk - retBid : 0;
+  const decimals = retBid > 100 ? 2 : 5;
+  const spreadStr = effectiveSpread > 0
+    ? (isJpyPairBool ? (effectiveSpread * 100).toFixed(1)
+        : isPointBased ? effectiveSpread.toFixed(2)
+        : (effectiveSpread * 10000).toFixed(1))
+    : '-';
+  return (
+    <>
+      <div className="text-right w-16">
+        <div className="text-red-500 text-xs font-mono">{retBid > 0 ? retBid.toFixed(decimals) : '...'}</div>
+        <div className="text-gray-600 text-[9px]">Bid</div>
+      </div>
+      <div className={`px-1.5 py-0.5 rounded text-[10px] font-medium min-w-[28px] text-center mx-1.5 ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>{spreadStr}</div>
+      <div className="text-right w-14">
+        <div className="text-green-500 text-xs font-mono">{retAsk > 0 ? retAsk.toFixed(decimals) : '...'}</div>
+        <div className="text-gray-600 text-[9px]">Ask</div>
+      </div>
+    </>
+  );
+};
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -3096,14 +3076,14 @@ const TradingPage = () => {
   const [chartLoading, setChartLoading] = useState(false)
   const [selectedInstrument, setSelectedInstrument] = useState(() => {
     try {
-      const savedActiveTab = localStorage.getItem('activeTab') || 'XAUUSD.i'
+      const savedActiveTab = localStorage.getItem('activeTab') || 'XAUUSD'
       const savedOpenTabs = JSON.parse(localStorage.getItem('openTabs') || '[]')
       // Ensure all loaded symbols are normalized
       const normalizedActiveTab = ensureISuffix(savedActiveTab);
       const activeTabData = savedOpenTabs.find(t => ensureISuffix(t.symbol) === normalizedActiveTab)
-      return activeTabData ? { ...activeTabData, symbol: normalizedActiveTab } : { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
+      return activeTabData ? { ...activeTabData, symbol: normalizedActiveTab } : { symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
     } catch {
-      return { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
+      return { symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }
     }
   })
   const [showInstruments, setShowInstruments] = useState(window.innerWidth >= 768)
@@ -3116,18 +3096,19 @@ const TradingPage = () => {
   const [activePositionTab, setActivePositionTab] = useState('Positions')
   const [isBottomPanelMinimized, setIsBottomPanelMinimized] = useState(false)
   const [oneClickTrading, setOneClickTrading] = useState(false)
+  const [partialQuantity, setPartialQuantity] = useState('')
   const [selectedSide, setSelectedSide] = useState('BUY') // BUY or SELL
   const [openTabs, setOpenTabs] = useState(() => {
     try {
       const saved = localStorage.getItem('openTabs')
       return saved ? JSON.parse(saved) : [
-        { symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 },
-        { symbol: 'EURUSD.i', name: 'Euro vs US Dollar', bid: 0, ask: 0, spread: 0 }
+        { symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 },
+        { symbol: 'EURUSD', name: 'Euro vs US Dollar', bid: 0, ask: 0, spread: 0 }
       ]
-    } catch { return [{ symbol: 'XAUUSD.i', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }] }
+    } catch { return [{ symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', bid: 0, ask: 0, spread: 0 }] }
   })
   const [activeTab, setActiveTab] = useState(() => {
-    try { return localStorage.getItem('activeTab') || 'XAUUSD.i' } catch { return 'XAUUSD.i' }
+    try { return localStorage.getItem('activeTab') || 'XAUUSD' } catch { return 'XAUUSD' }
   })
   const [showSymbolPicker, setShowSymbolPicker] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
@@ -3140,57 +3121,57 @@ const TradingPage = () => {
   // Initialize with default instruments immediately - no loading state
   const [instruments, setInstruments] = useState([
     // ============ FOREX PAIRS ============
-    { symbol: 'EURUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
-    { symbol: 'GBPUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
-    { symbol: 'USDJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'USDCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURGBP.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURAUD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'CADJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'CHFJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDNZD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'CADCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDJPY.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPAUD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'GBPNZD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'AUDCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDCAD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'NZDCHF.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
-    { symbol: 'EURNZD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
+    { symbol: 'GBPUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: true },
+    { symbol: 'USDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'USDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURGBP', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURAUD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CADJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CHFJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'CADCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDJPY', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPAUD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'GBPNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'AUDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDCAD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'NZDCHF', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
+    { symbol: 'EURNZD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Forex', starred: false },
     // ============ COMMODITIES / METALS ============
-    { symbol: 'XAUUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: true },
-    { symbol: 'XAGUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'USOIL.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'UKOIL.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
-    { symbol: 'NGAS.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'XAUUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: true },
+    { symbol: 'XAGUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'USOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'UKOIL', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
+    { symbol: 'NGAS', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     // { symbol: 'COPPER', bid: 0, ask: 0, spread: 0, change: 0, category: 'Metals', starred: false },
     // ============ CRYPTO ============
-    { symbol: 'BTCUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: true },
-    { symbol: 'ETHUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'BNBUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'SOLUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'DOGEUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
-    { symbol: 'LTCUSD.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'BTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: true },
+    { symbol: 'ETHUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'BNBUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'SOLUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'DOGEUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
+    { symbol: 'LTCUSD', bid: 0, ask: 0, spread: 0, change: 0, category: 'Crypto', starred: false },
     // ============ INDICES ============
-    { symbol: 'US30.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: true },
-    { symbol: 'US500.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-    { symbol: 'US100.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-    { symbol: 'UK100.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-    { symbol: 'ES35.i', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
-  ].filter(inst => inst.symbol.toLowerCase().endsWith('.i'))) // v7.77 Strict UI Guard
+    { symbol: 'US30', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: true },
+    { symbol: 'US500', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'US100', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'UK100', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+    { symbol: 'ES35', bid: 0, ask: 0, spread: 0, change: 0, category: 'Indices', starred: false },
+  ])
   const [loadingInstruments, setLoadingInstruments] = useState(false) // Don't block UI on prices
-  const [starredSymbols, setStarredSymbols] = useState(['XAUUSD.i', 'EURUSD.i', 'GBPUSD.i'])
+  const [starredSymbols, setStarredSymbols] = useState(['XAUUSD', 'EURUSD', 'GBPUSD'])
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [openTrades, setOpenTrades] = useState([])
   const [pendingOrders, setPendingOrders] = useState([])
@@ -3236,8 +3217,10 @@ const TradingPage = () => {
   const [showKillSwitchModal, setShowKillSwitchModal] = useState(false)
   const [killSwitchActive, setKillSwitchActive] = useState(false)
   const [killSwitchEndTime, setKillSwitchEndTime] = useState(null)
-  const [killSwitchDuration, setKillSwitchDuration] = useState({ value: 30, unit: 'minutes' })
   const [killSwitchTimeLeft, setKillSwitchTimeLeft] = useState('')
+  const [showKillSwitchPopover, setShowKillSwitchPopover] = useState(false)
+  const [killSwitchInputTime, setKillSwitchInputTime] = useState('')
+  const [killSwitchDuration, setKillSwitchDuration] = useState({ value: 4, unit: 'hours' })
   const [globalNotification, setGlobalNotification] = useState('')
 
   const categories = ['All', 'Forex', 'Metals', 'Crypto', 'Indices']
@@ -3275,75 +3258,6 @@ const TradingPage = () => {
     }
   }, [accountId])
 
-  // Kill Switch countdown timer
-  useEffect(() => {
-    if (!killSwitchActive || !killSwitchEndTime) return
-    
-    const updateTimer = () => {
-      const now = Date.now()
-      const remaining = killSwitchEndTime - now
-      
-      if (remaining <= 0) {
-        setKillSwitchActive(false)
-        setKillSwitchEndTime(null)
-        setKillSwitchTimeLeft('')
-        localStorage.removeItem(`killSwitch_${accountId}`)
-        return
-      }
-      
-      // Format time remaining
-      const days = Math.floor(remaining / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((remaining % (1000 * 60)) / 1000)
-      
-      let timeStr = ''
-      if (days > 0) timeStr += `${days}d `
-      if (hours > 0 || days > 0) timeStr += `${hours}h `
-      if (minutes > 0 || hours > 0 || days > 0) timeStr += `${minutes}m `
-      timeStr += `${seconds}s`
-      
-      setKillSwitchTimeLeft(timeStr.trim())
-    }
-    
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
-    return () => clearInterval(interval)
-  }, [killSwitchActive, killSwitchEndTime, accountId])
-
-  // Activate Kill Switch
-  const activateKillSwitch = (customDuration = null) => {
-    const multipliers = { seconds: 1000, minutes: 60 * 1000, hours: 60 * 60 * 1000, days: 24 * 60 * 60 * 1000 }
-    const durationConfig = customDuration || killSwitchDuration
-    const duration = durationConfig.value * multipliers[durationConfig.unit]
-    const endTime = Date.now() + duration
-    
-    setKillSwitchActive(true)
-    setKillSwitchEndTime(endTime)
-    localStorage.setItem(`killSwitch_${accountId}`, endTime.toString())
-    setShowKillSwitchModal(false)
-    
-    // Show notification
-    const timeStr = `${durationConfig.value} ${durationConfig.unit}`
-    setTradeSuccess(`🛑 Kill Switch activated for ${timeStr}! Trading is now blocked.`)
-    setTimeout(() => setTradeSuccess(''), 5000)
-  }
-
-  // Quick activate Kill Switch with default 30 minutes (one-click)
-  const quickActivateKillSwitch = () => {
-    activateKillSwitch({ value: 30, unit: 'minutes' })
-  }
-
-  // Deactivate Kill Switch
-  const deactivateKillSwitch = () => {
-    setKillSwitchActive(false)
-    setKillSwitchEndTime(null)
-    setKillSwitchTimeLeft('')
-    localStorage.removeItem(`killSwitch_${accountId}`)
-    
-    setTradeSuccess('✅ Kill Switch deactivated. Trading is now enabled.')
-    setTimeout(() => setTradeSuccess(''), 3000)
-  }
 
   // Persist open tabs + active tab to localStorage
   useEffect(() => {
@@ -3448,6 +3362,10 @@ const TradingPage = () => {
   // Use a ref to store prices and only update state every 300ms to keep UI smooth
   const lastUpdateRef = useRef(0);
   const priceBufferRef = useRef({});
+  //Sanket v2.0 - Cache last valid price per symbol to prevent PnL flicker when ticks arrive for only some symbols
+  const lastValidPricesRef = useRef({});
+  //Sanket v2.0 - Cache last computed PnL per trade to use as fallback when price is temporarily missing
+  const lastTradePnlRef = useRef({});
 
   useEffect(() => {
     const unsubscribe = priceStreamService.subscribe('tradingPage', (prices, updated, timestamp) => {
@@ -3573,60 +3491,109 @@ const TradingPage = () => {
       }
     }
     checkAuthStatus()
+  }, [navigate, user._id])
 
-    // Check if kill switch is active from localStorage
-    const savedKillSwitch = localStorage.getItem(`killSwitch_${accountId}`)
-    if (savedKillSwitch) {
-      const endTime = parseInt(savedKillSwitch)
-      if (endTime > Date.now()) {
-        setKillSwitchActive(true)
-        setKillSwitchEndTime(endTime)
-      } else {
-        localStorage.removeItem(`killSwitch_${accountId}`)
-      }
-    }
-  }, [accountId])
-
-  // Kill Switch countdown timer
+  // Kill Switch synced timer - securely tracks against backend-provided UTC end time
   useEffect(() => {
-    if (!killSwitchActive || !killSwitchEndTime) return
+    // Sync state immediately upon valid accountSummary presence holding a lock block
+    if (accountSummary?.killSwitchUntil) {
+      const dbUntilTime = new Date(accountSummary.killSwitchUntil).getTime();
+      if (dbUntilTime > Date.now()) {
+        setKillSwitchActive(true);
+        setKillSwitchEndTime(dbUntilTime);
+      } else {
+        setKillSwitchActive(false);
+        setKillSwitchEndTime(null);
+      }
+    } else {
+        setKillSwitchActive(false);
+        setKillSwitchEndTime(null);
+    }
+  }, [accountSummary?.killSwitchUntil]);
+
+  // Tick the Kill Switch UI countdown smoothly without hitting backend
+  useEffect(() => {
+    if (!killSwitchActive || !killSwitchEndTime) return;
     
     const updateTimer = () => {
-      const now = Date.now()
-      const remaining = killSwitchEndTime - now
+      const now = Date.now();
+      const remaining = killSwitchEndTime - now;
       
       if (remaining <= 0) {
-        setKillSwitchActive(false)
-        setKillSwitchEndTime(null)
-        setKillSwitchTimeLeft('')
-        localStorage.removeItem(`killSwitch_${accountId}`)
-        return
+        setKillSwitchActive(false);
+        setKillSwitchEndTime(null);
+        setKillSwitchTimeLeft('');
+        // Refresh the backend block to confirm explicitly
+        fetchAccountSummary();
+        return;
       }
       
-      // Format time remaining
-      const days = Math.floor(remaining / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((remaining % (1000 * 60)) / 1000)
+      const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
       
-      let timeStr = ''
-      if (days > 0) timeStr += `${days}d `
-      if (hours > 0 || days > 0) timeStr += `${hours}h `
-      if (minutes > 0 || hours > 0 || days > 0) timeStr += `${minutes}m `
-      timeStr += `${seconds}s`
+      let timeStr = '';
+      if (days > 0) timeStr += `${days}d `;
+      if (hours > 0 || days > 0) timeStr += `${hours}h `;
+      if (minutes > 0 || hours > 0 || days > 0) timeStr += `${minutes}m `;
+      timeStr += `${seconds}s`;
       
-      setKillSwitchTimeLeft(timeStr.trim())
-    }
+      setKillSwitchTimeLeft(timeStr.trim());
+    };
     
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
-    return () => clearInterval(interval)
-  }, [killSwitchActive, killSwitchEndTime, accountId])
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [killSwitchActive, killSwitchEndTime]);
+
+  // Backend Lock action for Kill Switch
+  const activateBackendKillSwitch = async (durationType) => {
+    try {
+      const payload = {
+        tradingAccountId: accountId,
+        durationType // 'nextDay' or 'custom'
+      };
+      
+      if (durationType === 'custom') {
+        if (!killSwitchInputTime) {
+          setTradeError('Please select a valid future time');
+          return;
+        }
+        payload.unlockTimestamp = killSwitchInputTime;
+      }
+
+      const res = await fetch(`${API_URL}/trade/kill-switch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setTradeSuccess('Secure Kill Switch Activated!');
+        setShowKillSwitchPopover(false);
+        fetchAccountSummary(); // Immediately pull new lockdown status
+      } else {
+        setTradeError(data.message || 'Kill switch activation failed');
+      }
+    } catch (err) {
+      console.error(err);
+      setTradeError('Server error while activating Kill Switch');
+    }
+  };
 
   // Update account summary when prices change (for real-time equity/margin)
   useEffect(() => {
     // Skip if no live prices yet (prevent flickering to zero)
     if (Object.keys(livePrices).length === 0) return
+    
+    //Sanket v2.0 - Update lastValidPricesRef with any new valid prices from this tick cycle
+    Object.entries(livePrices).forEach(([sym, p]) => {
+      if (p && p.bid && p.bid > 0) {
+        lastValidPricesRef.current[sym] = p;
+      }
+    });
     
     // Calculate total floating PnL from current prices
     let totalFloatingPnl = 0
@@ -3635,12 +3602,14 @@ const TradingPage = () => {
     
     if (openTrades.length > 0) {
       openTrades.forEach(trade => {
-        // ✅ ELITE: Robust case-insensitive lookup (matching the positions table)
         const targetSym = trade.symbol;
+        //Sanket v2.0 - Look up price: live first, then lastValidPricesRef cache, then instrument fallback
         const livePrice = livePrices[targetSym] || 
                         livePrices[targetSym.toUpperCase()] || 
                         livePrices[targetSym.toLowerCase()] ||
-                        livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()];
+                        livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
+                        lastValidPricesRef.current[targetSym] ||
+                        lastValidPricesRef.current[targetSym.toUpperCase()];
 
         const inst = instruments.find(i => i.symbol === trade.symbol)
         
@@ -3658,8 +3627,13 @@ const TradingPage = () => {
             ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
             : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize
           
-          // Deduct commission from floating PnL if not already deducted
-          totalFloatingPnl += pnl - (trade.swap || 0)
+          const tradePnl = pnl - (trade.swap || 0)
+          totalFloatingPnl += tradePnl
+          //Sanket v2.0 - Cache this trade's PnL so partial updates don't reset it to $0
+          lastTradePnlRef.current[trade._id] = tradePnl;
+        } else {
+          //Sanket v2.0 - No valid price for this trade right now, use last cached PnL instead of $0
+          totalFloatingPnl += lastTradePnlRef.current[trade._id] || 0;
         }
         totalUsedMargin += trade.marginUsed || 0
       })
@@ -4235,7 +4209,7 @@ const TradingPage = () => {
   }
 
   // Close a trade
-  const closeTrade = async (tradeId) => {
+  const closeTrade = async (tradeId, quantity = null) => {
     // Prevent double-click - check if already closing this trade
     if (closingTradeIds.has(tradeId)) {
       console.log(`Trade ${tradeId} already being closed, ignoring duplicate request`)
@@ -4271,7 +4245,8 @@ const TradingPage = () => {
         body: JSON.stringify({
           tradeId,
           bid,
-          ask
+          ask,
+          quantity
         })
       })
 
@@ -4392,8 +4367,9 @@ const TradingPage = () => {
   }
 
   // Open close confirmation modal
-  const openCloseModal = (trade) => {
+  const openCloseModal = async (trade) => {
     setSelectedTradeForClose(trade)
+    setPartialQuantity(trade.quantity.toString())
     setShowCloseModal(true)
   }
 
@@ -4521,9 +4497,6 @@ const TradingPage = () => {
   }
 
   const filteredInstruments = instruments.filter(inst => {
-    // v7.77 Strict Filter: Only show .i symbols in UI
-    if (!inst.symbol.toLowerCase().endsWith('.i')) return false;
-
     const matchesSearch = inst.symbol.toLowerCase().includes(searchTerm.toLowerCase())
     if (activeCategory === 'Starred') {
       return matchesSearch && inst.starred
@@ -4708,6 +4681,8 @@ const TradingPage = () => {
             </>
           )}
           <div className="flex-1" />
+          
+
           <span className="text-red-500 font-mono text-xs sm:text-sm mr-1 sm:mr-2">{selectedInstrument.bid?.toFixed(2)}</span>
           <span className="text-green-500 font-mono text-xs sm:text-sm mr-2 sm:mr-4">{selectedInstrument.ask?.toFixed(2)}</span>
           <button 
@@ -4716,29 +4691,73 @@ const TradingPage = () => {
           >
             {isMobile ? 'Order' : 'New Order'}
           </button>
-          {/* Kill Switch Button - One click to activate (30min default), long press for options */}
-          <button 
-            onClick={() => killSwitchActive ? deactivateKillSwitch() : quickActivateKillSwitch()}
-            onContextMenu={(e) => { e.preventDefault(); if (!killSwitchActive) setShowKillSwitchModal(true) }}
-            className={`ml-2 text-xs px-2 sm:px-3 py-1 rounded flex items-center gap-1 ${
-              killSwitchActive 
-                ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
-                : 'bg-orange-500 hover:bg-orange-600 text-white'
-            }`}
-            title={killSwitchActive ? `Click to deactivate (${killSwitchTimeLeft} left)` : 'Click: Activate 30min | Right-click: Custom duration'}
-          >
-            {killSwitchActive ? (
-              <>
-                <span className="hidden sm:inline">🛑 {killSwitchTimeLeft}</span>
-                <span className="sm:hidden">🛑</span>
-              </>
-            ) : (
-              <>
-                <span className="hidden sm:inline">🛑 Kill Switch</span>
-                <span className="sm:hidden">🛑</span>
-              </>
+          {/* Secure Backend Kill Switch Component */}
+          <div className="relative z-50">
+            <button 
+              onClick={() => {
+                if (killSwitchActive) {
+                  setTradeError('Kill Switch is strictly enforced by the server and cannot be manually disabled here until the time expires.');
+                } else {
+                  setShowKillSwitchPopover(!showKillSwitchPopover)
+                }
+              }}
+              className={`ml-2 text-xs px-2 sm:px-3 py-1 rounded flex items-center gap-1 transition-all ${
+                killSwitchActive 
+                  ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm'
+              }`}
+              title={killSwitchActive ? `Trading locked on server (${killSwitchTimeLeft} left)` : 'Activate Server-Grade Kill Switch'}
+            >
+              {killSwitchActive ? (
+                <>
+                  <span className="hidden sm:inline">🛑 {killSwitchTimeLeft}</span>
+                  <span className="sm:hidden">🛑</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">🛑 Kill Switch</span>
+                  <span className="sm:hidden">🛑</span>
+                </>
+              )}
+            </button>
+            
+            {/* Popover Card */}
+            {showKillSwitchPopover && !killSwitchActive && (
+              <div className={`absolute right-0 mt-2 w-64 p-3 rounded-md shadow-xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
+                <h4 className={`text-sm font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Activate Kill Switch</h4>
+                
+                {/* Next Day Option */}
+                <button 
+                  onClick={() => activateBackendKillSwitch('nextDay')}
+                  className="w-full text-left bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-3 py-2 rounded mb-3 transition-colors flex items-center justify-between"
+                >
+                  <span>Next Trading Day (00:00 UTC)</span>
+                  <span className="text-xl">🌙</span>
+                </button>
+                
+                {/* Custom Time Option */}
+                <div className="pt-2 border-t border-zinc-800">
+                  <label className={`block text-xs mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Custom Time:</label>
+                  <input 
+                    type="datetime-local" 
+                    value={killSwitchInputTime}
+                    onChange={(e) => setKillSwitchInputTime(e.target.value)}
+                    className={`w-full text-xs p-1.5 rounded border mb-2 outline-none ${
+                        isDarkMode 
+                          ? 'bg-zinc-950 border-zinc-700 text-white focus:border-orange-500' 
+                          : 'bg-white border-gray-300 text-gray-900 focus:border-orange-500'
+                    }`}
+                  />
+                  <button 
+                    onClick={() => activateBackendKillSwitch('custom')}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1.5 rounded transition-colors font-medium"
+                  >
+                    Lock Until Custom Time
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
           <button onClick={() => setShowOrderPanel(!showOrderPanel)} className="ml-1 sm:ml-2 text-gray-400 hover:text-white">
             <Settings size={16} />
           </button>
@@ -4815,7 +4834,15 @@ const TradingPage = () => {
                     <div className="text-gray-500 text-sm">No instruments found</div>
                   </div>
                 ) : (
-                  filteredInstruments.map(inst => (
+                  filteredInstruments.map(inst => {
+                    //Sanket v2.0 - Apply admin markup to displayed bid/ask so instruments panel matches execution prices
+                    const markup = getAdminMarkupValue(inst.symbol, adminSpreads);
+                    const sym = getBaseSymbol(inst.symbol);
+                    //Sanket v2.0 - retailBid/retailAsk/effectiveSpread now computed inside AnimatedInstrumentPrices
+                    // at 60fps so the instruments list price digits animate instead of jump every 300ms.
+                    const isPointBased = isMetalSymbol(sym) || isCryptoSymbol(sym) || ['USOIL','UKOIL','NGAS','COPPER','US30','US500','US100','UK100','GER40','FRA40','JP225','HK50','AUS200','ES35'].includes(sym);
+
+                    return (
                     <button
                       key={inst.symbol}
                       onClick={() => handleInstrumentClick(inst)}
@@ -4833,34 +4860,17 @@ const TradingPage = () => {
                         <div className="text-green-500 text-[10px]">+{inst.change?.toFixed(2) || '0.00'}%</div>
                       </div>
                       <div className="flex-1" />
-                      <div className="text-right w-16">
-                        <div className="text-red-500 text-xs font-mono">
-                          {inst.bid > 0 ? inst.bid.toFixed(inst.bid > 100 ? 2 : 5) : '...'}
-                        </div>
-                        <div className="text-gray-600 text-[9px]">Bid</div>
-                      </div>
-                      <div className="bg-[#2a2a2a] px-1.5 py-0.5 rounded text-cyan-400 text-[10px] font-medium min-w-[28px] text-center mx-2">
-                        {/* Show admin-set spread if available, otherwise show market spread */}
-                        {getSpreadConfig(inst.symbol)?.spread > 0 ? (
-                          // Convert admin spread to pips for display
-                          isJpyPair(inst.symbol) ? (getSpreadConfig(inst.symbol).spread * 100).toFixed(1) :
-                          inst.bid > 100 ? getSpreadConfig(inst.symbol).spread.toFixed(2) :
-                          (getSpreadConfig(inst.symbol).spread * 10000).toFixed(1)
-                        ) : inst.spread > 0 ? (
-                          // Convert market spread to pips
-                          isJpyPair(inst.symbol) ? (inst.spread * 100).toFixed(1) :
-                          inst.bid > 100 ? inst.spread.toFixed(2) :
-                          (inst.spread * 10000).toFixed(1)
-                        ) : '-'}
-                      </div>
-                      <div className="text-right w-14">
-                        <div className="text-green-500 text-xs font-mono">
-                          {inst.ask > 0 ? inst.ask.toFixed(inst.ask > 100 ? 2 : 5) : '...'}
-                        </div>
-                        <div className="text-gray-600 text-[9px]">Ask</div>
-                      </div>
+                      <AnimatedInstrumentPrices
+                        rawBid={inst.bid}
+                        rawAsk={inst.ask}
+                        markup={markup}
+                        isJpyPairBool={isJpyPair(inst.symbol)}
+                        isPointBased={isPointBased}
+                        isDarkMode={isDarkMode}
+                      />
                     </button>
-                  ))
+                    )
+                  })
                 )}
               </div>
               
@@ -4966,6 +4976,7 @@ const TradingPage = () => {
               onTradeModify={handleTradeModify}
               isDarkMode={isDarkMode}
               adminSpreads={adminSpreads}
+              selectedSide={selectedSide}
               onSymbolChange={(newSym) => {
                 // 🔄 Sync chart's internal search with parent tabs
                 const cleanSym = newSym.replace(/\.i$/i, '').toUpperCase();
@@ -5014,8 +5025,8 @@ const TradingPage = () => {
 
           {/* Positions Panel - Expanded height for History tab */}
           <div className={`${isBottomPanelMinimized ? 'h-10' : (isMobile ? 'h-48' : (activePositionTab === 'History' ? 'h-80' : 'h-44'))} border-t flex flex-col shrink-0 overflow-hidden ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} transition-all duration-300`}>
-            <div className={`h-10 flex items-center justify-between px-2 sm:px-4 border-b overflow-x-auto ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-              <div className="flex gap-2 sm:gap-6">
+            <div className={`h-10 flex items-center justify-between gap-2 px-2 sm:px-3 border-b overflow-hidden ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-1 sm:gap-3 min-w-0 flex-1 overflow-hidden">
                 {[
                   { name: 'Positions', count: openTrades.length },
                   { name: 'Pending', count: pendingOrders.length },
@@ -5028,28 +5039,51 @@ const TradingPage = () => {
                       if (isBottomPanelMinimized) setIsBottomPanelMinimized(false);
                       setActivePositionTab(tab.name);
                     }}
-                    className={`text-xs sm:text-sm whitespace-nowrap ${activePositionTab === tab.name ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500 hover:text-white'}`}
+                    className={`text-[11px] sm:text-xs lg:text-sm whitespace-nowrap truncate ${activePositionTab === tab.name ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500 hover:text-white'}`}
                   >
                     {isMobile ? `${tab.name.split(' ')[0]}(${tab.count})` : `${tab.name}(${tab.count})`}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="flex items-center justify-end gap-1 sm:gap-2 shrink-0 min-w-0">
                 {!isMobile && (
                   <>
-                    <span className="text-sm text-gray-500">One Click</span>
+                    {oneClickTrading && (
+                      <div className="flex items-center gap-1 mr-1 sm:mr-2 animate-in slide-in-from-right-4 duration-300">
+                        <button
+                          onClick={() => confirmCloseAll()}
+                          className="h-6 px-1.5 sm:px-2 text-[9px] sm:text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500/20 transition-all active:scale-95"
+                        >
+                          Close All
+                        </button>
+                        <button
+                          onClick={() => handleCloseAllTrades('profit')}
+                          className="h-6 px-1.5 sm:px-2 text-[9px] sm:text-[10px] font-semibold bg-green-500/10 text-green-500 border border-green-500/20 rounded hover:bg-green-500/20 transition-all active:scale-95"
+                        >
+                          Close Profit
+                        </button>
+                        <button
+                          onClick={() => handleCloseAllTrades('loss')}
+                          className="h-6 px-1.5 sm:px-2 text-[9px] sm:text-[10px] font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-all active:scale-95"
+                        >
+                          Close Loss
+                        </button>
+                      </div>
+                    )}
+                    <span className="text-xs text-gray-500 hidden lg:inline">One Click</span>
                     <button
                       onClick={() => setOneClickTrading(!oneClickTrading)}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${oneClickTrading ? 'bg-blue-600' : 'bg-gray-600'}`}
+                      aria-pressed={oneClickTrading}
+                      className={`w-10 h-5 rounded-full relative border transition-all duration-300 ease-out ${oneClickTrading ? 'bg-blue-600 border-blue-500 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : (isDarkMode ? 'bg-gray-700 border-gray-500' : 'bg-gray-300 border-gray-400')}`}
                     >
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${oneClickTrading ? 'left-5' : 'left-0.5'}`} />
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ease-out ${oneClickTrading ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                     {oneClickTrading && (
                       <>
                         <button 
                           onClick={() => executeMarketOrder('SELL')}
                           disabled={isExecutingTrade}
-                          className="w-8 h-8 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50"
+                          className="w-7 h-7 rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors disabled:opacity-50"
                         >
                           S
                         </button>
@@ -5057,12 +5091,12 @@ const TradingPage = () => {
                           type="text"
                           value={volume}
                           onChange={(e) => setVolume(e.target.value)}
-                          className="w-14 h-7 bg-[#1a1a1a] border border-gray-600 rounded text-center text-white text-sm font-medium focus:outline-none focus:border-blue-500"
+                          className="w-12 h-6 bg-[#1a1a1a] border border-gray-600 rounded text-center text-white text-xs font-medium focus:outline-none focus:border-blue-500"
                         />
                         <button 
                           onClick={() => executeMarketOrder('BUY')}
                           disabled={isExecutingTrade}
-                          className="w-8 h-8 rounded-full bg-blue-500 text-white text-sm font-bold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                          className="w-7 h-7 rounded-full bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors disabled:opacity-50"
                         >
                           B
                         </button>
@@ -5070,10 +5104,10 @@ const TradingPage = () => {
                     )}
                   </>
                 )}
-                <span className="text-xs sm:text-sm text-gray-500 flex items-center gap-1">P/L: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{accountSummary.floatingPnl >= 0 ? '+' : ''}${(accountSummary.floatingPnl || 0).toFixed(2)}</span></span>
+                <span className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">P/L: <AnimatedPNL value={accountSummary.floatingPnl} /></span>
                 <button
                   onClick={() => setIsBottomPanelMinimized(!isBottomPanelMinimized)}
-                  className={`ml-1 p-1 rounded-md transition-all duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'} ${isBottomPanelMinimized ? 'rotate-180' : ''}`}
+                  className={`ml-0.5 p-0.5 rounded-md transition-all duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-200'} ${isBottomPanelMinimized ? 'rotate-180' : ''}`}
                   title={isBottomPanelMinimized ? "Expand Panel" : "Minimize Panel"}
                 >
                   <ChevronDown size={18} />
@@ -5081,7 +5115,7 @@ const TradingPage = () => {
               </div>
             </div>
             
-            <div className={`flex-1 overflow-auto transition-opacity duration-300 ${isBottomPanelMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide transition-opacity duration-300 ${isBottomPanelMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {activePositionTab === 'Positions' && (
               <table className="w-full text-sm">
                 <thead className={`text-gray-500 border-b sticky top-0 ${isDarkMode ? 'border-gray-800 bg-[#0d0d0d]' : 'border-gray-200 bg-white'}`}>
@@ -5107,69 +5141,43 @@ const TradingPage = () => {
                     </tr>
                   ) : (
                     openTrades.map(trade => {
-                      // ✅ ELITE: Case-insensitive lookup (handles XAUUSD.i vs XAUUSD.I)
                       const targetSym = trade.symbol;
+                      const baseSym = getBaseSymbol(targetSym);
+                      //Sanket v2.0 - Use lastValidPricesRef cache as fallback to prevent PnL flicker to $0
                       const livePrice = livePrices[targetSym] || 
                                       livePrices[targetSym.toUpperCase()] || 
                                       livePrices[targetSym.toLowerCase()] ||
-                                      livePrices[targetSym.replace(/\.i$/i, '').toUpperCase()];
+                                      livePrices[baseSym] ||
+                                      lastValidPricesRef.current[targetSym] ||
+                                      lastValidPricesRef.current[baseSym];
 
-                      const inst = instruments.find(i => i.symbol === trade.symbol) || selectedInstrument
+                      const inst = instruments.find(i => i.symbol === targetSym) || 
+                                   instruments.find(i => getBaseSymbol(i.symbol) === baseSym) || 
+                                   (getBaseSymbol(selectedInstrument?.symbol) === baseSym ? selectedInstrument : null);
                       
-                      // Normalize side for safety (matching calculateEquity)
-                      const side = String(trade.side || '').toUpperCase();
-
-                      const currentPrice = livePrice 
-                        ? (side === 'BUY' ? (livePrice.rawBid || livePrice.bid) : (livePrice.rawAsk || livePrice.ask))
-                        : (side === 'BUY' ? (inst.rawBid || inst.bid) : (inst.rawAsk || inst.ask))
-                      const pnl = side === 'BUY' 
-                        ? (currentPrice - trade.openPrice) * trade.quantity * trade.contractSize
-                        : (trade.openPrice - currentPrice) * trade.quantity * trade.contractSize
-                      
-                      // Format price based on symbol type
-                      const formatPrice = (price) => {
-                        if (!price) return '-'
-                        if (isJpyPair(trade.symbol)) return price.toFixed(3)
-                        if (isCryptoSymbol(trade.symbol) || getBaseSymbol(trade.symbol) === 'XAUUSD') return price.toFixed(2)
-                        if (getBaseSymbol(trade.symbol) === 'XAGUSD') return price.toFixed(4)
-                        return price.toFixed(5)
-                      }
-                      
+                      //Sanket v2.0 - Resolve raw bid/ask with all fallbacks; passed to AnimatedTradeRow
+                      // which interpolates them internally at 60fps so current-price and P/L columns
+                      // never jump. TradingPage re-renders only at the normal 300ms price-stream rate.
+                      const cachePrices = lastValidPricesRef.current[targetSym] || lastValidPricesRef.current[baseSym];
+                      const rawBid = (livePrice?.rawBid || livePrice?.bid) || (cachePrices?.rawBid || cachePrices?.bid) || (inst?.rawBid || inst?.bid) || 0;
+                      const rawAsk = (livePrice?.rawAsk || livePrice?.ask) || (cachePrices?.rawAsk || cachePrices?.ask) || (inst?.rawAsk || inst?.ask) || 0;
+                      const priceDecimals = isJpyPair(trade.symbol) ? 3
+                        : (isCryptoSymbol(trade.symbol) || getBaseSymbol(trade.symbol) === 'XAUUSD') ? 2
+                        : getBaseSymbol(trade.symbol) === 'XAGUSD' ? 4
+                        : 5;
                       return (
-                        <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.openedAt).toLocaleTimeString()}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(currentPrice)}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.stopLoss ? formatPrice(trade.stopLoss) : '-'}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.takeProfit ? formatPrice(trade.takeProfit) : '-'}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.commission?.toFixed(2) || '0.00'}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.swap?.toFixed(2) || '0.00'}</td>
-                          <td className={`py-2 px-3 text-xs font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ${pnl.toFixed(2)}
-                          </td>
-                          <td className="py-2 px-3">
-                            <div className="flex items-center gap-1">
-                              <button 
-                                onClick={() => openModifyModal(trade)}
-                                className="p-1.5 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
-                                title="Modify SL/TP"
-                              >
-                                <Pencil size={12} />
-                              </button>
-                              <button 
-                                onClick={() => openCloseModal(trade)}
-                                className="p-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                                title="Close Trade"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
+                        <AnimatedTradeRow
+                          key={trade._id}
+                          trade={trade}
+                          rawBid={rawBid}
+                          rawAsk={rawAsk}
+                          fallbackPnl={lastTradePnlRef.current[trade._id] || 0}
+                          priceDecimals={priceDecimals}
+                          isDarkMode={isDarkMode}
+                          onModify={openModifyModal}
+                          onClose={openCloseModal}
+                        />
+                      );
                     })
                   )}
                 </tbody>
@@ -5451,7 +5459,7 @@ const TradingPage = () => {
                           return (
                             <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
                               <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.closedAt).toLocaleString()}</td>
-                              <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
+                              <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{String(trade.symbol || '').toUpperCase().replace(/\.I$/i, '')}</td>
                               <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
                               <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
                               <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
@@ -5581,7 +5589,7 @@ const TradingPage = () => {
                     pendingOrders.map(order => (
                       <tr key={order._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
                         <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(order.createdAt).toLocaleTimeString()}</td>
-                        <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{order.symbol}</td>
+                        <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{String(order.symbol || '').toUpperCase().replace(/\.I$/i, '')}</td>
                         <td className={`py-2 px-3 text-xs font-medium ${order.orderType.includes('BUY') ? 'text-blue-500' : 'text-red-500'}`}>{order.orderType}</td>
                         <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.quantity}</td>
                         <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{order.pendingPrice?.toFixed(5)}</td>
@@ -5612,7 +5620,25 @@ const TradingPage = () => {
 
         {/* Right Panel - Order */}
         {showOrderPanel && (
-          <div className={`${isMobile ? 'absolute inset-0 z-20' : 'w-72'} border-l flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
+          <div className={`${isMobile ? 'absolute inset-0 z-20' : 'w-72'} relative border-l flex flex-col shrink-0 ${isDarkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
+            
+            {/* Kill Switch Lockdown Overlay */}
+            {killSwitchActive && (
+              <div className="absolute inset-0 z-[30] backdrop-blur-[2px] bg-black/40 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4 border border-red-500/40 animate-pulse">
+                  <Lock size={32} className="text-red-500" />
+                </div>
+                <h3 className="text-white font-bold text-sm uppercase tracking-widest mb-1">Trading Locked</h3>
+                <p className="text-red-400 font-mono text-lg mb-4">{killSwitchTimeLeft}</p>
+                <p className="text-gray-400 text-[10px] leading-relaxed">
+                  The Kill Switch is currently active. New orders are disabled to protect your capital.
+                </p>
+                <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                  <p className="text-[9px] text-gray-500 italic">Unlocking automatically when timer expires</p>
+                </div>
+              </div>
+            )}
+
             <div className={`px-4 py-4 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
               <span className={`text-base font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedInstrument.symbol} order</span>
               <button onClick={() => setShowOrderPanel(false)} className={isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}>
@@ -5659,6 +5685,21 @@ const TradingPage = () => {
 
                   {/* One-Click Buy/Sell Buttons */}
                   <div className="flex gap-2 mb-3">
+                    {(() => {
+                      //Sanket v2.0 - Compute raw target prices once and pass to AnimatedPrice.
+                      // AnimatedPrice is an isolated child — only IT re-renders at 60 fps via
+                      // useInterpolation; TradingPage itself is NOT affected by the RAF loop.
+                      const sym = selectedInstrument.symbol;
+                      const sellRaw = metaApiPrices[sym]
+                        ? metaApiPrices[sym].bid
+                        : getDisplayPrice(sym, 'SELL', selectedInstrument.bid, selectedInstrument.ask);
+                      const buyRaw = metaApiPrices[sym]
+                        ? metaApiPrices[sym].ask
+                        : getDisplayPrice(sym, 'BUY', selectedInstrument.bid, selectedInstrument.ask);
+                      const decimals = isJpyPair(sym) ? 3
+                        : (isCryptoSymbol(sym) || getBaseSymbol(sym) === 'XAUUSD') ? 2
+                        : 5;
+                      return (<>
                     <button 
                       onClick={() => executeMarketOrder('SELL')}
                       disabled={isExecutingTrade}
@@ -5670,20 +5711,7 @@ const TradingPage = () => {
                       )}
                       <div className="text-white text-[10px] font-medium">SELL</div>
                       <div className="text-white font-mono text-lg font-bold">
-                        {(() => {
-                          // Use MetaAPI prices for the selected instrument when available
-                          let price;
-                          if (metaApiPrices[selectedInstrument.symbol]) {
-                            price = metaApiPrices[selectedInstrument.symbol].bid; // Use bid for SELL
-                          } else {
-                            price = getDisplayPrice(selectedInstrument.symbol, 'SELL', selectedInstrument.bid, selectedInstrument.ask);
-                          }
-                          return isJpyPair(selectedInstrument.symbol)
-                            ? price?.toFixed(3)
-                            : (isCryptoSymbol(selectedInstrument.symbol) || getBaseSymbol(selectedInstrument.symbol) === 'XAUUSD')
-                              ? price?.toFixed(2)
-                              : price?.toFixed(5)
-                        })()}
+                        <AnimatedPrice target={sellRaw} decimals={decimals} />
                       </div>
                     </button>
                     <button 
@@ -5697,22 +5725,11 @@ const TradingPage = () => {
                       )}
                       <div className="text-white text-[10px] font-medium">BUY</div>
                       <div className="text-white font-mono text-lg font-bold">
-                        {(() => {
-                          // Use MetaAPI prices for the selected instrument when available
-                          let price;
-                          if (metaApiPrices[selectedInstrument.symbol]) {
-                            price = metaApiPrices[selectedInstrument.symbol].ask; // Use ask for BUY
-                          } else {
-                            price = getDisplayPrice(selectedInstrument.symbol, 'BUY', selectedInstrument.bid, selectedInstrument.ask);
-                          }
-                          return isJpyPair(selectedInstrument.symbol)
-                            ? price?.toFixed(3)
-                            : (isCryptoSymbol(selectedInstrument.symbol) || getBaseSymbol(selectedInstrument.symbol) === 'XAUUSD')
-                              ? price?.toFixed(2)
-                              : price?.toFixed(5)
-                        })()}
+                        <AnimatedPrice target={buyRaw} decimals={decimals} />
                       </div>
                     </button>
+                      </>);
+                    })()}
                   </div>
 
                   {/* Side Selection for detailed order */}
@@ -6071,13 +6088,13 @@ const TradingPage = () => {
         {/* Bottom Status Bar */}
         <footer className={`h-6 border-t flex items-center px-2 sm:px-3 text-[10px] sm:text-xs shrink-0 overflow-x-auto ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
           <span className={`font-medium shrink-0 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedInstrument.symbol}</span>
-          <span className="text-gray-500 ml-2 sm:ml-4 shrink-0">Bal: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>${accountSummary.balance?.toFixed(2) || '0.00'}</span></span>
+          <span className="text-gray-500 ml-2 sm:ml-4 shrink-0">Bal: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>$<AnimatedValue value={accountSummary.balance} /></span></span>
           {!isMobile && (
             <>
-              <span className="text-gray-500 ml-4 shrink-0">Credit: <span className="text-purple-400">${accountSummary.credit?.toFixed(2) || '0.00'}</span></span>
-              <span className="text-gray-500 ml-4 shrink-0">Eq: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500' : 'text-red-500'}>${accountSummary.equity?.toFixed(2) || '0.00'}</span></span>
-              <span className="text-gray-500 ml-4 shrink-0">Margin: <span className="text-yellow-500">${accountSummary.usedMargin?.toFixed(2) || '0.00'}</span></span>
-              <span className="text-gray-500 ml-4 shrink-0">Free: <span className={accountSummary.freeMargin >= 0 ? 'text-blue-400' : 'text-red-500'}>${accountSummary.freeMargin?.toFixed(2) || '0.00'}</span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Credit: <span className="text-purple-400">$<AnimatedValue value={accountSummary.credit} /></span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Eq: <span className={accountSummary.floatingPnl >= 0 ? 'text-green-500' : 'text-red-500'}>$<AnimatedValue value={accountSummary.equity} /></span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Margin: <span className="text-yellow-500">$<AnimatedValue value={accountSummary.usedMargin} /></span></span>
+              <span className="text-gray-500 ml-4 shrink-0">Free: <span className={accountSummary.freeMargin >= 0 ? 'text-blue-400' : 'text-red-500'}>$<AnimatedValue value={accountSummary.freeMargin} /></span></span>
             </>
           )}
           <div className="flex-1" />
@@ -6091,7 +6108,7 @@ const TradingPage = () => {
 
       {/* iOS-Style Modify SL/TP Modal */}
       {showModifyModal && selectedTradeForModify && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={() => setShowModifyModal(false)}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowModifyModal(false)}>
           <div className="w-full sm:w-96 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-700/50 text-center">
@@ -6165,66 +6182,54 @@ const TradingPage = () => {
         </div>
       )}
 
-      {/* iOS-Style Close Trade Confirmation Modal */}
+      {/* Enhanced Close Trade Modal (No Blur, Partial Close Support) */}
       {showCloseModal && selectedTradeForClose && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
           <div className="w-full sm:w-80 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
-            {/* Header */}
-            <div className="px-4 py-4 text-center">
-              <h3 className="text-white font-semibold text-lg">Close Trade?</h3>
-              <p className="text-gray-400 text-sm mt-2">
+            <div className="p-5 text-center">
+              <h3 className="text-sm font-medium text-white">Close Trade?</h3>
+              <p className="text-xs text-white/60 mt-1">
                 {selectedTradeForClose.symbol} • {selectedTradeForClose.side} • {selectedTradeForClose.quantity} lots
               </p>
-              <p className="text-gray-500 text-xs mt-1">
-                This action cannot be undone
-              </p>
-            </div>
 
-            {/* Actions */}
-            <div className="border-t border-gray-700/50">
-              <button
-                onClick={handleConfirmClose}
-                className="w-full py-4 text-red-500 font-semibold text-lg hover:bg-[#2c2c2e] transition-colors"
-              >
-                Close Trade
-              </button>
-            </div>
-            {/* Close All Options */}
-            {openTrades.length > 1 && (
-              <>
-                <div className="border-t border-gray-700/50">
-                  <button
-                    onClick={() => { setShowCloseModal(false); handleCloseAllTrades('all'); }}
-                    className="w-full py-4 text-orange-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-                  >
-                    Close All ({openTrades.length})
-                  </button>
+              <div className="mt-4 p-3 bg-white/5 border border-white/10 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] text-white/40 uppercase font-bold">Partial Close (Lots)</span>
+                  <span className="text-[10px] text-blue-400 font-bold">Max: {selectedTradeForClose?.quantity}</span>
                 </div>
-                <div className="border-t border-gray-700/50">
-                  <button
-                    onClick={() => { setShowCloseModal(false); handleCloseAllTrades('profit'); }}
-                    className="w-full py-4 text-green-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-                  >
-                    Close Profit
-                  </button>
-                </div>
-                <div className="border-t border-gray-700/50">
-                  <button
-                    onClick={() => { setShowCloseModal(false); handleCloseAllTrades('loss'); }}
-                    className="w-full py-4 text-red-400 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-                  >
-                    Close Loss
-                  </button>
-                </div>
-              </>
-            )}
-            <div className="border-t border-gray-700/50">
-              <button
-                onClick={() => setShowCloseModal(false)}
-                className="w-full py-4 text-blue-500 font-medium text-lg hover:bg-[#2c2c2e] transition-colors"
-              >
-                Cancel
-              </button>
+                <input 
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={selectedTradeForClose?.quantity}
+                  value={partialQuantity}
+                  onChange={(e) => setPartialQuantity(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 text-center"
+                  placeholder="Lots to close"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <button 
+                  onClick={() => setShowCloseModal(false)}
+                  className="py-2.5 bg-white/5 text-white/60 text-xs font-medium rounded active:scale-95 transition-all hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    const qty = parseFloat(partialQuantity);
+                    if (qty > 0 && qty <= selectedTradeForClose.quantity) {
+                      closeTrade(selectedTradeForClose._id, qty);
+                      setShowCloseModal(false);
+                    }
+                  }}
+                  className="py-2.5 bg-red-500 text-white text-xs font-medium rounded active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                >
+                  {parseFloat(partialQuantity) < selectedTradeForClose?.quantity ? 'Partial Close' : 'Close Trade'}
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -6232,7 +6237,7 @@ const TradingPage = () => {
 
       {/* iOS-Style Close All Trades Confirmation Modal */}
       {showCloseAllModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
           <div className="w-full sm:w-80 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
             {/* Header */}
             <div className="px-4 py-4 text-center">
@@ -6278,7 +6283,7 @@ const TradingPage = () => {
 
       {/* Kill Switch Modal */}
       {showKillSwitchModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
           <div className="w-full sm:w-96 bg-[#1c1c1e] sm:rounded-2xl rounded-t-2xl overflow-hidden animate-slide-up">
             {/* Header */}
             <div className="px-4 py-4 text-center border-b border-gray-700/50">

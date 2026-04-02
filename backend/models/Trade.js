@@ -151,6 +151,11 @@ const tradeSchema = new mongoose.Schema({
   adminModifiedAt: {
     type: Date,
     default: null
+  },
+  //Sanket v2.0 - Grace period: timestamp of last SL/TP modification to prevent immediate SL trigger on moved stop
+  slLastModifiedAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true })
 

@@ -43,21 +43,16 @@ router.post('/save', async (req, res) => {
 router.get('/load/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { symbol } = req.query;
-    
-    // v7.77 Strict Normalization
-    const targetSymbol = normalizeSymbol(symbol || 'GLOBAL');
-    
+    const { symbol } = req.query; // ΓöÇΓöÇ┬ü∩╕Å Senior Dev Fix: extract symbol from query
+    let targetSymbol = normalizeSymbol(symbol || 'GLOBAL');
     let layout = await ChartLayout.findOne({ userId, symbol: targetSymbol });
 
-    // v7.77 Migration Logic: If not found, check for non-.i variant
-    if (!layout && targetSymbol.endsWith('.i')) {
-      const legacySymbol = targetSymbol.replace(/\.i$/i, '');
-      layout = await ChartLayout.findOne({ userId, symbol: legacySymbol });
+    //Sanket v2.0 - Backward compat: check for old .i suffix layouts and migrate
+    if (!layout) {
+      layout = await ChartLayout.findOne({ userId, symbol: `${targetSymbol}.i` });
       
       if (layout) {
-        console.log(`[v7.77] Migrating legacy layout for ${userId}: ${legacySymbol} -> ${targetSymbol}`);
-        // Rename and save back
+        console.log(`[v2.0] Migrating .i layout for ${userId}: ${targetSymbol}.i -> ${targetSymbol}`);
         layout.symbol = targetSymbol;
         await layout.save();
       }
@@ -81,8 +76,8 @@ router.get('/load/:userId', async (req, res) => {
 router.delete('/reset/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const symbol = req.query.symbol || req.body.symbol || 'GLOBAL';
-    const targetSymbol = normalizeSymbol(symbol);
+    const { symbol } = req.query; // ΓöÇΓöÇ┬ü∩╕Å Senior Dev Fix: extract symbol from query
+    const targetSymbol = normalizeSymbol(symbol || 'GLOBAL');
     await ChartLayout.findOneAndDelete({ userId, symbol: targetSymbol });
 
     res.json({ success: true, message: 'Chart layout reset successfully' });

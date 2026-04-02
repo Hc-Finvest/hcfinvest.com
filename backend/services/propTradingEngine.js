@@ -3,6 +3,7 @@ import ChallengeAccount from '../models/ChallengeAccount.js'
 import PropSettings from '../models/PropSettings.js'
 import Trade from '../models/Trade.js'
 import { isMarketOpen } from '../utils/marketHours.js'
+import mongoose from 'mongoose'
 
 class PropTradingEngine {
   constructor() {
@@ -101,6 +102,14 @@ class PropTradingEngine {
     }
     if (account.status !== 'ACTIVE' && account.status !== 'FUNDED') {
       return { valid: false, error: 'Challenge account is not active', code: this.ERROR_CODES.ACCOUNT_NOT_ACTIVE }
+    }
+
+    if (account.killSwitchUntil && account.killSwitchUntil > new Date()) {
+      return { 
+        valid: false, 
+        error: `Trading blocked! Kill Switch active until ${account.killSwitchUntil.toLocaleString()}`, 
+        code: 'KILL_SWITCH_ACTIVE' 
+      }
     }
 
     // Check expiry
@@ -282,8 +291,68 @@ class PropTradingEngine {
 
     // Update challenge account stats
     await this.onTradeOpened(challengeAccountId, trade)
-
     return trade
+  }
+
+  // Close a trade for challenge account (supports partial close)
+  async closeTrade(tradeId, currentBid, currentAsk, closedBy = 'USER', adminId = null, rawBid = null, rawAsk = null, quantityToClose = null) {
+    const trade = await Trade.findById(tradeId);
+    if (!trade) throw new Error('Trade not found');
+    if (trade.status !== 'OPEN') return { trade, alreadyClosed: true };
+
+    const bidToUse = rawBid !== undefined && rawBid !== null ? rawBid : currentBid;
+    const askToUse = rawAsk !== undefined && rawAsk !== null ? rawAsk : ask;
+    const closePrice = trade.side === 'BUY' ? bidToUse : askToUse;
+
+    const totalQuantity = trade.quantity;
+    const actualQuantityToClose = (quantityToClose && quantityToClose > 0 && quantityToClose < totalQuantity)
+      ? parseFloat(quantityToClose)
+      : totalQuantity;
+    
+    const isPartialClose = actualQuantityToClose < totalQuantity;
+
+    // Calculate PnL for closed portion
+    const pnl = trade.side === 'BUY'
+      ? (closePrice - trade.openPrice) * actualQuantityToClose * trade.contractSize
+      : (trade.openPrice - closePrice) * actualQuantityToClose * trade.contractSize;
+
+    let finalTradeForResponse = trade;
+
+    if (isPartialClose) {
+      // 1. Create history entry
+      const closedPartTradeId = `CH${Date.now()}P${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+      const closedPartTrade = await Trade.create({
+        ...trade.toObject(),
+        _id: new mongoose.Types.ObjectId(),
+        tradeId: closedPartTradeId,
+        quantity: actualQuantityToClose,
+        status: 'CLOSED',
+        closePrice: closePrice,
+        closedAt: new Date(),
+        realizedPnl: pnl,
+        closedBy: closedBy,
+        marginUsed: 0
+      });
+
+      // 2. Update original
+      trade.quantity -= actualQuantityToClose;
+      const leverage = trade.leverage || 100;
+      trade.marginUsed = (trade.quantity * trade.contractSize * trade.openPrice) / leverage;
+      await trade.save();
+      finalTradeForResponse = closedPartTrade;
+    } else {
+      trade.status = 'CLOSED';
+      trade.closePrice = closePrice;
+      trade.closedAt = new Date();
+      trade.realizedPnl = pnl;
+      trade.closedBy = closedBy;
+      await trade.save();
+    }
+
+    // Update challenge account stats
+    await this.onTradeClosed(trade.tradingAccountId, finalTradeForResponse, pnl, !isPartialClose);
+
+    return { trade: finalTradeForResponse, realizedPnl: pnl, isChallengeAccount: true };
   }
 
   // Get contract size based on symbol
@@ -358,7 +427,7 @@ class PropTradingEngine {
   }
 
   // Called after trade closes - CRITICAL for rule enforcement
-  async onTradeClosed(challengeAccountId, trade, closePnL) {
+  async onTradeClosed(challengeAccountId, trade, closePnL, isFullClose = true) {
     const account = await ChallengeAccount.findById(challengeAccountId)
       .populate('challengeId')
     
@@ -370,7 +439,10 @@ class PropTradingEngine {
     // Update balance and equity
     account.currentBalance += closePnL
     account.currentEquity = account.currentBalance
-    account.openTradesCount = Math.max(0, account.openTradesCount - 1)
+    
+    if (isFullClose) {
+      account.openTradesCount = Math.max(0, account.openTradesCount - 1)
+    }
 
     // Update equity tracking
     await account.updateEquity(account.currentEquity)
@@ -650,20 +722,17 @@ class PropTradingEngine {
     const closedTrades = []
 
     for (const trade of openTrades) {
-      const priceData = prices[trade.symbol]
-      if (!priceData || !priceData.bid || !priceData.ask || parseFloat(priceData.bid) <= 0 || parseFloat(priceData.ask) <= 0) {
-        // Skip SL/TP check for challenge trades when price is missing or zero
-        continue
+      //Sanket v2.0 - Skip SL/TP check for 5 seconds after user modified SL/TP.
+      // Prevents immediate close when user moves stop above current price (trailing stop / lock-in-profit).
+      if (trade.slLastModifiedAt) {
+        const secsSinceModify = (Date.now() - new Date(trade.slLastModifiedAt).getTime()) / 1000;
+        if (secsSinceModify < 5) continue;
       }
 
-      // ✅ ELITE: Price Freshness Guard (Anti-Fossilization)
-      const priceAgeMs = Date.now() - (priceData.timestamp || 0);
-      if (priceAgeMs > 60000) {
-        if (Math.random() < 0.05) { // Log 5% of instances for challenge trades
-          console.warn(`[PropEngine] Skipping SL/TP check for ${trade.symbol} due to stale data (${Math.round(priceAgeMs/1000)}s)`);
-        }
-        continue;
-      }
+      //Sanket v2.0 - Normalize trade symbol: strip .i suffix for consistent price lookup
+      const sym = trade.symbol.toUpperCase().replace(/\.I$/i, '');
+      const priceData = prices[sym] || prices[`${sym}.i`] || prices[trade.symbol];
+      if (!priceData) continue
 
       const bid = priceData.rawBid !== undefined ? priceData.rawBid : priceData.bid
       const ask = priceData.rawAsk !== undefined ? priceData.rawAsk : priceData.ask
@@ -699,10 +768,6 @@ class PropTradingEngine {
       }
 
       if (shouldClose) {
-        console.log(`[PropEngine] 🚨 SL/TP TRIGGERED: Challenge Trade ${trade._id} [${trade.side} ${trade.symbol}] hit ${closeReason}. ` +
-                    `Price: ${trade.side === 'BUY' ? bid : ask}, Trigger: ${closePrice}, ` +
-                    `Data Age: ${Math.round((Date.now() - priceData.timestamp)/1000)}s`);
-
         // Calculate PnL
         const pnl = trade.side === 'BUY'
           ? (closePrice - trade.openPrice) * trade.quantity * trade.contractSize

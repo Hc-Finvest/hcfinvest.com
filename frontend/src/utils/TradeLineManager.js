@@ -1,4 +1,6 @@
 import { API_URL } from '../config/api';
+import { getInstrumentInfo, roundPrice } from './precision';
+import { canonicalSymbol } from './symbolUtils';
 
 /**
  * ============================================================
@@ -12,7 +14,8 @@ import { API_URL } from '../config/api';
  * ============================================================
  */
 // ΓöÇΓöÇΓöÇ Auth ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-window.TRADE_ENGINE_VERSION = '7.51-SILENT';
+window.TRADE_ENGINE_VERSION = '7.53-ACTIVE';
+console.log("%c [TradeManager] v7.53 SL/TP ENGINE ACTIVE ", "background: #1a1a1a; color: #00ff00; font-weight: bold; padding: 4px; border-radius: 4px;");
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -28,14 +31,6 @@ const getAuthToken = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     return normalizeToken(user?.token || user?.accessToken || user?.jwt);
   } catch { return ''; }
-};
-
-// ΓöÇΓöÇΓöÇ Symbol normalization ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-const canonicalSymbol = (raw) => {
-  const v = String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!v) return '';
-  if (/^[A-Z]{6}/.test(v)) return v.slice(0, 6);
-  return v;
 };
 
 // ΓöÇΓöÇΓöÇ Price formatting ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -66,6 +61,7 @@ export class TradeLineManager {
     this.isUpdatingGhost = false;
     this.syncLockUntil = 0;
     this._adminSpreads = {};
+    this._lastPrices = {}; // canonicalSymbol -> { bid, ask }
   }
 
   setAdminSpreads(spreads) {
@@ -76,14 +72,17 @@ export class TradeLineManager {
     this.widget = widget;
     this._attachEvents(widget);
     
-    // ≡ƒ¢í∩╕Å v7.80 Fossil Cleanup: Purge baked-in lines from localStorage
-    // Because auto_save_delay saves programmatic lines, they load as dead "fossil" shapes on refresh.
-    // We must scan and destroy them before syncing live trades.
+    // v7.80 Fossil Cleanup: Purge baked-in lines from chart save state on refresh.
+    // CRITICAL: skip any shape that is already tracked in tvIdMap — those are LIVE managed lines
+    // created by syncTrades. Deleting them leaves set.tp/sl with a dead tvId (since _destroyShape
+    // is not called), causing _updateShape to silently fail and the line to vanish permanently.
+    //Sanket v2.0 - Only remove shapes that are NOT in tvIdMap (true fossils, not managed lines)
     setTimeout(() => {
         try {
             const chart = widget.chart();
             const shapes = chart.getAllShapes();
             shapes.forEach(shape => {
+                if (this.tvIdMap[shape.id]) return; // Skip managed shapes — never delete live lines
                 const entity = chart.getShapeById(shape.id);
                 const props = entity?.getProperties?.();
                 if (props && props.text) {
@@ -132,8 +131,11 @@ export class TradeLineManager {
       }
 
       // v7.51 Restore Guard
+      // Sanket v2.0 - Skip restore if WE triggered the removal (ghost cleanup etc.), and always pass current symbol so canonicalSymbol(null) does not wipe all lines
       if (action === 'remove' && !this.isCommitBlocked) {
-          setTimeout(() => this.syncTrades(this.trades), 100);
+          if (this._ownRemovals?.has(tvId)) return;
+          const sym = this.widget?.symbolInterval?.()?.symbol;
+          setTimeout(() => this.syncTrades(this.trades, sym), 100);
       }
 
       // ≡ƒ¢í∩╕Å v7.32 Track BOTH move and points_changed to guarantee we never miss a final drag endpoint!
@@ -231,19 +233,25 @@ export class TradeLineManager {
               this._destroyShape(ghost.tvId);
               this.lines[tid].ghost = null;
               
-              const side = String(trade.side || trade.type || '').toLowerCase();
-              const isBuy = side.includes('buy') || side.includes('long');
+              // v7.53 Hardened side detection with price-based fallback
+              const sideStr = String(trade.side || trade.type || trade.action || trade.orderType || '').toLowerCase();
               const entryPrice = Number(trade.openPrice || trade.price);
               
-              // v7.51 Precision decision logic
-              const priceScale = this.widget.activeChart().symbolInfo()?.pricescale || 100;
-              const epsilon = 1 / (priceScale * 10); // 0.1 pip epsilon
+              let isBuy = sideStr.includes('buy') || sideStr.includes('long');
+              // Fallback: If side is ambiguous, infer from current position vs entry
+              if (!sideStr && price !== entryPrice) {
+                  isBuy = price > entryPrice; 
+              }
               
-              let t;
+              const symbol = this.widget.symbolInterval().symbol;
+              const { pricescale } = getInstrumentInfo(symbol);
+              const epsilon = 5 / (pricescale * 10); // 0.5 pip epsilon for better drag stability
+              
+              let t = null;
               if (isBuy) {
                   if (price > entryPrice + epsilon) t = 'tp';
                   else if (price < entryPrice - epsilon) t = 'sl';
-                  else return; // Dropped too close to entry, ignore to prevent accidental SL hit
+                  else return;
               } else {
                   if (price < entryPrice - epsilon) t = 'tp';
                   else if (price > entryPrice + epsilon) t = 'sl';
@@ -260,6 +268,20 @@ export class TradeLineManager {
                   this.lines[tid][t] = shapeRef;
               }
 
+                  //Sanket v2.0 - Multi-trade safety guard: reject commits that are already triggerable
+                  // at the current live bid/ask. On crowded charts with overlapping SL/TP lines,
+                  // users can accidentally drag the wrong trade's line. Without this check, backend
+                  // accepts the new SL/TP and the trade closes on the very next engine cycle.
+                  if (!this._isSafeLevelForCurrentPrice(trade, t, price)) {
+                    const original = t === 'sl'
+                    ? Number(trade.stopLoss || trade.sl || 0)
+                    : Number(trade.takeProfit || trade.tp || 0);
+                    if (Number.isFinite(original) && original > 0 && this.lines[tid][t]) {
+                      this._updateShape(this.lines[tid][t].tvId, original);
+                    }
+                    return;
+                  }
+
               await this._commitTrade(tid, t, price); 
           }
 
@@ -271,6 +293,16 @@ export class TradeLineManager {
         }
 
         if (meta.type === 'sl' || meta.type === 'tp') {
+          const trade = this.getTradeById(meta.tradeId);
+          if (trade && !this._isSafeLevelForCurrentPrice(trade, meta.type, price)) {
+            const original = meta.type === 'sl'
+              ? Number(trade.stopLoss || trade.sl || 0)
+              : Number(trade.takeProfit || trade.tp || 0);
+            if (Number.isFinite(original) && original > 0) {
+              this._updateShape(tvId, original);
+            }
+            return;
+          }
             this._updateShape(tvId, price);
             await this._commitTrade(meta.tradeId, meta.type, price);
         }
@@ -363,7 +395,30 @@ export class TradeLineManager {
         selectable: false // ≡ƒ¢í∩╕Å v7.46 Stationary Anchor: Entry lines cannot be selected/deleted.
       });
     } else {
-      this._updateShape(set.entry.tvId, entry, labelText);
+      //Sanket v2.0 - Dead-reference guard for entry line. Same pattern as SL/TP below.
+      // Without this, an entry shape removed externally (fossil cleanup, chart re-init, widget.load)
+      // leaves set.entry pointing to a dead tvId. _updateShape returns silently, the entry line
+      // never redraws, and the next syncTrades cycle finds set.entry truthy so it never recreates.
+      let entryExists = false;
+      try { entryExists = !!this.widget.chart().getShapeById(set.entry.tvId); } catch(e) {}
+      if (!entryExists) {
+        delete this.tvIdMap[set.entry.tvId];
+        set.entry = null;
+        set.entry = await this._createShape(tid, 'entry', entry, { color: '#2196F3', style: 1, width: 2, text: labelText, selectable: false });
+      } else {
+        this._updateShape(set.entry.tvId, entry, labelText);
+      }
+    }
+
+    //Sanket v2.0 - Race condition guard: clearAllManagedDrawings() can be called while this async
+    // function is awaiting _createShape (e.g. trades briefly becomes [] between render cycles).
+    // After the await resolves, this.lines[tid] may have been deleted. If we continue writing to
+    // the stale local `set` reference, the new shape is registered in tvIdMap but orphaned from
+    // lines, creating a phantom shape that is never cleaned up and causes duplicate lines on the
+    // next sync. Abort early and let the next syncTrades cycle recreate lines cleanly.
+    if (!this.lines[tid]) {
+      if (set.entry) { this._destroyShape(set.entry.tvId); set.entry = null; }
+      return;
     }
 
     // SL
@@ -371,16 +426,46 @@ export class TradeLineManager {
       if (!set.sl) {
         set.sl = await this._createShape(tid, 'sl', sl, { color: '#f44336', style: 1, width: 2, text: `SL` });
       } else {
-        this._updateShape(set.sl.tvId, sl);
+        //Sanket v2.0 - Verify the TV shape still exists before updating. If the shape was removed
+        // externally (fossil cleanup, chart clear, widget re-init) _updateShape silently fails and
+        // set.sl stays non-null forever — the line never re-appears AND a second orphan can form
+        // if set.sl is later nulled while the ghost shape persists on the chart.
+        let slExists = false;
+        try { slExists = !!this.widget.chart().getShapeById(set.sl.tvId); } catch(e) {}
+        if (!slExists) {
+          delete this.tvIdMap[set.sl.tvId];
+          set.sl = null;
+          set.sl = await this._createShape(tid, 'sl', sl, { color: '#f44336', style: 1, width: 2, text: `SL` });
+        } else {
+          this._updateShape(set.sl.tvId, sl);
+        }
       }
     } else if (set.sl) { this._destroyShape(set.sl.tvId); set.sl = null; }
+
+    // Race condition guard after SL await
+    if (!this.lines[tid]) {
+      if (set.sl) { this._destroyShape(set.sl.tvId); set.sl = null; }
+      return;
+    }
 
     // TP
     if (Number.isFinite(tp) && tp > 0) {
       if (!set.tp) {
         set.tp = await this._createShape(tid, 'tp', tp, { color: '#4caf50', style: 1, width: 2, text: `TP` });
       } else {
-        this._updateShape(set.tp.tvId, tp);
+        //Sanket v2.0 - Same dead-reference guard as SL above. Without this, a TP moved by drag
+        // then externally destroyed leaves set.tp pointing to a dead tvId. _updateShape silently
+        // returns, the TP never redraws, AND the orphaned ghost shape at the old price stays on
+        // screen — causing the "two TP lines" symptom (old ghost + newly created managed line).
+        let tpExists = false;
+        try { tpExists = !!this.widget.chart().getShapeById(set.tp.tvId); } catch(e) {}
+        if (!tpExists) {
+          delete this.tvIdMap[set.tp.tvId];
+          set.tp = null;
+          set.tp = await this._createShape(tid, 'tp', tp, { color: '#4caf50', style: 1, width: 2, text: `TP` });
+        } else {
+          this._updateShape(set.tp.tvId, tp);
+        }
       }
     } else if (set.tp) { this._destroyShape(set.tp.tvId); set.tp = null; }
   }
@@ -402,11 +487,17 @@ export class TradeLineManager {
                     linewidth: cfg.width,
                     linestyle: cfg.style,
                     showLabel: true,
+                    showPrice: false,
                     text: cfg.text,
                     horzLabelsAlign: 'left',
                 }
             }
         );
+        //Sanket v2.0 - Guard against null tvId: createShape returns null when the chart is still
+        // processing a widget.load() or in a non-interactive state. If we store tvIdMap[null],
+        // every subsequent lookup (getShapeById, removeEntity) silently fails and the shape is
+        // stuck in a zombie "non-null set.entry" state that never retries creation.
+        if (!tvId) return null;
         this.tvIdMap[tvId] = { tradeId, type };
         return { tvId, price };
     } catch (e) { return null; }
@@ -432,15 +523,19 @@ export class TradeLineManager {
 
   _destroyShape(tvId) {
     if (!tvId) return;
-    try { 
-        const chart = this.widget.chart();
-        try { chart.removeEntity(tvId); } catch(e) {}
-        // ≡ƒ¢í∩╕Å v7.48 Double-Tap Deletion: Some shapes linger if deleted during a render cycle.
-        // We fire a second cleanup 100ms later to ensure the entity is gone.
-        setTimeout(() => {
-            try { this.widget?.chart()?.removeEntity(tvId); } catch(e) {}
-        }, 100);
-    } catch (e) {}
+    // Sanket v2.0 - Mark as own removal so the drawing_event 'remove' handler does not trigger a symbol-less syncTrades and wipe all visible lines
+    if (!this._ownRemovals) this._ownRemovals = new Set();
+    this._ownRemovals.add(tvId);
+    setTimeout(() => this._ownRemovals?.delete(tvId), 500);
+    //Sanket v2.0 - Removed the 100ms double-tap deletion. The double-tap called removeEntity on an
+    // ID that TV had already deleted from the first call. TV fires "Can't find a source with id"
+    // for every double-tap → each error triggered the drawing_event 'remove' handler → handler
+    // called syncTrades → syncTrades ran removeTradeLines → _destroyShape on freshly created
+    // SL/TP shapes → those fresh shapes also got double-tapped → cascade wipe of all lines.
+    // Single removeEntity is sufficient; TV processes it synchronously within the same frame.
+    try {
+        this.widget?.chart()?.removeEntity(tvId);
+    } catch(e) {}
     delete this.tvIdMap[tvId];
   }
 
@@ -461,23 +556,47 @@ export class TradeLineManager {
     return this.trades.find(t => String(t._id || t.id) === tid);
   }
 
+  _isSafeLevelForCurrentPrice(trade, type, price) {
+    //Sanket v2.0 - Validation uses current live bid/ask to prevent an immediate SL/TP trigger.
+    // This is especially critical on multi-trade charts where lines overlap and a wrong drag can
+    // otherwise close a different open trade instantly.
+    if (!trade || !type || !Number.isFinite(price)) return true;
+
+    const sym = canonicalSymbol(trade.symbol || this.widget?.symbolInterval?.()?.symbol);
+    const live = this._lastPrices[sym];
+    const bid = Number(live?.bid);
+    const ask = Number(live?.ask);
+    if (!Number.isFinite(bid) || !Number.isFinite(ask)) return true;
+
+    const side = String(trade.side || trade.type || '').toLowerCase();
+    const isBuy = side.includes('buy') || side.includes('long');
+    const { pricescale } = getInstrumentInfo(sym || 'XAUUSD');
+    const epsilon = 5 / (pricescale * 10); // 0.5 pip safety buffer
+
+    if (isBuy && type === 'sl') return price < (bid - epsilon);
+    if (isBuy && type === 'tp') return price > (bid + epsilon);
+    if (!isBuy && type === 'sl') return price > (ask + epsilon);
+    if (!isBuy && type === 'tp') return price < (ask - epsilon);
+    return true;
+  }
+
   async _commitTrade(tradeId, type, price) {
     const tid = String(tradeId);
     
+    //Sanket v2.0 - Guard against destroyed widget. _commitTrade is called via a 250ms setTimeout.
+    // By the time the timer fires, the widget may have been destroyed (e.g., component unmount,
+    // theme change forcing widget rebuild). Without this guard, the symbolInterval() call throws
+    // a TypeError which propagates as an unhandled rejection and silently kills the commit.
+    if (!this.widget) return;
+
     // v7.51 State-Preserving Commit
     const trade = this.getTradeById(tid);
     if (!trade) return;
 
     // ≡ƒ¢í∩╕Å v7.28 Precision Discovery
-    // Try to get instrument precision from chart to eliminate slippage
-    let decimals = 5;
-    try {
-        const info = this.widget.activeChart().symbolInfo();
-        if (info && info.pricescale) {
-            decimals = Math.round(Math.log10(info.pricescale));
-            if (decimals < 0) decimals = 2; // Default to 2 for things like JPY
-        }
-    } catch {}
+    // Use shared utility to get correct rounding decimals for the instrument
+    const symbol = this.widget.symbolInterval().symbol;
+    const { decimals } = getInstrumentInfo(symbol);
 
     // ≡ƒ¢í∩╕Å v7.36 Ultimate State Integrity
     // Use physical TV shapes as the primary fallback to prevent asynchronous Redux lag from overwriting new lines with zeros!
@@ -528,11 +647,18 @@ export class TradeLineManager {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
+      
       const data = await res.json();
+
       if (data.success && this.onTradeModify) {
+        console.log(`[TradeManager] SUCCESS: Trade ${tid} modified (${type} -> ${roundedPrice})`);
         this.onTradeModify({ tradeId: tid, sl: currentSL, tp: currentTP });
+      } else {
+        console.warn(`[TradeManager] FAILED: ${data.message || 'Unknown backend error'}`);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(`[TradeManager] ERROR: Network or parse failure during commit`, e);
+    }
   }
 
   updateLivePrice(symbol, prices) {
@@ -544,6 +670,10 @@ export class TradeLineManager {
     // Support both single numeric price (legacy) and dual price object
     const bid = typeof prices === 'object' ? prices.bid : prices;
     const ask = typeof prices === 'object' ? prices.ask : prices;
+
+    if (Number.isFinite(Number(bid)) && Number.isFinite(Number(ask))) {
+      this._lastPrices[curSym] = { bid: Number(bid), ask: Number(ask) };
+    }
 
     visibleTrades.forEach(trade => {
       const tid = String(trade._id || trade.id);
@@ -573,7 +703,26 @@ export class TradeLineManager {
       const pnlText = finalPnl >= 0 ? `+$${finalPnl.toFixed(2)}` : `-$${Math.abs(finalPnl).toFixed(2)}`;
       const labelText = `${isBuy ? 'BUY' : 'SELL'} ${quantity} | ${pnlText}`;
 
-      this._updateShape(set.entry.tvId, trade.openPrice || trade.price, labelText);
+      //Sanket v2.0 - CRITICAL: Do NOT call _updateShape here. _updateShape calls setPoints() which
+      // triggers TV's drawing_event 'points_changed' echo → _handler sets isCommitBlocked=true for
+      // 50ms. useInterpolation runs at 60fps (~16ms per frame), so _updateShape is called every 16ms.
+      // Since 16ms < 50ms reset timer, each frame re-sets isCommitBlocked=true before the previous
+      // timer clears it → isCommitBlocked is PERMANENTLY TRUE during live tick flow → every user
+      // drag event (started/move/points_changed) is silently swallowed → SL/TP never responds.
+      // The entry price (trade.openPrice) never changes anyway, so setPoints is a no-op price-wise.
+      // Only the label text changes → use setProperties text-only, which does NOT trigger any echo.
+      this._updateShapeLabel(set.entry.tvId, labelText);
     });
+  }
+
+  _updateShapeLabel(tvId, text) {
+    //Sanket v2.0 - Text-only label update. Does NOT call setPoints so TV never fires points_changed.
+    // Safe to call at 60fps without affecting isCommitBlocked or any drag interaction.
+    if (!this.widget || !tvId || !text) return;
+    try {
+      const shape = this.widget.chart().getShapeById(tvId);
+      if (!shape) return;
+      shape.setProperties({ overrides: { text } });
+    } catch (e) {}
   }
 }

@@ -6,6 +6,7 @@ import AdminLog from '../models/AdminLog.js'
 import ibEngine from './ibEngineNew.js'
 import MasterTrader from '../models/MasterTrader.js'
 import { isMarketOpen, isPriceFresh } from '../utils/marketHours.js'
+import mongoose from 'mongoose'
 
 class TradeEngine {
   constructor() {
@@ -15,6 +16,26 @@ class TradeEngine {
   normalizeSymbol(symbol = '') {
     // Normalize broker-specific aliases (e.g. XAUUSD.i -> XAUUSD)
     return String(symbol).toUpperCase().replace(/\.I$/i, '')
+  }
+
+  // Scales the admin spread input into actual price math based on asset class
+  getScaledSpreadValue(symbol, spreadValue) {
+    if (!spreadValue || isNaN(spreadValue)) return 0;
+    
+    // Normalize symbol to strip suffixes like .i
+    const normalizedSymbol = this.normalizeSymbol(symbol);
+
+    if (normalizedSymbol.includes('JPY')) {
+      return spreadValue * 0.01; // JPY pairs: 1 pip = 0.01
+    } else if (['XAUUSD', 'XAGUSD', 'XPTUSD', 'XPDUSD', 'USOIL', 'UKOIL', 'NGAS', 'COPPER'].includes(normalizedSymbol)) {
+      return spreadValue * 0.01; // Metals & Commodities: cents to dollars
+    } else if (['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD', 'UNIUSD', 'ATOMUSD', 'XLMUSD', 'TRXUSD', 'ETCUSD', 'NEARUSD', 'ALGOUSD'].includes(normalizedSymbol)) {
+      return spreadValue; // Crypto: USD value as-is
+    } else if (['US30', 'US500', 'US100', 'UK100', 'GER40', 'FRA40', 'JP225', 'HK50', 'AUS200', 'ES35'].includes(normalizedSymbol)) {
+      return spreadValue; // Indices: points as-is
+    } else {
+      return spreadValue * 0.0001; // Standard Forex: 1 pip = 0.0001
+    }
   }
 
   // Get contract size based on symbol type
@@ -29,10 +50,27 @@ class TradeEngine {
     return 100000
   }
 
-  // Calculate execution price (Strict MT5 logic)
-  // BUY opens at ASK, SELL opens at BID
-  calculateExecutionPrice(side, bid, ask) {
-    return side === 'BUY' ? ask : bid
+  // Calculate execution price with Retail Markup (if any)
+  calculateExecutionPrice(symbol, side, bid, ask, spreadValue, spreadType) {
+    // ELITE: Start with raw market prices (Transparent Pricing)
+    let executionPrice = (side === 'BUY') ? ask : bid;
+    
+    // Apply administrative markup if configured
+    if (spreadValue > 0) {
+      let markup = this.getScaledSpreadValue(symbol, spreadValue);
+      if (spreadType === 'PERCENTAGE') {
+        markup = (ask - bid) * (spreadValue / 100);
+      }
+      executionPrice = (side === 'BUY') ? (executionPrice + markup) : (executionPrice - markup);
+    }
+    
+    return executionPrice;
+  }
+
+  // Simulated Market Execution Delay (LP Matching / Network Latency)
+  async simulateExecutionDelay() {
+    const delayMs = Math.floor(Math.random() * 50) + 30; // 30ms - 80ms realistic latency
+    return new Promise(resolve => setTimeout(resolve, delayMs));
   }
 
   // Calculate margin required for a trade
@@ -70,25 +108,15 @@ class TradeEngine {
     }
   }
 
-  // Calculate floating PnL using the model's business logic
-  calculateFloatingPnl(trade, currentBid, currentAsk) {
-    // If trade is a Mongoose model, use its method
-    if (typeof trade.calculatePnl === 'function') {
-      return trade.calculatePnl(currentBid, currentAsk)
-    }
-
-    // Fallback for plain objects (e.g. from Redis or aggregate)
-    const entryAsk = trade.entryAsk || trade.openPrice
-    const entryBid = trade.entryBid || trade.openPrice
+  // Calculate floating PnL including charges
+  calculateFloatingPnl(trade, currentBid, currentAsk, rawBid = null, rawAsk = null) {
+    // Prioritize raw values for institutional-grade accuracy
+    const actualBid = rawBid !== null ? rawBid : currentBid
+    const actualAsk = rawAsk !== null ? rawAsk : currentAsk
     
-    let pnl = 0
-    if (trade.side === 'BUY') {
-      pnl = (currentBid - entryAsk) * trade.quantity * trade.contractSize
-    } else {
-      pnl = (entryBid - currentAsk) * trade.quantity * trade.contractSize
-    }
-    
-    return pnl - (trade.commission || 0) - (trade.swap || 0)
+    const currentPrice = trade.side === 'BUY' ? actualBid : actualAsk
+    const rawPnl = this.calculatePnl(trade.side, trade.openPrice, currentPrice, trade.quantity, trade.contractSize)
+    return rawPnl - trade.commission - trade.swap
   }
 
   // Get account financial summary (real-time calculated values)
@@ -101,7 +129,8 @@ class TradeEngine {
 
     for (const trade of openTrades) {
       usedMargin += trade.marginUsed
-      const prices = currentPrices[trade.symbol]
+      const targetSym = this.normalizeSymbol(trade.symbol)
+      const prices = currentPrices[targetSym] || currentPrices[trade.symbol]
       if (prices) {
         floatingPnl += this.calculateFloatingPnl(trade, prices.bid, prices.ask, prices.rawBid, prices.rawAsk)
       }
@@ -132,6 +161,10 @@ class TradeEngine {
 
     if (account.status !== 'Active') {
       return { valid: false, error: `Account is ${account.status}` }
+    }
+
+    if (account.killSwitchUntil && account.killSwitchUntil > new Date()) {
+      return { valid: false, error: `Trading blocked! Kill Switch active until ${account.killSwitchUntil.toLocaleString()}` }
     }
 
     // CRITICAL: Check if account has any balance at all
@@ -194,7 +227,8 @@ class TradeEngine {
   }
 
   // Open a new trade
-  async openTrade(userId, tradingAccountId, symbol, segment, side, orderType, quantity, bid, ask, sl = null, tp = null, userLeverage = null, pendingPriceInput = null, rawBid = null, rawAsk = null) {
+  async openTrade(userId, tradingAccountId, rawSymbol, segment, side, orderType, quantity, bid, ask, sl = null, tp = null, userLeverage = null, pendingPriceInput = null, rawBid = null, rawAsk = null) {
+    const symbol = this.normalizeSymbol(rawSymbol);
     const account = await TradingAccount.findById(tradingAccountId).populate('accountTypeId')
     if (!account) throw new Error('Trading account not found')
 
@@ -212,14 +246,18 @@ class TradeEngine {
     const charges = await Charges.getChargesForTrade(userId, symbol, segment, account.accountTypeId?._id)
     console.log(`Charges retrieved: spread=${charges.spreadValue}, commission=${charges.commissionValue}, commissionType=${charges.commissionType}`)
 
-    // Calculate execution prices
-    const bidToUse = rawBid !== null ? rawBid : bid
-    const askToUse = rawAsk !== null ? rawAsk : ask
-    
-    // MT5: BUY opens at ASK, SELL opens at BID
-    const openPrice = this.calculateExecutionPrice(side, bidToUse, askToUse)
-    const entryBid = bidToUse
-    const entryAsk = askToUse
+    // Calculate execution price with spread
+    // For pending orders, use the user-specified pending price
+    // For market orders, calculate based on bid/ask with spread
+    let openPrice
+    if (orderType !== 'MARKET' && pendingPriceInput) {
+      openPrice = pendingPriceInput
+    } else {
+      // Use raw values for the opening price if possible
+      const bidToUse = rawBid !== null ? rawBid : bid
+      const askToUse = rawAsk !== null ? rawAsk : ask
+      openPrice = this.calculateExecutionPrice(symbol, side, bidToUse, askToUse, charges.spreadValue, charges.spreadType)
+    }
 
     // Get contract size based on symbol
     const contractSize = this.getContractSize(symbol)
@@ -239,7 +277,8 @@ class TradeEngine {
     const marginRequired = this.calculateMargin(quantity, openPrice, leverage, contractSize)
     
     // Log for debugging
-    console.log(`Trade validation: ${quantity} lots ${symbol} @ ${openPrice}, Contract: ${contractSize}, Leverage: ${leverage}, Margin Required: $${marginRequired}`)
+    // Simulate LP Matching Delay
+    await this.simulateExecutionDelay();
 
     // Validate trade - pass the correct parameters
     const validation = await this.validateTradeOpen(tradingAccountId, symbol, side, quantity, openPrice, leverage, contractSize)
@@ -271,8 +310,6 @@ class TradeEngine {
       orderType,
       quantity,
       openPrice,
-      entryBid,
-      entryAsk,
       stopLoss: sl,
       sl: sl,
       takeProfit: tp,
@@ -298,8 +335,8 @@ class TradeEngine {
     return trade
   }
 
-  // Close a trade
-  async closeTrade(tradeId, currentBid, currentAsk, closedBy = 'USER', adminId = null, rawBid = null, rawAsk = null) {
+  // Close a trade (supports partial close)
+  async closeTrade(tradeId, currentBid, currentAsk, closedBy = 'USER', adminId = null, rawBid = null, rawAsk = null, quantityToClose = null) {
     const trade = await Trade.findById(tradeId).populate({ path: 'tradingAccountId', populate: { path: 'accountTypeId' } })
     if (!trade) throw new Error('Trade not found')
     if (trade.status !== 'OPEN') {
@@ -308,12 +345,21 @@ class TradeEngine {
       return { trade, realizedPnl: trade.realizedPnl || 0, alreadyClosed: true }
     }
 
+    // Simulate LP Matching Delay for close order
+    await this.simulateExecutionDelay();
+
     const bidToUse = rawBid !== null ? rawBid : currentBid
     const askToUse = rawAsk !== null ? rawAsk : currentAsk
-    
-    // MT5 Logic: BUY closes at BID, SELL closes at ASK
     const closePrice = trade.side === 'BUY' ? bidToUse : askToUse
     
+    // Determine the actual quantity to close
+    const totalQuantity = trade.quantity;
+    const actualQuantityToClose = (quantityToClose && quantityToClose > 0 && quantityToClose < totalQuantity) 
+      ? parseFloat(quantityToClose) 
+      : totalQuantity;
+    
+    const isPartialClose = actualQuantityToClose < totalQuantity;
+
     // Get charges to check if commission on close is enabled
     const charges = await Charges.getChargesForTrade(
       trade.userId, 
@@ -322,30 +368,67 @@ class TradeEngine {
       trade.tradingAccountId?.accountTypeId?._id
     )
     
-    // Calculate commission on close if enabled
+    // Calculate commission on close if enabled (proportioned by quantity)
     let closeCommission = 0
     if (charges.commissionOnClose && charges.commissionValue > 0) {
-      closeCommission = this.calculateCommission(trade.quantity, closePrice, charges.commissionType, charges.commissionValue, trade.contractSize)
-      console.log(`Commission on close: $${closeCommission}`)
+      closeCommission = this.calculateCommission(actualQuantityToClose, closePrice, charges.commissionType, charges.commissionValue, trade.contractSize)
+      console.log(`Commission on close (Partial=${isPartialClose}): $${closeCommission}`)
     }
     
-    // Calculate final PnL using the model's robust logic
-    const realizedPnl = trade.calculatePnl(bidToUse, askToUse)
+    // Calculate final PnL for the closed portion
+    const rawPnl = this.calculatePnl(trade.side, trade.openPrice, closePrice, actualQuantityToClose, trade.contractSize)
+    const realizedPnl = rawPnl - (isPartialClose ? (trade.swap * (actualQuantityToClose / totalQuantity)) : trade.swap) - closeCommission
 
-    // Update trade
-    trade.closePrice = closePrice
-    trade.realizedPnl = realizedPnl
-    trade.status = 'CLOSED'
-    trade.closedBy = closedBy
-    trade.closedAt = new Date()
+    let finalTradeForResponse = trade;
 
-    if (adminId) {
-      trade.adminModified = true
-      trade.adminModifiedBy = adminId
-      trade.adminModifiedAt = new Date()
+    if (isPartialClose) {
+      // PARTIAL CLOSE LOGIC:
+      // 1. Create a "History" trade entry for the closed portion
+      // We use the same static generateTradeId() but we might need a unique ID here
+      const closedPartTradeId = await Trade.generateTradeId();
+      const closedPartTrade = await Trade.create({
+        ...trade.toObject(),
+        _id: new mongoose.Types.ObjectId(),
+        tradeId: closedPartTradeId,
+        quantity: actualQuantityToClose,
+        status: 'CLOSED',
+        closePrice: closePrice,
+        realizedPnl: realizedPnl,
+        closedBy: closedBy,
+        closedAt: new Date(),
+        commission: (trade.commission * (actualQuantityToClose / totalQuantity)) + closeCommission,
+        swap: (trade.swap * (actualQuantityToClose / totalQuantity)),
+        marginUsed: 0 // No margin used for closed trades
+      });
+
+      // 2. Update the original trade (KEEP OPEN with reduced volume)
+      const oldQuantity = trade.quantity;
+      trade.quantity -= actualQuantityToClose;
+      // Proportionally reduce commission and swap stored on the open trade
+      trade.commission -= (trade.commission * (actualQuantityToClose / oldQuantity));
+      trade.swap -= (trade.swap * (actualQuantityToClose / oldQuantity));
+      // Update margin used for smaller quantity
+      trade.marginUsed = this.calculateMargin(trade.quantity, trade.openPrice, `1:${trade.leverage}`, trade.contractSize);
+      
+      await trade.save();
+      finalTradeForResponse = closedPartTrade; // Return the closed portion for history tracking
+      console.log(`[Trade] Partial close successful: ${actualQuantityToClose} closed, ${trade.quantity} remaining.`);
+    } else {
+      // FULL CLOSE LOGIC (Original):
+      trade.closePrice = closePrice
+      trade.realizedPnl = realizedPnl
+      trade.status = 'CLOSED'
+      trade.closedBy = closedBy
+      trade.closedAt = new Date()
+
+      if (adminId) {
+        trade.adminModified = true
+        trade.adminModifiedBy = adminId
+        trade.adminModifiedAt = new Date()
+      }
+
+      await trade.save()
     }
-
-    await trade.save()
 
     // Update account balance with proper credit handling
     const account = await TradingAccount.findById(trade.tradingAccountId)
@@ -378,17 +461,22 @@ class TradeEngine {
     if (adminId) {
       await AdminLog.create({
         adminId,
-        action: closedBy === 'ADMIN' ? 'TRADE_CLOSE' : 'TRADE_FORCE_CLOSE',
+        action: isPartialClose ? 'TRADE_PARTIAL_CLOSE' : (closedBy === 'ADMIN' ? 'TRADE_CLOSE' : 'TRADE_FORCE_CLOSE'),
         targetType: 'TRADE',
         targetId: trade._id,
-        previousValue: { status: 'OPEN' },
-        newValue: { status: 'CLOSED', realizedPnl }
+        previousValue: { status: 'OPEN', quantity: isPartialClose ? totalQuantity : trade.quantity },
+        newValue: { 
+          status: isPartialClose ? 'OPEN' : 'CLOSED', 
+          quantity: isPartialClose ? trade.quantity : actualQuantityToClose,
+          realizedPnl 
+        }
       })
     }
 
-    // Process IB commission for this trade
+    // Process IB commission for this trade (proportional for partial close)
     try {
-      await ibEngine.processTradeCommission(trade)
+      // Pass the quantity closed to the IB engine if it supports it
+      await ibEngine.processTradeCommission(finalTradeForResponse)
     } catch (ibError) {
       console.error('Error processing IB commission:', ibError)
     }
@@ -398,7 +486,6 @@ class TradeEngine {
     try {
       // Get the tradingAccountId - handle both populated and non-populated cases
       const tradingAccountId = trade.tradingAccountId?._id || trade.tradingAccountId
-      console.log(`[CopyTrade] Checking if trade belongs to master. tradingAccountId: ${tradingAccountId}`)
       
       const master = await MasterTrader.findOne({ 
         tradingAccountId: tradingAccountId, 
@@ -406,38 +493,27 @@ class TradeEngine {
       })
       
       if (master) {
-        console.log(`[CopyTrade] Master trade ${trade._id} closed via ${closedBy}, closing follower trades...`)
-        console.log(`[CopyTrade] Master tradingAccountId: ${tradingAccountId}, masterId: ${master._id}`)
-        
-        // Update master stats (totalTrades, winRate, profitableTrades, totalProfitGenerated)
+        // Update master stats
         master.stats.totalTrades = (master.stats.totalTrades || 0) + 1
         master.stats.totalProfitGenerated = (master.stats.totalProfitGenerated || 0) + realizedPnl
         if (realizedPnl > 0) {
           master.stats.profitableTrades = (master.stats.profitableTrades || 0) + 1
         }
-        // Calculate win rate
         if (master.stats.totalTrades > 0) {
           master.stats.winRate = Math.round((master.stats.profitableTrades / master.stats.totalTrades) * 100)
         }
         await master.save()
-        console.log(`[CopyTrade] Master stats updated: totalTrades=${master.stats.totalTrades}, winRate=${master.stats.winRate}%, profit=${master.stats.totalProfitGenerated.toFixed(2)}`)
         
-        // Dynamically import to avoid circular dependency
+        // Close follower trades (proportionally if partial)
         const copyTradingEngine = (await import('./copyTradingEngine.js')).default
-        // Use trade._id (ObjectId) not tradeId (could be string)
-        const copyResults = await copyTradingEngine.closeFollowerTrades(trade._id, closePrice)
-        console.log(`[CopyTrade] Closed ${copyResults.filter(r => r.status === 'SUCCESS').length} follower trades`)
-        if (copyResults.length > 0) {
-          console.log(`[CopyTrade] Close results:`, JSON.stringify(copyResults))
-        }
-      } else {
-        console.log(`[CopyTrade] No active master found for tradingAccountId: ${tradingAccountId}`)
+        const copyResults = await copyTradingEngine.closeFollowerTrades(trade._id, closePrice, actualQuantityToClose)
+        console.log(`[CopyTrade] Closed ${copyResults.filter(r => r.status === 'SUCCESS').length} follower trades (Partial=${isPartialClose})`)
       }
     } catch (copyError) {
       console.error('[CopyTrade] Error closing follower trades:', copyError)
     }
 
-    return { trade, realizedPnl }
+    return { trade: finalTradeForResponse, realizedPnl, originalTradeRemaining: isPartialClose ? trade : null }
   }
 
   // Modify trade SL/TP
@@ -457,6 +533,13 @@ class TradeEngine {
     if (tp !== null && !isNaN(tp)) {
       trade.takeProfit = tp
       trade.tp = tp
+    }
+
+    //Sanket v2.0 - Stamp modification time for 5s grace period: prevents immediate SL trigger when user
+    // moves stop above current price (e.g. trailing stop on BUY). checkSlTpForAllTrades skips this trade
+    // for 5 seconds after modification so the price has time to actually cross the new SL level.
+    if ((sl !== null && !isNaN(sl)) || (tp !== null && !isNaN(tp))) {
+      trade.slLastModifiedAt = new Date();
     }
 
     if (adminId) {
@@ -543,48 +626,29 @@ class TradeEngine {
     const triggeredTrades = []
 
     for (const trade of openTrades) {
-      // ✅ ELITE: Robust price lookup (Sync with alltickApiService dual-key logic)
-      const targetSym = trade.symbol;
-      const prices = currentPrices[targetSym] || 
-                     currentPrices[targetSym.toUpperCase()] || 
-                     currentPrices[targetSym.toLowerCase()] ||
-                     currentPrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
-                     currentPrices[targetSym.replace(/\.i$/i, '').toLowerCase()];
-      
-      if (!prices || !prices.bid || !prices.ask || parseFloat(prices.bid) <= 0 || parseFloat(prices.ask) <= 0) {
-        // Skip SL/TP check if prices are missing, zero, or invalid to prevent auto-closure bug
-        continue
+      //Sanket v2.0 - Skip SL/TP check for 5 seconds after user modified SL/TP.
+      // Prevents immediate close when user moves stop above current price (trailing stop / lock-in-profit).
+      if (trade.slLastModifiedAt) {
+        const secsSinceModify = (Date.now() - new Date(trade.slLastModifiedAt).getTime()) / 1000;
+        if (secsSinceModify < 5) continue;
       }
 
-      // ✅ ELITE: Price Freshness Guard (Anti-Fossilization)
-      // If the price is older than 60 seconds, it's considered stale and dangerous for SL/TP checks
-      const priceAgeMs = Date.now() - (prices.timestamp || 0);
-      if (priceAgeMs > 60000) {
-        if (Math.random() < 0.01) { // Log only 1% of instances to avoid flooding
-           console.warn(`[TradeEngine] Skipping SL/TP check for ${targetSym} due to stale price data (age: ${Math.round(priceAgeMs/1000)}s)`);
-        }
-        continue;
-      }
+      //Sanket v2.0 - Normalize trade symbol: strip .i suffix for consistent price lookup
+      const targetSym = trade.symbol.toUpperCase().replace(/\.I$/i, '');
+      const prices = currentPrices[targetSym] || 
+                     currentPrices[`${targetSym}.i`];
+      
+      if (!prices) continue
 
       const trigger = trade.checkSlTp(prices.bid, prices.ask)
       if (trigger) {
-        console.log(`[TradeEngine] 🚨 SL/TP TRIGGERED: Trade ${trade._id} [${trade.side} ${trade.symbol}] hit ${trigger}. ` +
-                    `Price: ${trade.side === 'BUY' ? prices.bid : prices.ask}, ` +
-                    `Trigger Point: ${trigger === 'SL' ? (trade.stopLoss || trade.sl) : (trade.takeProfit || trade.tp)}, ` +
-                    `Data Age: ${Math.round((Date.now() - prices.timestamp)/1000)}s`);
+        // ENHANCED: Real-World Market Execution (Gap/Slippage Handling)
+        // Closing a trade (SL/TP) uses the first available market price (bid/ask) instead of the target stop/limit level
+        const executionPrice = trade.side === 'BUY' ? prices.bid : prices.ask;
         
-        // ZERO SLIPPAGE IMPLEMENTATION:
-        // Use the exact requested SL/TP price rather than the market price that breached it
-        let exactExecutionPrice = trade.side === 'BUY' ? prices.bid : prices.ask;
-        if (trigger === 'SL' && (trade.stopLoss || trade.sl)) {
-          exactExecutionPrice = trade.stopLoss || trade.sl;
-        } else if (trigger === 'TP' && (trade.takeProfit || trade.tp)) {
-          exactExecutionPrice = trade.takeProfit || trade.tp;
-        }
+        console.log(`[TradeEngine] SL/TP ${trigger} HIT for trade ${trade.tradeId} @ market price ${executionPrice} (Slippage tracked)`);
 
-        // Pass exactExecutionPrice for both bid and ask to ensure the exact price is used for P/L calculation regardless of trade side
-        // For SL/TP, the exactExecutionPrice is already the targeted price, so rawBid/rawAsk are not needed
-        const result = await this.closeTrade(trade._id, exactExecutionPrice, exactExecutionPrice, trigger)
+        const result = await this.closeTrade(trade._id, executionPrice, executionPrice, trigger)
         triggeredTrades.push({ trade: result.trade, trigger, pnl: result.realizedPnl })
       }
     }
@@ -598,19 +662,12 @@ class TradeEngine {
     const executedTrades = []
 
     for (const trade of pendingTrades) {
-      // ✅ ELITE: Robust price lookup
-      const targetSym = trade.symbol;
+      //Sanket v2.0 - Normalize trade symbol: strip .i suffix for consistent price lookup
+      const targetSym = trade.symbol.toUpperCase().replace(/\.I$/i, '');
       const prices = currentPrices[targetSym] || 
-                     currentPrices[targetSym.toUpperCase()] || 
-                     currentPrices[targetSym.toLowerCase()] ||
-                     currentPrices[targetSym.replace(/\.i$/i, '').toUpperCase()] ||
-                     currentPrices[targetSym.replace(/\.i$/i, '').toLowerCase()];
+                     currentPrices[`${targetSym}.i`];
       
-      if (!prices || !prices.bid || !prices.ask) continue
-
-      // ✅ ELITE: Price Freshness Guard (Anti-Fossilization)
-      const priceAgeMs = Date.now() - (prices.timestamp || 0);
-      if (priceAgeMs > 60000) continue;
+      if (!prices) continue
 
       let shouldExecute = false
       const currentBid = prices.bid

@@ -1,7 +1,6 @@
 import { io } from 'socket.io-client'
 import { API_BASE_URL } from '../config/api'
-import { getPriceEvents } from './datafeed'
-export { getPriceEvents }
+import { getPriceEvents } from './eventSystem'
 
 const SOCKET_URL = API_BASE_URL
 
@@ -90,7 +89,12 @@ class PriceStreamService {
       
       // Update local price cache with all prices
       if (prices) {
-        this.prices = { ...this.prices, ...prices }
+        //Sanket v2.0 - Only merge prices with valid bid to prevent overwriting good cache with zero/null values
+        Object.entries(prices).forEach(([sym, p]) => {
+          if (p && p.bid && p.bid > 0) {
+            this.prices[sym] = p;
+          }
+        });
       }
       
       // Update categories cache
@@ -98,10 +102,24 @@ class PriceStreamService {
         this.categories = categories
       }
       
-      // NOTE: Do NOT dispatch priceUpdate events from priceStream.
-      // Chart candle aggregation is handled exclusively by the tickUpdate event handler below.
-      // priceStream (both per-tick and 1s interval) was causing chart candles to be updated
-      // redundantly — inflating volume and H/L on every snapshot even during quiet markets.
+      // NOTE: We now dispatch priceUpdate events from priceStream as a robust fallback.
+      // While tickUpdate (high frequency) is the preferred driver for smooth chart movement,
+      // priceStream ensuring the chart moves at least every 1s if the tick stream is quiet.
+      if (prices) {
+        const priceEventTarget = getPriceEvents();
+        Object.entries(updated || prices).forEach(([symbol, p]) => {
+          if (p && p.bid > 0) {
+            priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
+              detail: {
+                symbol: symbol,
+                bid: p.bid,
+                ask: p.ask,
+                time: timestamp || new Date().toISOString()
+              }
+            }));
+          }
+        });
+      }
 
       // Notify all price subscribers with updated prices only (throttled)
       this.subscribers.forEach((callback, id) => {
@@ -160,6 +178,9 @@ class PriceStreamService {
       if (this.connectionStatus !== 'live') this._emitStatus('live')
       
       const { symbol, bid, ask, time, rawBid, rawAsk } = tickData
+
+      //Sanket v2.0 - Drop ticks with invalid/zero bid to prevent PnL flicker to $0
+      if (!symbol || !bid || bid <= 0) return
 
       //Sanket v2.0 - Drop duplicate ticks arriving back-to-back for same symbol.
       const tickKey = `${symbol}|${bid}|${ask}|${time || ''}`

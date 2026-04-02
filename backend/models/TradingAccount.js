@@ -58,6 +58,10 @@ const tradingAccountSchema = new mongoose.Schema({
   isDemo: {
     type: Boolean,
     default: false
+  },
+  killSwitchUntil: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true })
 

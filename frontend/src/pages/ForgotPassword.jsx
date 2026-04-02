@@ -130,7 +130,7 @@ const ForgotPassword = () => {
                   </div>
                   <p className="text-yellow-500 text-xs mt-2 flex items-start gap-1">
                     <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                    Admin will verify and update your email. Password will be sent to the new email.
+                    If an account exists with this email, you will receive a password reset link shortly.
                   </p>
                 </div>
               )}

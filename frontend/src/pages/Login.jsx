@@ -37,6 +37,9 @@ const Login = () => {
       const response = await login(formData)
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
+
+      sessionStorage.removeItem("announcementOpened");
+
       // Redirect to mobile view on mobile devices
       if (isMobile) {
         navigate('/mobile')
@@ -49,6 +52,7 @@ const Login = () => {
       setLoading(false)
     }
   }
+
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -152,4 +156,4 @@ const Login = () => {
   )
 }
 
-export default Login
+export default Login;

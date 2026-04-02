@@ -11,7 +11,7 @@ export const getCandles = async (req, res) => {
     const { timeframe = "1m", from, to, symbol } = req.query;
 
     const query = {
-      symbol: symbol || "XAUUSD.i",
+      symbol: symbol || "XAUUSD",
       timeframe,
     };
 
@@ -78,7 +78,7 @@ router.get("/latest", async (req, res) => {
   try {
 
     const candle = await XAUUSD
-      .find({ symbol: "XAUUSD.i", timeframe: "1m" })
+      .find({ symbol: "XAUUSD", timeframe: "1m" })
       .sort({ time: -1 })
       .limit(1)
       .lean();
