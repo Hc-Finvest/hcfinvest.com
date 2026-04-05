@@ -41,6 +41,13 @@ const IBPage = () => {
   const { sidebarExpanded } = useSidebar();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const authHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -72,7 +79,7 @@ const IBPage = () => {
 
   const fetchIBProfile = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/my-profile/${user._id}`);
+      const res = await fetch(`${API_URL}/ib/my-profile/${user._id}`, { headers: authHeaders() });
       const data = await res.json();
       if (data.ibUser) {
         // Merge ibUser, wallet, and stats into one profile object
@@ -84,6 +91,7 @@ const IBPage = () => {
           pendingWithdrawal: data.wallet?.pendingWithdrawal || 0,
           totalWithdrawn: data.wallet?.totalWithdrawn || 0,
           stats: data.stats || {},
+          commissionProfile: data.commissionProfile || null,
         });
         // Set level progress data
         if (data.levelProgress) {
@@ -107,7 +115,7 @@ const IBPage = () => {
 
   const fetchReferrals = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/my-referrals/${user._id}`);
+      const res = await fetch(`${API_URL}/ib/my-referrals/${user._id}`, { headers: authHeaders() });
       const data = await res.json();
       setReferrals(data.referrals || []);
     } catch (error) {
@@ -117,7 +125,7 @@ const IBPage = () => {
 
   const fetchCommissions = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/my-commissions/${user._id}`);
+      const res = await fetch(`${API_URL}/ib/my-commissions/${user._id}`, { headers: authHeaders() });
       const data = await res.json();
       setCommissions(data.commissions || []);
     } catch (error) {
@@ -127,7 +135,7 @@ const IBPage = () => {
 
   const fetchDownline = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/my-downline/${user._id}`);
+      const res = await fetch(`${API_URL}/ib/my-downline/${user._id}`, { headers: authHeaders() });
       const data = await res.json();
       // The API returns tree with downlines array
       setDownline(data.tree?.downlines || []);
@@ -146,7 +154,7 @@ const IBPage = () => {
     const res = await fetch(`${API_URL}/wallet-transfer/from-ib`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        ...authHeaders(),
       },
       body: JSON.stringify({
         userId: user._id,
@@ -179,6 +187,7 @@ const IBPage = () => {
       const res = await fetch(`${API_URL}/ib/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ userId: user._id }),
       });
       const data = await res.json();
@@ -212,7 +221,7 @@ const IBPage = () => {
     try {
       const res = await fetch(`${API_URL}/ib/withdraw`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           userId: user._id,
           amount: parseFloat(withdrawAmount),
@@ -398,7 +407,7 @@ const IBPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-3xl font-bold text-gray-900">
-                            ${levelProgress?.currentLevel?.commissionRate || 0}
+                            ${ibProfile?.commissionProfile?.effectiveRate ?? levelProgress?.commissionProfile?.effectiveRate ?? levelProgress?.currentLevel?.commissionRate || 0}
                             <span className="text-sm text-gray-500"> /lot</span>
                           </p>
 
@@ -408,6 +417,11 @@ const IBPage = () => {
                               {levelProgress?.currentLevel?.name || "Standard"}
                             </span>
                           </p>
+                          {ibProfile?.commissionProfile?.manualOverrideEnabled && (
+                            <p className="text-xs text-blue-600 mt-1 font-semibold">
+                              Manual override active
+                            </p>
+                          )}
                         </div>
 
                         <div

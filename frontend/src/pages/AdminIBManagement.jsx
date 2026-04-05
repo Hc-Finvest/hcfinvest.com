@@ -60,6 +60,19 @@ const AdminIBManagement = () => {
   const [ibCommission, setIbCommission] = useState('')
   const [ibPlan, setIbPlan] = useState('')
   const [savingIB, setSavingIB] = useState(false)
+  const [ibAutoUpgradeEnabled, setIbAutoUpgradeEnabled] = useState(true)
+  const [ibManualCommissionEnabled, setIbManualCommissionEnabled] = useState(false)
+  const [ibManualCommissionType, setIbManualCommissionType] = useState('PER_LOT')
+  const [ibManualCommissionLevels, setIbManualCommissionLevels] = useState({ level1: 0, level2: 0, level3: 0, level4: 0, level5: 0 })
+  const [ibManualCommissionNotes, setIbManualCommissionNotes] = useState('')
+
+  const getAdminHeaders = () => {
+    const adminToken = localStorage.getItem('adminToken')
+    return {
+      'Content-Type': 'application/json',
+      ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+    }
+  }
 
   useEffect(() => {
     fetchDashboard()
@@ -82,7 +95,7 @@ const AdminIBManagement = () => {
 
   const fetchAllUsers = async () => {
     try {
-      const res = await fetch(`${API_URL}/admin/users`)
+      const res = await fetch(`${API_URL}/admin/users`, { headers: getAdminHeaders() })
       const data = await res.json()
       setAllUsers(data.users || [])
     } catch (error) {
@@ -104,7 +117,7 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/transfer-referrals`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({
           userIds: selectedUsers,
           targetIBId: targetIB
@@ -152,7 +165,7 @@ const AdminIBManagement = () => {
 
   const fetchDashboard = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/admin/dashboard`)
+      const res = await fetch(`${API_URL}/ib/admin/dashboard`, { headers: getAdminHeaders() })
       const data = await res.json()
       // Handle both old format (data.dashboard) and new format (data.stats)
       if (data.stats) {
@@ -175,7 +188,7 @@ const AdminIBManagement = () => {
 
   const fetchIBs = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/admin/all`)
+      const res = await fetch(`${API_URL}/ib/admin/all`, { headers: getAdminHeaders() })
       const data = await res.json()
       setIbs(data.ibs || [])
     } catch (error) {
@@ -186,7 +199,7 @@ const AdminIBManagement = () => {
 
   const fetchApplications = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/admin/pending`)
+      const res = await fetch(`${API_URL}/ib/admin/pending`, { headers: getAdminHeaders() })
       const data = await res.json()
       setApplications(data.pending || [])
     } catch (error) {
@@ -196,7 +209,7 @@ const AdminIBManagement = () => {
 
   const fetchPlans = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/admin/plans`)
+      const res = await fetch(`${API_URL}/ib/admin/plans`, { headers: getAdminHeaders() })
       const data = await res.json()
       setPlans(data.plans || [])
     } catch (error) {
@@ -206,7 +219,7 @@ const AdminIBManagement = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/admin/settings`)
+      const res = await fetch(`${API_URL}/ib/admin/settings`, { headers: getAdminHeaders() })
       const data = await res.json()
       if (data.settings) setSettings(data.settings)
     } catch (error) {
@@ -216,7 +229,7 @@ const AdminIBManagement = () => {
 
   const fetchIBLevels = async () => {
     try {
-      const res = await fetch(`${API_URL}/ib/admin/levels`)
+      const res = await fetch(`${API_URL}/ib/admin/levels`, { headers: getAdminHeaders() })
       const data = await res.json()
       setIbLevels(data.levels || [])
     } catch (error) {
@@ -233,7 +246,7 @@ const AdminIBManagement = () => {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(levelData)
       })
       const data = await res.json()
@@ -275,7 +288,7 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/approve/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ planId: planId })
       })
       const data = await res.json()
@@ -300,7 +313,7 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/reject/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ reason })
       })
       const data = await res.json()
@@ -324,7 +337,7 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/block/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ reason })
       })
       const data = await res.json()
@@ -344,7 +357,7 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/suspend/${ibId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ adminId: 'admin' })
       })
       const data = await res.json()
@@ -361,6 +374,17 @@ const AdminIBManagement = () => {
     setViewingIB(ib)
     setIbCommission(ib.ibLevelId?._id || '')
     setIbPlan(ib.ibPlanId?._id || '')
+    setIbAutoUpgradeEnabled(ib.autoUpgradeEnabled !== false)
+    setIbManualCommissionEnabled(Boolean(ib.ibCommissionOverride?.enabled))
+    setIbManualCommissionType(ib.ibCommissionOverride?.commissionType || 'PER_LOT')
+    setIbManualCommissionLevels({
+      level1: Number(ib.ibCommissionOverride?.levels?.level1 || 0),
+      level2: Number(ib.ibCommissionOverride?.levels?.level2 || 0),
+      level3: Number(ib.ibCommissionOverride?.levels?.level3 || 0),
+      level4: Number(ib.ibCommissionOverride?.levels?.level4 || 0),
+      level5: Number(ib.ibCommissionOverride?.levels?.level5 || 0)
+    })
+    setIbManualCommissionNotes(ib.ibCommissionOverride?.notes || '')
     setShowIBModal(true)
   }
 
@@ -371,10 +395,17 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/update/${viewingIB._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({
           levelId: ibCommission || null,
-          planId: ibPlan || null
+          planId: ibPlan || null,
+          autoUpgradeEnabled: ibAutoUpgradeEnabled,
+          commissionOverride: {
+            enabled: ibManualCommissionEnabled,
+            commissionType: ibManualCommissionType,
+            levels: ibManualCommissionLevels,
+            notes: ibManualCommissionNotes
+          }
         })
       })
       const data = await res.json()
@@ -402,7 +433,7 @@ const AdminIBManagement = () => {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(planData)
       })
       const data = await res.json()
@@ -424,7 +455,7 @@ const AdminIBManagement = () => {
     try {
       const res = await fetch(`${API_URL}/ib/admin/settings`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify(newSettings)
       })
       const data = await res.json()
@@ -477,6 +508,7 @@ const AdminIBManagement = () => {
           { id: 'ibs', label: 'Verified Partners', count: dashboard?.ibs?.active, icon: Award },
           { id: 'applications', label: 'Review Queue', count: applications.length, icon: UserPlus },
           { id: 'levels', label: 'Echelon Tiers', count: ibLevels.length, icon: Trophy },
+          { id: 'plans', label: 'Commission Plans', count: plans.length, icon: Percent },
           { id: 'transfer', label: 'Lineage Migrator', icon: ArrowRightLeft },
           { id: 'settings', label: 'System Logic', icon: Settings }
         ].map(tab => (
@@ -761,7 +793,7 @@ const AdminIBManagement = () => {
               <p style={{ color: modeColors.textSecondary }} className="font-medium mb-8 italic">No progression tiers currently exist in the system</p>
               <button
                 onClick={async () => {
-                  await fetch(`${API_URL}/ib/admin/init-levels`, { method: 'POST' })
+                  await fetch(`${API_URL}/ib/admin/init-levels`, { method: 'POST', headers: getAdminHeaders() })
                   fetchIBLevels()
                 }}
                 className="px-8 py-4 bg-blue-500 text-white rounded-2xl hover:bg-blue-600 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20"
@@ -1181,6 +1213,16 @@ const AdminIBManagement = () => {
           setIbCommission={setIbCommission}
           ibPlan={ibPlan}
           setIbPlan={setIbPlan}
+          ibAutoUpgradeEnabled={ibAutoUpgradeEnabled}
+          setIbAutoUpgradeEnabled={setIbAutoUpgradeEnabled}
+          ibManualCommissionEnabled={ibManualCommissionEnabled}
+          setIbManualCommissionEnabled={setIbManualCommissionEnabled}
+          ibManualCommissionType={ibManualCommissionType}
+          setIbManualCommissionType={setIbManualCommissionType}
+          ibManualCommissionLevels={ibManualCommissionLevels}
+          setIbManualCommissionLevels={setIbManualCommissionLevels}
+          ibManualCommissionNotes={ibManualCommissionNotes}
+          setIbManualCommissionNotes={setIbManualCommissionNotes}
           onSave={handleSaveIBDetails}
           onClose={() => { setShowIBModal(false); setViewingIB(null); }}
           saving={savingIB}
@@ -1535,7 +1577,28 @@ const LevelModal = ({ level, onSave, onClose, existingOrders }) => {
 }
 
 // IB Details Modal Component
-const IBDetailsModal = ({ ib, plans, ibLevels, ibCommission, setIbCommission, ibPlan, setIbPlan, onSave, onClose, saving }) => {
+const IBDetailsModal = ({
+  ib,
+  plans,
+  ibLevels,
+  ibCommission,
+  setIbCommission,
+  ibPlan,
+  setIbPlan,
+  ibAutoUpgradeEnabled,
+  setIbAutoUpgradeEnabled,
+  ibManualCommissionEnabled,
+  setIbManualCommissionEnabled,
+  ibManualCommissionType,
+  setIbManualCommissionType,
+  ibManualCommissionLevels,
+  setIbManualCommissionLevels,
+  ibManualCommissionNotes,
+  setIbManualCommissionNotes,
+  onSave,
+  onClose,
+  saving
+}) => {
   const { modeColors } = useTheme()
   if (!ib) return null
 
@@ -1619,6 +1682,77 @@ const IBDetailsModal = ({ ib, plans, ibLevels, ibCommission, setIbCommission, ib
             <p style={{ color: modeColors.textSecondary }} className="text-[10px] font-medium opacity-50 px-1 italic text-center uppercase tracking-wider leading-relaxed">Direct override of partner growth logic. Proceed with audit trail active.</p>
           </div>
 
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label style={{ color: modeColors.textSecondary }} className="text-[10px] font-black uppercase tracking-[0.2em] block px-1">Manual Commission Override</label>
+              <button
+                onClick={() => setIbAutoUpgradeEnabled(!ibAutoUpgradeEnabled)}
+                className={`w-14 h-8 rounded-full transition-all relative ${ibAutoUpgradeEnabled ? 'bg-green-500 shadow-lg shadow-green-500/20' : 'bg-slate-300'}`}
+                type="button"
+                title="Toggle auto-upgrade"
+              >
+                <div className={`w-6 h-6 bg-white rounded-full transition-transform absolute top-1 shadow-sm ${ibAutoUpgradeEnabled ? 'translate-x-[1.75rem]' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            <p style={{ color: modeColors.textSecondary }} className="text-[10px] font-medium opacity-50 px-1 italic text-center uppercase tracking-wider leading-relaxed">Auto-upgrade can be disabled when manual commercial terms are enforced.</p>
+
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div>
+                <p style={{ color: modeColors.text }} className="font-black text-xs uppercase tracking-widest">Override Active</p>
+                <p style={{ color: modeColors.textSecondary }} className="text-[10px] opacity-60">When enabled, plan/level fallback no longer controls commissions.</p>
+              </div>
+              <button
+                onClick={() => setIbManualCommissionEnabled(!ibManualCommissionEnabled)}
+                className={`w-14 h-8 rounded-full transition-all relative ${ibManualCommissionEnabled ? 'bg-blue-600 shadow-lg shadow-blue-500/20' : 'bg-slate-300'}`}
+                type="button"
+              >
+                <div className={`w-6 h-6 bg-white rounded-full transition-transform absolute top-1 shadow-sm ${ibManualCommissionEnabled ? 'translate-x-[1.75rem]' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label style={{ color: modeColors.textSecondary }} className="text-[10px] font-black uppercase tracking-[0.2em] block mb-2 px-1">Override Type</label>
+                <select
+                  value={ibManualCommissionType}
+                  onChange={(e) => setIbManualCommissionType(e.target.value)}
+                  style={{ backgroundColor: modeColors.bgSecondary, borderColor: modeColors.border, color: modeColors.text }}
+                  className="w-full border-2 rounded-2xl px-5 py-4 font-black text-sm focus:outline-none focus:border-blue-500 shadow-inner"
+                >
+                  <option value="PER_LOT">Fixed USD / Lot</option>
+                  <option value="PERCENT">Revenue Share %</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-5 gap-3">
+              {[1, 2, 3, 4, 5].map((levelNumber) => (
+                <div key={levelNumber}>
+                  <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block mb-1 text-center font-mono">L{levelNumber}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={ibManualCommissionLevels[`level${levelNumber}`] || 0}
+                    onChange={(e) => setIbManualCommissionLevels({
+                      ...ibManualCommissionLevels,
+                      [`level${levelNumber}`]: parseFloat(e.target.value) || 0
+                    })}
+                    style={{ backgroundColor: modeColors.bgSecondary, borderColor: modeColors.border, color: modeColors.text }}
+                    className="w-full border-2 rounded-xl px-2 py-3 text-center font-black text-xs focus:outline-none focus:border-blue-500 shadow-inner"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <textarea
+              value={ibManualCommissionNotes}
+              onChange={(e) => setIbManualCommissionNotes(e.target.value)}
+              style={{ backgroundColor: modeColors.bgSecondary, borderColor: modeColors.border, color: modeColors.text }}
+              className="w-full border-2 rounded-2xl px-5 py-4 font-bold text-sm focus:outline-none focus:border-blue-500 shadow-inner h-24 resize-none"
+              placeholder="Reason for manual commercial override..."
+            />
+          </div>
+
           {/* Safety Protocols */}
           <div className="flex gap-4">
             {ib.ibStatus === 'BLOCKED' && (
@@ -1646,7 +1780,7 @@ const IBDetailsModal = ({ ib, plans, ibLevels, ibCommission, setIbCommission, ib
                   try {
                     const res = await fetch(`${API_URL}/ib/admin/block/${ib._id}`, {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: getAdminHeaders(),
                       body: JSON.stringify({ reason })
                     })
                     const data = await res.json()

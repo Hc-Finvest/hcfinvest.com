@@ -78,6 +78,9 @@ class AllTickApiService {
     this.restCooldownUntil = 0; // Cooldown for REST API (history)
     this.wsCooldownUntil = 0;   // Cooldown for WebSocket (connection)
     this.historyCache = new Map(); // Cache for historical requests to avoid 429s
+    this.lastAcceptedMidBySymbol = new Map();
+    this.lastAcceptedTsBySymbol = new Map();
+    this.pendingSpikeBySymbol = new Map();
     //Sanket v2.0 - Blacklist for symbols that AllTick confirms are unsupported (HTTP 600 / code invalid).
     // Without this, every startup warmup + chart load re-hits the API for the same bad symbol,
     // stacking up REST requests that trigger 429 → WS disconnect → real-time prices lost.
@@ -95,6 +98,79 @@ class AllTickApiService {
 
     // REST Request Queue to prevent concurrent 429s/402s on trial tokens
     this.restQueue = Promise.resolve();
+  }
+
+  getSpikeThresholdPercent(symbol = '') {
+    const s = String(symbol).toUpperCase();
+
+    if (s.includes('BTC') || s.includes('ETH') || s.includes('BNB') || s.includes('SOL') || s.includes('XRP') || s.includes('ADA') || s.includes('DOGE') || s.includes('LTC')) {
+      return 20;
+    }
+
+    if (s.includes('XAU') || s.includes('XAG') || s.includes('OIL') || s.includes('NGAS') || s.includes('COPPER') || s.includes('US30') || s.includes('US100') || s.includes('US500') || s.includes('UK100') || s.includes('ES35')) {
+      return 5;
+    }
+
+    return 3;
+  }
+
+  markAcceptedPrice(symbol, mid, ts) {
+    this.lastAcceptedMidBySymbol.set(symbol, mid);
+    this.lastAcceptedTsBySymbol.set(symbol, ts);
+    this.pendingSpikeBySymbol.delete(symbol);
+  }
+
+  shouldAcceptTickPrice(symbol, midPrice, tickMs) {
+    if (!Number.isFinite(midPrice) || midPrice <= 0) return false;
+
+    const ts = Number.isFinite(tickMs) && tickMs > 0 ? tickMs : Date.now();
+    const lastMid = this.lastAcceptedMidBySymbol.get(symbol);
+    const lastTs = this.lastAcceptedTsBySymbol.get(symbol) || 0;
+
+    if (!Number.isFinite(lastMid) || lastMid <= 0) {
+      this.markAcceptedPrice(symbol, midPrice, ts);
+      return true;
+    }
+
+    // Allow wider price movement after long market pauses/session transitions.
+    const elapsedMs = Math.max(0, ts - lastTs);
+    if (elapsedMs > (45 * 60 * 1000)) {
+      this.markAcceptedPrice(symbol, midPrice, ts);
+      return true;
+    }
+
+    const jumpPct = Math.abs((midPrice - lastMid) / lastMid) * 100;
+    const thresholdPct = this.getSpikeThresholdPercent(symbol);
+    if (jumpPct <= thresholdPct) {
+      this.markAcceptedPrice(symbol, midPrice, ts);
+      return true;
+    }
+
+    // Quarantine spikes: require a second near-identical anomalous tick before acceptance.
+    const pending = this.pendingSpikeBySymbol.get(symbol);
+    if (pending) {
+      const withinPendingBand = Math.abs((midPrice - pending.price) / pending.price) * 100 <= 0.35;
+      const withinWindow = (ts - pending.firstSeenAt) <= 15000;
+      if (withinPendingBand && withinWindow) {
+        pending.confirmations += 1;
+        pending.lastSeenAt = ts;
+        if (pending.confirmations >= 2) {
+          this.markAcceptedPrice(symbol, midPrice, ts);
+          return true;
+        }
+        this.pendingSpikeBySymbol.set(symbol, pending);
+        return false;
+      }
+    }
+
+    this.pendingSpikeBySymbol.set(symbol, {
+      price: midPrice,
+      confirmations: 1,
+      firstSeenAt: ts,
+      lastSeenAt: ts
+    });
+    console.warn(`[AllTick] Spike rejected for ${symbol}: ${lastMid} -> ${midPrice} (${jumpPct.toFixed(2)}%)`);
+    return false;
   }
 
   /**
@@ -237,6 +313,10 @@ class AllTickApiService {
         if (tickMs < 100000000000) tickMs *= 1000;
 
         const tickTime = tickMs ? new Date(tickMs) : new Date();
+
+        if (!this.shouldAcceptTickPrice(appSymbol, lastPrice, tickMs)) {
+          return;
+        }
         
         // Normalize price (rounds for display, keeps raw for math)
         const normalized = priceNormalizer.normalizePrice(appSymbol, lastPrice, lastPrice * 1.0001, tickTime);
@@ -276,6 +356,11 @@ class AllTickApiService {
         // Add tiny spread if bid/ask are identical
         if (ask === bid && bid > 0) {
             ask += (bid * 0.00005);
+        }
+
+        const mid = (bid + ask) / 2;
+        if (!this.shouldAcceptTickPrice(appSymbol, mid, tickTs || Date.now())) {
+          return;
         }
 
         const tickTime = tickTs ? new Date(tickTs) : new Date();

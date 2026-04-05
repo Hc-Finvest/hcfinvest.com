@@ -453,6 +453,7 @@ const restrictAdminOrigin = (req, res, next) => {
 app.use('/api/admin', restrictAdminOrigin)
 app.use('/api/admin-mgmt', restrictAdminOrigin)
 app.use('/api/oxapay/admin', restrictAdminOrigin)
+app.use('/api/ib/admin', restrictAdminOrigin)
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)

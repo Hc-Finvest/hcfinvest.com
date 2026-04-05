@@ -100,6 +100,24 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  ibCommissionOverride: {
+    enabled: { type: Boolean, default: false },
+    commissionType: {
+      type: String,
+      enum: ['PER_LOT', 'PERCENT'],
+      default: 'PER_LOT'
+    },
+    levels: {
+      level1: { type: Number, default: 0 },
+      level2: { type: Number, default: 0 },
+      level3: { type: Number, default: 0 },
+      level4: { type: Number, default: 0 },
+      level5: { type: Number, default: 0 }
+    },
+    updatedAt: { type: Date, default: null },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+    notes: { type: String, default: '' }
+  },
   referredBy: {
     type: String,
     default: null

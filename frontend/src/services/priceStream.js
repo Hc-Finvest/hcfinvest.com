@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client'
 import { API_BASE_URL } from '../config/api'
 import { getPriceEvents } from './eventSystem'
+import { validateRealtimeTick } from '../utils/realtimeCandleBuilder'
 
 const SOCKET_URL = API_BASE_URL
 
@@ -24,6 +25,27 @@ class PriceStreamService {
     this._disconnectDelayMs = 350
     this._lastTickKeyBySymbol = new Map()
     this._lastTickTsBySymbol = new Map()
+    this._lastAcceptedMidBySymbol = new Map()
+    this._lastAcceptedTimeBySymbol = new Map()
+  }
+
+  _acceptRealtimeTick(symbol, bid, ask, time) {
+    const result = validateRealtimeTick({
+      symbol,
+      bid,
+      ask,
+      time,
+      state: {
+        lastMid: this._lastAcceptedMidBySymbol.get(symbol),
+        lastTime: this._lastAcceptedTimeBySymbol.get(symbol)
+      }
+    })
+
+    if (!result.accepted) return result
+
+    this._lastAcceptedMidBySymbol.set(symbol, result.mid)
+    this._lastAcceptedTimeBySymbol.set(symbol, result.tickTime)
+    return result
   }
 
   _emitStatus(status) {
@@ -109,12 +131,14 @@ class PriceStreamService {
         const priceEventTarget = getPriceEvents();
         Object.entries(updated || prices).forEach(([symbol, p]) => {
           if (p && p.bid > 0) {
+            const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
+            if (!acceptedTick.accepted) return
             priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
               detail: {
                 symbol: symbol,
-                bid: p.bid,
-                ask: p.ask,
-                time: timestamp || new Date().toISOString()
+                bid: acceptedTick.bid,
+                ask: acceptedTick.ask,
+                time: acceptedTick.tickTime
               }
             }));
           }
@@ -147,12 +171,14 @@ class PriceStreamService {
         // ✅ BROADCAST to chart datafeed
         const priceEventTarget = getPriceEvents()
         Object.entries(prices).forEach(([symbol, p]) => {
+          const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
+          if (!acceptedTick.accepted) return
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
             detail: {
               symbol: symbol,
-              bid: p.bid,
-              ask: p.ask,
-              time: timestamp || new Date().toISOString()
+              bid: acceptedTick.bid,
+              ask: acceptedTick.ask,
+              time: acceptedTick.tickTime
             }
           }))
         })
@@ -182,6 +208,9 @@ class PriceStreamService {
       //Sanket v2.0 - Drop ticks with invalid/zero bid to prevent PnL flicker to $0
       if (!symbol || !bid || bid <= 0) return
 
+      const acceptedTick = this._acceptRealtimeTick(symbol, bid, ask, time)
+      if (!acceptedTick.accepted) return
+
       //Sanket v2.0 - Drop duplicate ticks arriving back-to-back for same symbol.
       const tickKey = `${symbol}|${bid}|${ask}|${time || ''}`
       const prevKey = this._lastTickKeyBySymbol.get(symbol)
@@ -193,11 +222,11 @@ class PriceStreamService {
       
       // ✅ BROADCAST to all price subscribers (P/L table, etc.)
       const priceObj = { 
-        bid, 
-        ask, 
-        rawBid: rawBid || bid, 
-        rawAsk: rawAsk || ask, 
-        time: time || new Date().toISOString() 
+        bid: acceptedTick.bid,
+        ask: acceptedTick.ask,
+        rawBid: rawBid || acceptedTick.bid,
+        rawAsk: rawAsk || acceptedTick.ask,
+        time: acceptedTick.tickTime
       }
       
       this.prices[symbol] = priceObj
@@ -212,9 +241,9 @@ class PriceStreamService {
         priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
           detail: {
             symbol: symbol,
-            bid: bid,
-            ask: ask,
-            time: time || new Date().toISOString()
+            bid: acceptedTick.bid,
+            ask: acceptedTick.ask,
+            time: acceptedTick.tickTime
           }
         }))
       } catch (e) {}

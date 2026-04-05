@@ -48,6 +48,18 @@ class IBEngine {
   }
 
   async resolveCommissionConfig(ibUser, level) {
+    const override = ibUser?.ibCommissionOverride
+    if (override?.enabled) {
+      const overrideRate = Number(override.levels?.[`level${level}`] || 0)
+      if (overrideRate > 0) {
+        return {
+          rate: overrideRate,
+          commissionType: this.normalizeCommissionType(override.commissionType),
+          source: 'manual-override'
+        }
+      }
+    }
+
     let levelDoc = null
 
     if (ibUser.ibLevelId && typeof ibUser.ibLevelId === 'object' && ibUser.ibLevelId.downlineCommission) {
@@ -99,6 +111,27 @@ class IBEngine {
       rate: 0,
       commissionType: 'PER_LOT',
       source: 'none'
+    }
+  }
+
+  async getCommissionProfile(ibUserOrId) {
+    const ibUser = typeof ibUserOrId === 'object'
+      ? ibUserOrId
+      : await User.findById(ibUserOrId).populate('ibLevelId').populate('ibPlanId')
+
+    if (!ibUser || !ibUser.isIB) {
+      return null
+    }
+
+    const directConfig = await this.resolveCommissionConfig(ibUser, 1)
+    return {
+      source: directConfig.source,
+      effectiveRate: Number(directConfig.rate || 0),
+      commissionType: directConfig.commissionType,
+      manualOverrideEnabled: Boolean(ibUser.ibCommissionOverride?.enabled),
+      manualLevels: ibUser.ibCommissionOverride?.levels || null,
+      levelName: ibUser.ibLevelId?.name || null,
+      planName: ibUser.ibPlanId?.name || null
     }
   }
 
@@ -619,6 +652,16 @@ class IBEngine {
         icon: currentLevel.icon,
         referralTarget: currentLevel.referralTarget,
         downlineCommission: currentLevel.downlineCommission
+      },
+      commissionProfile: {
+        source: user.ibCommissionOverride?.enabled ? 'manual-override' : 'level',
+        effectiveRate: user.ibCommissionOverride?.enabled
+          ? Number(user.ibCommissionOverride?.levels?.level1 || currentLevel.commissionRate || 0)
+          : Number(currentLevel.commissionRate || 0),
+        commissionType: user.ibCommissionOverride?.enabled
+          ? this.normalizeCommissionType(user.ibCommissionOverride?.commissionType)
+          : currentLevel.commissionType,
+        manualOverrideEnabled: Boolean(user.ibCommissionOverride?.enabled)
       },
       nextLevel: nextLevel ? {
         _id: nextLevel._id,

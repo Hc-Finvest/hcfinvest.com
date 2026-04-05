@@ -2,6 +2,7 @@ import { API_URL } from "../config/api";
 import { normalizeSymbol } from "../utils/symbolUtils";
 import priceStreamService from "./priceStream";
 import { getPriceEvents } from "./eventSystem";
+import { buildCandleFromTick, validateRealtimeBar } from "../utils/realtimeCandleBuilder";
 
 /**
  * Custom Datafeed for TradingView Charting Library
@@ -40,32 +41,6 @@ const toMs = (rawTime) => {
 const toNumber = (value) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : NaN;
-};
-
-const getSymbolJumpThresholdPct = (symbol = '') => {
-  const s = String(symbol).toUpperCase();
-
-  if (s.includes('BTC') || s.includes('ETH') || s.includes('BNB') || s.includes('SOL') || s.includes('XRP') || s.includes('ADA') || s.includes('DOGE') || s.includes('LTC')) {
-    return 25;
-  }
-
-  if (s.includes('XAU') || s.includes('XAG') || s.includes('OIL') || s.includes('NGAS') || s.includes('COPPER') || s.includes('US30') || s.includes('US100') || s.includes('US500') || s.includes('UK100') || s.includes('ES35')) {
-    return 8;
-  }
-
-  return 3;
-};
-
-const isSuspiciousPriceJump = ({ symbol, nextPrice, referencePrice, elapsedMs }) => {
-  if (!Number.isFinite(nextPrice) || !Number.isFinite(referencePrice)) return false;
-  if (referencePrice <= 0) return false;
-
-  // After longer gaps (session reopen/offline) allow wider moves to avoid blocking valid jumps.
-  if (Number.isFinite(elapsedMs) && elapsedMs > (45 * 60 * 1000)) return false;
-
-  const thresholdPct = getSymbolJumpThresholdPct(symbol);
-  const jumpPct = Math.abs((nextPrice - referencePrice) / referencePrice) * 100;
-  return jumpPct > thresholdPct;
 };
 
 const normalizeBars = (candles = []) => {
@@ -499,36 +474,25 @@ const Datafeed = {
       };
       const prevBarTime = lastBarTime;
 
-      // Guard against occasional corrupt upstream candles that create vertical crash/spike artifacts.
-      const previousClose = currentBar?.close;
-      const elapsedMs = Number.isFinite(lastBarTime) && Number.isFinite(bar.time)
-        ? Math.max(0, bar.time - lastBarTime)
-        : 0;
-      if (
-        Number.isFinite(previousClose) &&
-        isSuspiciousPriceJump({
-          symbol: symbolInfo.name,
-          nextPrice: Number(bar.close),
-          referencePrice: Number(previousClose),
-          elapsedMs
-        })
-      ) {
-        console.warn(`[DATAFEED] ⚠️ Rejected suspicious candle for ${symbolInfo.name}: ${bar.close} vs ${previousClose}`);
-        return;
-      }
+      const validatedBar = validateRealtimeBar({
+        symbol: symbolInfo.name,
+        bar,
+        previousBar: currentBar
+      });
+      if (!validatedBar.accepted) return;
 
       //Sanket v2.0 - Reject stale candle updates that would rewind our time state.
       // On higher timeframes (1D/1W/1M) the backend emits the last COMPLETED bar alongside the
       // current forming bar. If we accept the old bar, currentBar/lastBarTime reset backwards,
       // handlePriceUpdate sees "new bucket" at a misaligned timestamp, pushBar emits a bar older
       // than TV's cache → putToCacheNewBar time violation → chart shows only 1 candle.
-      if (currentBar !== null && bar.time < lastBarTime) return;
+      if (currentBar !== null && validatedBar.bar.time < lastBarTime) return;
 
       // Apply Retail Lens Markup to AUTHORITATIVE bar
-      const authoritativeBar = applyChartPriceModeToBar(bar, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
+      const authoritativeBar = applyChartPriceModeToBar(validatedBar.bar, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
 
       currentBar = { ...authoritativeBar };
-      lastBarTime = bar.time;
+      lastBarTime = validatedBar.bar.time;
       lastUpdateTime = Date.now();
 
       // Update the singleton cache so History -> Realtime is seamless.
@@ -536,11 +500,11 @@ const Datafeed = {
       // stale candle updates from corrupting the seed value for the next subscription.
       Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
       const existingCachedBar = Datafeed._lastHistoryBars[historyKey];
-      if (!existingCachedBar || bar.time >= existingCachedBar.time) {
+      if (!existingCachedBar || validatedBar.bar.time >= existingCachedBar.time) {
         Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
       }
 
-      const isSameBarUpdate = Number.isFinite(prevBarTime) && bar.time === prevBarTime;
+      const isSameBarUpdate = Number.isFinite(prevBarTime) && validatedBar.bar.time === prevBarTime;
 
       // New bars should snap immediately for strict bar-boundary correctness.
       // Same-bar updates should lerp to prevent visible jumpiness in the active candle.
@@ -578,55 +542,32 @@ const Datafeed = {
       const price = getChartExecutionPrice(bid, ask, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
       if (!isFinite(price) || price <= 0) return;
 
-      // Calculate candle bucket for this tick
       const tickTime = toMs(time) || now;
-      const bucketTime = Math.floor(tickTime / resolutionMs) * resolutionMs;
-
-      const previousClose = currentBar?.close;
-      const elapsedMs = Number.isFinite(lastBarTime)
-        ? Math.max(0, tickTime - lastBarTime)
-        : 0;
-      if (
-        Number.isFinite(previousClose) &&
-        isSuspiciousPriceJump({
-          symbol: symbolInfo.name,
-          nextPrice: price,
-          referencePrice: Number(previousClose),
-          elapsedMs
-        })
-      ) {
-        console.warn(`[DATAFEED] ⚠️ Rejected suspicious tick for ${symbolInfo.name}: ${price} vs ${previousClose}`);
-        return;
-      }
+      const candleUpdate = buildCandleFromTick({
+        currentBar,
+        tickPrice: price,
+        tickTime,
+        resolutionMs,
+        symbol: symbolInfo.name
+      });
+      if (!candleUpdate.accepted) return;
 
       //Sanket v2.0 - Track whether this tick starts a new candle so we can snap displayClose.
-      let snapDisplay = false;
+      let snapDisplay = candleUpdate.isNewBar;
 
-      if (currentBar === null) {
-        // No bar yet — seed from this tick
-        currentBar = { time: bucketTime, open: price, high: price, low: price, close: price, volume: 0 };
-        lastBarTime = bucketTime;
-        snapDisplay = true;
-      } else if (bucketTime > lastBarTime) {
+      if (currentBar && candleUpdate.isNewBar) {
         // New candle period — only finalize the immediately preceding bar to avoid pushing stale bars.
         //Sanket v2.0 - If seededBar was from months ago, currentBar.time will be far in the past.
         // Pushing it would violate TV's time order (TV already has recent bars from getBars).
         // Only push if currentBar is the direct predecessor of the new bucket.
-        if (currentBar.time === bucketTime - resolutionMs) {
+        if (currentBar.time === candleUpdate.bucketTime - resolutionMs) {
           //Sanket v2.0 - Finalise the closed candle with the real close (not smoothed).
           pushBar({ ...currentBar });
         }
-        currentBar = { time: bucketTime, open: currentBar.close, high: price, low: price, close: price, volume: 0 };
-        lastBarTime = bucketTime;
-        snapDisplay = true; // New candle: snap displayClose to avoid lerping from old period's price
-      } else {
-        // Same bar — update OHLC
-        currentBar.high  = Math.max(currentBar.high,  price);
-        currentBar.low   = Math.min(currentBar.low,   price);
-        currentBar.close = price;
       }
 
-      currentBar.volume = (currentBar.volume || 0) + 1;
+      currentBar = candleUpdate.bar;
+      lastBarTime = currentBar.time;
 
       // Refresh display target on every eligible tick for tighter sync with the UI.
       const shouldRefreshDisplayTarget = snapDisplay || (now - lastDisplayTargetAt) >= displayTargetThrottleMs;
