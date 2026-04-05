@@ -497,6 +497,7 @@ const Datafeed = {
         close: candle.close,
         volume: candle.volume
       };
+      const prevBarTime = lastBarTime;
 
       // Guard against occasional corrupt upstream candles that create vertical crash/spike artifacts.
       const previousClose = currentBar?.close;
@@ -539,15 +540,24 @@ const Datafeed = {
         Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
       }
 
-      // Push to chart
-      pushBar(currentBar);
-      //Sanket v2.0 - Sync interpolation state with the authoritative bar so the RAF loop
-      // continues from the correct position after a server candle update.
+      const isSameBarUpdate = Number.isFinite(prevBarTime) && bar.time === prevBarTime;
+
+      // New bars should snap immediately for strict bar-boundary correctness.
+      // Same-bar updates should lerp to prevent visible jumpiness in the active candle.
+      if (!isSameBarUpdate) {
+        pushBar(currentBar);
+      }
+
       lastMarkupBar = { ...currentBar };
       targetClose = currentBar.close;
-      displayClose = currentBar.close; // snap — server candles are authoritative, no lerp needed
       lastDisplayTargetAt = Date.now();
-      hasNewTick = false;
+
+      if (displayClose === null || !isSameBarUpdate) {
+        displayClose = currentBar.close;
+        hasNewTick = false;
+      } else {
+        hasNewTick = true;
+      }
     };
     
     const handlePriceUpdate = (e) => {
