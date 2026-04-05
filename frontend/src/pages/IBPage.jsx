@@ -407,7 +407,11 @@ const IBPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-3xl font-bold text-gray-900">
-                            ${ibProfile?.commissionProfile?.effectiveRate ?? levelProgress?.commissionProfile?.effectiveRate ?? levelProgress?.currentLevel?.commissionRate || 0}
+                            ${(
+                              ibProfile?.commissionProfile?.effectiveRate ??
+                              levelProgress?.commissionProfile?.effectiveRate ??
+                              levelProgress?.currentLevel?.commissionRate
+                            ) || 0}
                             <span className="text-sm text-gray-500"> /lot</span>
                           </p>
 
