@@ -425,7 +425,12 @@ const corsOptions = {
 app.use(cors(corsOptions))
 // Explicitly handle OPTIONS pre-flight for all routes
 app.options('*', cors(corsOptions))
-app.use(express.json({ limit: '50mb' }))
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, _res, buf) => {
+    req.rawBody = buf?.toString('utf8') || ''
+  }
+}))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
 // 🛡️ Security: Restrict /api/admin & /api/admin-mgmt to admin subdomain only
@@ -447,6 +452,7 @@ const restrictAdminOrigin = (req, res, next) => {
 }
 app.use('/api/admin', restrictAdminOrigin)
 app.use('/api/admin-mgmt', restrictAdminOrigin)
+app.use('/api/oxapay/admin', restrictAdminOrigin)
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)

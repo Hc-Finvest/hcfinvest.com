@@ -12,6 +12,13 @@ const isValidObjectId = (id) => {
   return id && id !== 'undefined' && id !== 'null' && /^[a-fA-F0-9]{24}$/.test(id)
 }
 
+const requireAdminPermission = (admin, permissionKeyOrKeys) => {
+  if (!admin) return false
+  if (admin.role === 'SUPER_ADMIN') return true
+  const permissionKeys = Array.isArray(permissionKeyOrKeys) ? permissionKeyOrKeys : [permissionKeyOrKeys]
+  return permissionKeys.some((key) => !!admin.permissions?.[key])
+}
+
 // ==================== USER ROUTES ====================
 
 // GET /api/oxapay/status - Check if Oxapay is available
@@ -28,10 +35,11 @@ router.get('/status', async (req, res) => {
 // POST /api/oxapay/deposit - Create a deposit request (authenticated user)
 router.post('/deposit', authMiddleware, async (req, res) => {
   try {
-    const { userId, amount, currency = 'USD', cryptoCurrency = 'USDT' } = req.body
+    const { amount, currency = 'USD', cryptoCurrency = 'USDT' } = req.body
+    const userId = req.user?._id?.toString()
 
     if (!isValidObjectId(userId)) {
-      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+      return res.status(401).json({ success: false, message: 'Unauthorized user context' })
     }
     if (!amount) {
       return res.status(400).json({ success: false, message: 'Amount is required' })
@@ -56,7 +64,15 @@ router.post('/deposit', authMiddleware, async (req, res) => {
 // GET /api/oxapay/transaction/:id - Get transaction status
 router.get('/transaction/:id', authMiddleware, async (req, res) => {
   try {
-    const result = await oxapayService.getTransactionStatus(req.params.id)
+    const transactionId = req.params.id
+    if (!isValidObjectId(transactionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid transaction ID' })
+    }
+
+    const result = await oxapayService.getTransactionStatus(transactionId)
+    if (String(result.userId) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Access denied for this transaction' })
+    }
     res.json({ success: true, transaction: result })
   } catch (error) {
     res.status(404).json({ success: false, message: error.message })
@@ -87,10 +103,11 @@ router.get('/transactions', authMiddleware, async (req, res) => {
 // POST /api/oxapay/withdraw - User requests crypto withdrawal (authenticated user)
 router.post('/withdraw', authMiddleware, async (req, res) => {
   try {
-    const { userId, amount, cryptoCurrency = 'USDT', walletAddress, network = 'TRC20' } = req.body
+    const { amount, cryptoCurrency = 'USDT', walletAddress, network = 'TRC20' } = req.body
+    const userId = req.user?._id?.toString()
 
     if (!isValidObjectId(userId)) {
-      return res.status(400).json({ success: false, message: 'Invalid user ID' })
+      return res.status(401).json({ success: false, message: 'Unauthorized user context' })
     }
     if (!amount || !walletAddress) {
       return res.status(400).json({ success: false, message: 'Amount and wallet address are required' })
@@ -211,18 +228,18 @@ router.get('/withdraw/status', async (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const hmacHeader = req.headers['hmac']
-    const rawBody = JSON.stringify(req.body)
+    const rawBody = req.rawBody || JSON.stringify(req.body)
     
     console.log('[Oxapay] Webhook received from gateway')
 
     const result = await oxapayService.processWebhook(req.body, hmacHeader, rawBody)
     
-    // Oxapay requires "ok" response
     res.status(200).send('ok')
   } catch (error) {
     console.error('[Oxapay] Webhook error:', error)
-    // Still return 200 with "ok" to prevent retries
-    res.status(200).send('ok')
+    const msg = String(error?.message || '').toLowerCase()
+    const isAuthError = msg.includes('signature') || msg.includes('missing webhook signature')
+    res.status(isAuthError ? 401 : 500).send('error')
   }
 })
 
@@ -231,6 +248,10 @@ router.post('/webhook', async (req, res) => {
 // GET /api/oxapay/admin/transaction/:id - Get transaction details (admin only)
 router.get('/admin/transaction/:id', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, ['canViewReports', 'canManageDeposits', 'canManageWithdrawals'])) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to view transaction details' })
+    }
+
     const transaction = await CryptoTransaction.findById(req.params.id)
       .populate('userId', 'firstName lastName email walletBalance')
 
@@ -260,8 +281,12 @@ router.get('/admin/transaction/:id', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/oxapay/test/user-balance/:userId - Get user balance for testing
-router.get('/test/user-balance/:userId', async (req, res) => {
+router.get('/test/user-balance/:userId', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, ['canViewReports', 'canManageUsers'])) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to view test balance' })
+    }
+
     const mode = process.env.PAYMENT_MODE || 'TEST'
     
     if (mode !== 'TEST') {
@@ -297,6 +322,10 @@ router.get('/test/user-balance/:userId', async (req, res) => {
 // GET /api/oxapay/admin/transactions - Get all transactions (admin only)
 router.get('/admin/transactions', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canManageDeposits')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to view transactions' })
+    }
+
     const { page, limit, status, type, startDate, endDate } = req.query
     const result = await oxapayService.getAllTransactions({
       page: parseInt(page) || 1,
@@ -315,6 +344,10 @@ router.get('/admin/transactions', adminMiddleware, async (req, res) => {
 // GET /api/oxapay/admin/config - Get gateway configuration (admin only)
 router.get('/admin/config', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, ['canManageSettings', 'canManageDeposits', 'canManageWithdrawals'])) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to view gateway config' })
+    }
+
     let gateway = await PaymentGateway.findOne({ name: 'oxapay' })
     
     // Create default config if not exists
@@ -355,6 +388,10 @@ router.get('/admin/config', adminMiddleware, async (req, res) => {
 // PUT /api/oxapay/admin/config - Update gateway configuration (admin only)
 router.put('/admin/config', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, ['canManageSettings', 'canManageDeposits', 'canManageWithdrawals'])) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to update gateway config' })
+    }
+
     const {
       isActive,
       depositEnabled,
@@ -414,6 +451,10 @@ router.put('/admin/config', adminMiddleware, async (req, res) => {
 // POST /api/oxapay/admin/validate-key - Validate Merchant API Key (admin only)
 router.post('/admin/validate-key', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, ['canManageSettings', 'canManageDeposits', 'canManageWithdrawals'])) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to validate API key' })
+    }
+
     const { merchantApiKey } = req.body
     
     if (!merchantApiKey) {
@@ -446,6 +487,10 @@ router.post('/admin/validate-key', adminMiddleware, async (req, res) => {
 // GET /api/oxapay/admin/stats - Get transaction statistics (admin only)
 router.get('/admin/stats', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canViewReports')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to view stats' })
+    }
+
     const stats = await CryptoTransaction.aggregate([
       { $match: { gateway: 'oxapay' } },
       {
@@ -492,6 +537,10 @@ router.get('/admin/stats', adminMiddleware, async (req, res) => {
 // POST /api/oxapay/admin/manual-credit - Manually credit a transaction (admin only)
 router.post('/admin/manual-credit/:transactionId', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canApproveDeposits')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to credit transactions' })
+    }
+
     const { adminNotes } = req.body
     const transaction = await CryptoTransaction.findById(req.params.transactionId)
     
@@ -501,6 +550,10 @@ router.post('/admin/manual-credit/:transactionId', adminMiddleware, async (req, 
 
     if (transaction.walletCredited) {
       return res.status(400).json({ success: false, message: 'Transaction already credited' })
+    }
+
+    if (transaction.type !== 'deposit') {
+      return res.status(400).json({ success: false, message: 'Manual credit is allowed only for deposit transactions' })
     }
 
     // Use atomic credit
@@ -521,6 +574,10 @@ router.post('/admin/manual-credit/:transactionId', adminMiddleware, async (req, 
 // GET /api/oxapay/admin/withdrawal-requests - Get pending withdrawal requests (admin only)
 router.get('/admin/withdrawal-requests', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canManageWithdrawals')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to view withdrawal requests' })
+    }
+
     const { status = 'pending' } = req.query
     
     const requests = await CryptoTransaction.find({ 
@@ -546,6 +603,10 @@ router.get('/admin/withdrawal-requests', adminMiddleware, async (req, res) => {
 // POST /api/oxapay/admin/approve-withdrawal/:id - Approve and process withdrawal (admin only)
 router.post('/admin/approve-withdrawal/:id', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canApproveWithdrawals')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to approve withdrawals' })
+    }
+
     const { adminNotes } = req.body
     const transaction = await CryptoTransaction.findById(req.params.id)
     
@@ -584,12 +645,8 @@ router.post('/admin/approve-withdrawal/:id', adminMiddleware, async (req, res) =
 
     // STEP 2: Process the payout via Oxapay API
     try {
-      const result = await oxapayService.createPayout(
-        transaction.userId,
-        transaction.amount,
-        transaction.cryptoCurrency || 'USDT',
-        transaction.paymentAddress,
-        transaction.network || 'TRC20',
+      const result = await oxapayService.executePayoutForTransaction(
+        transaction._id,
         { adminNotes: adminNotes || 'Approved by admin' }
       )
 
@@ -640,6 +697,10 @@ router.post('/admin/approve-withdrawal/:id', adminMiddleware, async (req, res) =
 // POST /api/oxapay/admin/reject-withdrawal/:id - Reject withdrawal request (admin only)
 router.post('/admin/reject-withdrawal/:id', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canApproveWithdrawals')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to reject withdrawals' })
+    }
+
     const { reason } = req.body
     const transaction = await CryptoTransaction.findById(req.params.id)
     
@@ -684,6 +745,10 @@ router.post('/admin/reject-withdrawal/:id', adminMiddleware, async (req, res) =>
 // POST /api/oxapay/admin/payout - Create direct payout (admin only)
 router.post('/admin/payout', adminMiddleware, async (req, res) => {
   try {
+    if (!requireAdminPermission(req.admin, 'canManageWithdrawals')) {
+      return res.status(403).json({ success: false, message: 'Insufficient permission to create direct payouts' })
+    }
+
     const { userId, amount, cryptoCurrency, walletAddress, network, adminNotes } = req.body
 
     if (!userId || !amount || !walletAddress) {

@@ -66,37 +66,24 @@ export const adminMiddleware = async (req, res, next) => {
     
     const decoded = jwt.verify(token, getJwtSecret())
     
-    // Check if it's an admin token (adminId from admin-mgmt login or id from other sources)
+    // Check if it's an admin token (adminId from admin-mgmt login or id fallback)
     const adminId = decoded.adminId || decoded.id
-    console.log('Admin middleware - decoded:', { adminId, role: decoded.role })
     
     const admin = await Admin.findById(adminId).select('-password')
-    console.log('Admin middleware - admin found:', admin ? admin.email : 'NOT FOUND')
     
-    if (admin) {
-      if (admin.status !== 'ACTIVE') {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Admin account is not active' 
-        })
-      }
-      req.admin = admin
-      req.isAdmin = true
-      return next()
+    if (!admin) {
+      return res.status(403).json({ success: false, message: 'Admin access required' })
     }
 
-    // Fallback: Check if user has admin privileges (for backward compatibility)
-    const user = await User.findById(decoded.id).select('-password')
-    
-    if (!user) {
-      console.warn('Admin middleware - Admin and User not found for ID:', decoded.id || decoded.adminId)
-      return res.status(401).json({ success: false, message: 'Unauthorized' })
+    if (admin.status !== 'ACTIVE') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Admin account is not active' 
+      })
     }
 
-    // For now, allow any authenticated user to access admin routes
-    // In production, you should check for admin role
-    req.user = user
-    req.isAdmin = false
+    req.admin = admin
+    req.isAdmin = true
     next()
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {

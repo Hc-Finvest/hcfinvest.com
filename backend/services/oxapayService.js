@@ -326,7 +326,11 @@ class OxapayService {
       }
       console.log('[Oxapay] Webhook signature verified successfully')
     } else {
-      console.warn('[Oxapay] No HMAC header or API key - signature verification skipped')
+      const allowUnsigned = String(process.env.OXAPAY_ALLOW_UNSIGNED_WEBHOOKS || '').toLowerCase() === 'true'
+      if (!allowUnsigned) {
+        throw new Error('Missing webhook signature or merchant key')
+      }
+      console.warn('[Oxapay] Unsigned webhook accepted (OXAPAY_ALLOW_UNSIGNED_WEBHOOKS=true)')
     }
 
     const { track_id, status, type, order_id, amount } = payload
@@ -742,6 +746,82 @@ class OxapayService {
     }
   }
 
+  // Process payout for an already-created withdrawal transaction (single-ledger flow)
+  async executePayoutForTransaction(transactionId, options = {}) {
+    await this.loadConfig()
+
+    if (!this.payoutApiKey) {
+      throw new Error('Oxapay Payout API Key not configured')
+    }
+
+    const transaction = await CryptoTransaction.findById(transactionId)
+    if (!transaction) {
+      throw new Error('Withdrawal transaction not found')
+    }
+
+    if (transaction.type !== 'withdrawal') {
+      throw new Error('Transaction is not a withdrawal')
+    }
+
+    if (!transaction.walletDebited) {
+      throw new Error('Wallet must be debited before payout execution')
+    }
+
+    if (!transaction.paymentAddress) {
+      throw new Error('Withdrawal wallet address is missing')
+    }
+
+    if (transaction.status === 'success') {
+      return {
+        success: true,
+        transaction: {
+          id: transaction._id,
+          trackId: transaction.gatewayOrderId,
+          amount: transaction.amount,
+          cryptoCurrency: transaction.cryptoCurrency,
+          walletAddress: transaction.paymentAddress,
+          status: transaction.status
+        }
+      }
+    }
+
+    const user = await User.findById(transaction.userId)
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const payoutData = {
+      address: transaction.paymentAddress,
+      amount: transaction.amount,
+      currency: transaction.cryptoCurrency || 'USDT',
+      network: transaction.network || 'TRC20',
+      callback_url: process.env.OXAPAY_WEBHOOK_URL || `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/oxapay/webhook`,
+      description: options.description || `Withdrawal payout to ${user.email}`
+    }
+
+    const response = await this.makePayoutRequest('/v1/payout', payoutData)
+    const trackId = response.data?.track_id
+    const payoutStatus = response.data?.status
+
+    transaction.gatewayOrderId = trackId || transaction.gatewayOrderId
+    transaction.gatewayPaymentId = trackId || transaction.gatewayPaymentId
+    transaction.adminNotes = options.adminNotes || transaction.adminNotes
+    transaction.status = (payoutStatus === 'complete' || payoutStatus === 'confirmed') ? 'success' : 'processing'
+    await transaction.save()
+
+    return {
+      success: true,
+      transaction: {
+        id: transaction._id,
+        trackId: transaction.gatewayOrderId,
+        amount: transaction.amount,
+        cryptoCurrency: transaction.cryptoCurrency,
+        walletAddress: transaction.paymentAddress,
+        status: transaction.status
+      }
+    }
+  }
+
   // ==================== UTILITY METHODS ====================
 
   // Get transaction status
@@ -753,6 +833,7 @@ class OxapayService {
 
     return {
       id: transaction._id,
+      userId: transaction.userId,
       trackId: transaction.gatewayOrderId,
       status: transaction.status,
       amount: transaction.amount,
