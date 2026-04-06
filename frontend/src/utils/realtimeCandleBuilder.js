@@ -1,5 +1,5 @@
 const LONG_GAP_MS = 45 * 60 * 1000;
-const ALLOWED_TIME_SKEW_MS = 1500;
+const ALLOWED_TIME_SKEW_MS = 5000;
 
 export const toEventTimeMs = (rawTime) => {
   if (typeof rawTime === 'number') {

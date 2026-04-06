@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import redisClient from './redisClient.js';
 import { updateCandleListWithTick } from '../utils/candleAggregator.js';
 import priceNormalizer from './priceNormalizer.js';
+import { SYMBOL_REGISTRY, normalizeSymbol as canonicalNormalize } from '../config/symbols.js';
 
 dotenv.config();
 
@@ -70,20 +71,17 @@ class AllTickApiService {
       this.reverseSymbolMap[value] = key;
     });
 
+    //Sanket v2.0 - Initialize with Registry
     this.subscribedSymbols = new Set(['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSD', 'ETHUSD', 'XAGUSD', 'EURJPY', 'USDJPY', 'GBPJPY']);
-    // Auto-populate from symbol map to ensure we catch everything
-    Object.values(this.symbolMap).forEach(s => this.subscribedSymbols.add(s));
+    Object.keys(SYMBOL_REGISTRY).forEach(s => this.subscribedSymbols.add(s));
 
     this.prioritySymbols = [];
-    this.restCooldownUntil = 0; // Cooldown for REST API (history)
-    this.wsCooldownUntil = 0;   // Cooldown for WebSocket (connection)
-    this.historyCache = new Map(); // Cache for historical requests to avoid 429s
+    this.restCooldownUntil = 0;
+    this.wsCooldownUntil = 0;
+    this.historyCache = new Map();
     this.lastAcceptedMidBySymbol = new Map();
     this.lastAcceptedTsBySymbol = new Map();
     this.pendingSpikeBySymbol = new Map();
-    //Sanket v2.0 - Blacklist for symbols that AllTick confirms are unsupported (HTTP 600 / code invalid).
-    // Without this, every startup warmup + chart load re-hits the API for the same bad symbol,
-    // stacking up REST requests that trigger 429 → WS disconnect → real-time prices lost.
     this.unsupportedSymbols = new Set();
     
     // Periodically clear old cache entries (5 minute TTL)
@@ -96,8 +94,54 @@ class AllTickApiService {
       }
     }, 60000);
 
-    // REST Request Queue to prevent concurrent 429s/402s on trial tokens
+    // REST Request Queue
     this.restQueue = Promise.resolve();
+
+    // 🚀 NEW: Authoritative Backend Heartbeat (keeps charts moving)
+    this.startProactiveHeartbeat();
+  }
+
+  /**
+   * Proactive Heartbeat (Production Grade)
+   * Emits authoritative bar updates for priority symbols even when no trades occur.
+   */
+  startProactiveHeartbeat() {
+    setInterval(async () => {
+      if (this.prioritySymbols.length === 0) return;
+      
+      const now = Date.now();
+      for (const symbol of this.prioritySymbols) {
+        const clean = canonicalNormalize(symbol);
+        const last = this.prices[clean];
+        if (!last || !last.bid) continue;
+
+        // Pulse the time-series in Redis (keeps History continuity)
+        this.syncLivePriceToTiers(clean, { 
+          price: last.bid, // Use mid/bid as authoritative pulse
+          time: now 
+        });
+
+        // 🏆 AUTHORITATIVE BROADCAST
+        // This ensures the frontend doesn't need its own heartbeat or interpolation logic.
+        const priceEventTarget = await redisClient; 
+        const candle = {
+          time: Math.floor(now / 60000) * 60000,
+          open: last.bid,
+          high: last.bid,
+          low: last.bid,
+          close: last.bid,
+          volume: 0.0001 // Micro-volume pulse to maintain solid Rendering
+        };
+
+        // Emit for the 1m timeframe specifically (standard driver for live charts)
+        await redisClient.publish('price_updates', JSON.stringify({
+          symbol: clean,
+          timeframe: '1m',
+          candle,
+          isHeartbeat: true
+        }));
+      }
+    }, 10000); // 10 second pulse
   }
 
   getSpikeThresholdPercent(symbol = '') {
@@ -180,21 +224,9 @@ class AllTickApiService {
    */
   normalizeSymbol(symbol) {
     if (!symbol) return '';
-    const s = String(symbol).toUpperCase();
-    const base = s.replace(/\.I$/, '');
-    const targetWithSuffix = `${base}.i`;
-
-    // 1. Try with .i suffix (e.g. 'XAUUSD.i')
-    if (this.symbolMap[targetWithSuffix]) return this.symbolMap[targetWithSuffix];
-    
-    // 2. Try exact base (e.g. 'XAUUSD')
-    if (this.symbolMap[base]) return this.symbolMap[base];
-    
-    // 3. Last resort fallbacks
-    if (this.symbolMap[symbol]) return this.symbolMap[symbol];
-    if (this.symbolMap[symbol.toLowerCase()]) return this.symbolMap[symbol.toLowerCase()];
-    
-    return symbol;
+    const clean = canonicalNormalize(symbol);
+    const meta = SYMBOL_REGISTRY[clean];
+    return meta ? meta.providerCode : clean;
   }
 
   async connect() {
@@ -303,7 +335,11 @@ class AllTickApiService {
         const tick = data.data;
         if (!tick || !tick.code) return;
         
-        const appSymbol = this.reverseSymbolMap[tick.code] || tick.code;
+        // 🚀 THE FIX: Use SYMBOL_REGISTRY mapping for reverse lookup instead of hardcoded symbolMap
+        let appSymbol = tick.code;
+        const registryEntry = Object.entries(SYMBOL_REGISTRY).find(([k, v]) => v.providerCode === tick.code);
+        if (registryEntry) appSymbol = registryEntry[0];
+
         if (tick.code === 'XAUUSD' || appSymbol.includes('XAUUSD')) {
             console.log(`[AllTick] 📥 LIVE TICK: ${tick.code} -> ${appSymbol} @ ${tick.price}`);
         }

@@ -5,6 +5,17 @@ import { validateRealtimeTick } from '../utils/realtimeCandleBuilder'
 
 const SOCKET_URL = API_BASE_URL
 
+//SANKET - Universal Normalization Wrapper for consistent key matching
+const normalizeSym = (val = '') => {
+  if (!val) return '';
+  return String(val)
+    .toUpperCase()
+    .replace(/\.I$/i, '')
+    .replace(/\.F$/i, '')
+    .replace(/\.C$/i, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
 class PriceStreamService {
   constructor() {
     this.socket = null
@@ -114,7 +125,7 @@ class PriceStreamService {
         //Sanket v2.0 - Only merge prices with valid bid to prevent overwriting good cache with zero/null values
         Object.entries(prices).forEach(([sym, p]) => {
           if (p && p.bid && p.bid > 0) {
-            this.prices[sym] = p;
+            this.prices[normalizeSym(sym)] = p;
           }
         });
       }
@@ -127,23 +138,24 @@ class PriceStreamService {
       // NOTE: We now dispatch priceUpdate events from priceStream as a robust fallback.
       // While tickUpdate (high frequency) is the preferred driver for smooth chart movement,
       // priceStream ensuring the chart moves at least every 1s if the tick stream is quiet.
-      if (prices) {
-        const priceEventTarget = getPriceEvents();
-        Object.entries(updated || prices).forEach(([symbol, p]) => {
-          if (p && p.bid > 0) {
-            const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
-            if (!acceptedTick.accepted) return
-            priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
-              detail: {
-                symbol: symbol,
-                bid: acceptedTick.bid,
-                ask: acceptedTick.ask,
-                time: acceptedTick.tickTime
-              }
-            }));
-          }
-        });
-      }
+    if (prices) {
+      const priceEventTarget = getPriceEvents();
+      Object.entries(updated || prices).forEach(([rawSymbol, p]) => {
+        if (p && p.bid > 0) {
+          const symbol = normalizeSym(rawSymbol);
+          const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
+          if (!acceptedTick.accepted) return
+          priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
+            detail: {
+              symbol: symbol,
+              bid: acceptedTick.bid,
+              ask: acceptedTick.ask,
+              time: acceptedTick.tickTime
+            }
+          }));
+        }
+      });
+    }
 
       // Notify all price subscribers with updated prices only (throttled)
       this.subscribers.forEach((callback, id) => {
@@ -166,11 +178,16 @@ class PriceStreamService {
       
       // Full update of price cache
       if (prices) {
-        this.prices = prices
+        // Rebuild normalized price cache
+        this.prices = {}
+        Object.entries(prices).forEach(([sym, p]) => {
+          this.prices[normalizeSym(sym)] = p;
+        });
         
         // ✅ BROADCAST to chart datafeed
         const priceEventTarget = getPriceEvents()
-        Object.entries(prices).forEach(([symbol, p]) => {
+        Object.entries(prices).forEach(([rawSymbol, p]) => {
+          const symbol = normalizeSym(rawSymbol);
           const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
           if (!acceptedTick.accepted) return
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
@@ -203,7 +220,8 @@ class PriceStreamService {
       this.lastTickAt = Date.now()
       if (this.connectionStatus !== 'live') this._emitStatus('live')
       
-      const { symbol, bid, ask, time, rawBid, rawAsk } = tickData
+      const { symbol: rawSymbol, bid, ask, time, rawBid, rawAsk } = tickData
+      const symbol = normalizeSym(rawSymbol)
 
       //Sanket v2.0 - Drop ticks with invalid/zero bid to prevent PnL flicker to $0
       if (!symbol || !bid || bid <= 0) return

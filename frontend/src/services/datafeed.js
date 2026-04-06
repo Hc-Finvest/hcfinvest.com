@@ -26,7 +26,16 @@ const formatResolution = (res) => {
 };
 
 //Sanket v2.0 - Strip .i suffix before removing non-alphanumeric so XAUUSD.i and XAUUSD both normalize to XAUUSD
-const normalizeRealtimeSymbol = (value = '') => value.toUpperCase().replace(/\.I$/i, '').replace(/[^A-Z0-9]/g, '');
+//Sanket v2.0 - Strip ALL suffixes and special chars for strict normalization
+const normalizeRealtimeSymbol = (value = '') => {
+  if (!value) return '';
+  return String(value)
+    .toUpperCase()
+    .replace(/\.I$/i, '')
+    .replace(/\.F$/i, '')
+    .replace(/\.C$/i, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
 
 const toMs = (rawTime) => {
   let timeMs = rawTime;
@@ -97,6 +106,27 @@ const getChartExecutionPrice = (bid, ask, symbol, adminSpreads, side = 'MID') =>
 };
 
 //Sanket v2.0 - All symbols without .i suffix
+//Sanket v2.0 - Canonical Symbol Registry (Shared logic with Backend)
+const SYMBOL_REGISTRY_FE = {
+  'EURUSD': { pricescale: 100000, session: '2200-2200:12345' },
+  'GBPUSD': { pricescale: 100000, session: '2200-2200:12345' },
+  'USDJPY': { pricescale: 100,    session: '2200-2200:12345' },
+  'USDCHF': { pricescale: 100000, session: '2200-2200:12345' },
+  'AUDUSD': { pricescale: 100000, session: '2200-2200:12345' },
+  'NZDUSD': { pricescale: 100000, session: '2200-2200:12345' },
+  'USDCAD': { pricescale: 100000, session: '2200-2200:12345' },
+  'XAUUSD': { pricescale: 100,    session: '2200-2200:12345' },
+  'XAGUSD': { pricescale: 1000,   session: '2200-2200:12345' },
+  'BTCUSD': { pricescale: 100,    session: '24x7' },
+  'ETHUSD': { pricescale: 100,    session: '24x7' },
+  'BNBUSD': { pricescale: 100,    session: '24x7' },
+  'SOLUSD': { pricescale: 100,    session: '24x7' },
+  'US30':   { pricescale: 10,     session: '2200-2200:12345' },
+  'US500':  { pricescale: 100,    session: '2200-2200:12345' },
+  'US100':  { pricescale: 10,     session: '2200-2200:12345' },
+  'UK100':  { pricescale: 10,     session: '2200-2200:12345' },
+};
+
 const ALL_SYMBOLS = [
   // Forex
   { symbol: 'EURUSD', description: 'Euro / US Dollar', type: 'forex' },
@@ -122,7 +152,7 @@ const ALL_SYMBOLS = [
   // Metals
   { symbol: 'XAUUSD', description: 'CFDs on Gold (US$ / OZ)', type: 'commodity' },
   { symbol: 'XAGUSD', description: 'CFDs on Silver (US$ / OZ)', type: 'commodity' },
-  // Energy & Commodities (Sanket v2.0 - AllTick-confirmed codes)
+  // Energy & Commodities
   { symbol: 'USOIL',  description: 'US Crude Oil (WTI)', type: 'commodity' },
   { symbol: 'UKOIL',  description: 'UK Brent Crude Oil', type: 'commodity' },
   { symbol: 'NGAS',   description: 'Natural Gas', type: 'commodity' },
@@ -136,6 +166,8 @@ const ALL_SYMBOLS = [
   // Crypto
   { symbol: 'BTCUSD', description: 'Bitcoin / US Dollar', type: 'crypto' },
   { symbol: 'ETHUSD', description: 'Ethereum / US Dollar', type: 'crypto' },
+  { symbol: 'BNBUSD', description: 'Binance Coin / US Dollar', type: 'crypto' },
+  { symbol: 'SOLUSD', description: 'Solana / US Dollar', type: 'crypto' },
 ];
 
 const Datafeed = {
@@ -187,43 +219,23 @@ const Datafeed = {
   //Sanket v2.0 - Added try/catch + onResolveErrorCallback so chart doesn't hang on bad symbols
   resolveSymbol: async (symbolName, onSymbolResolvedCallback, onResolveErrorCallback) => {
     try {
-      // v7.77 Strict Normalization
-      const normalizedName = normalizeSymbol(symbolName);
+      // v7.77 Strict Normalization using Registry
+      const cleanName = normalizeRealtimeSymbol(symbolName);
+      const meta = SYMBOL_REGISTRY_FE[cleanName] || {};
       
-      // Determine pricescale based on actual asset type and precision requirements
-      let pricescale = 100000; // Default 5 decimals (Forex)
-      const s = normalizedName.toUpperCase();
+      const pricescale = meta.pricescale || 100000;
+      const session = meta.session || '24x7';
       
-      if (s.includes("US30") || s.includes("US100") || s.includes("UK100") || s.includes("GER40") || s.includes("FRA40") || s.includes("SPA35") || s.includes("ES35")) {
-        pricescale = 10; // 1 decimal (e.g., 18000.5)
-      } else if (s.includes("US500") || s.includes("XAU") || s.includes("BTC") || s.includes("ETH") || s.includes("BNB") || s.includes("SOL") || s.includes("LTC")) {
-        pricescale = 100; // 2 decimals (e.g., 2150.50, 65000.00)
-      } else if (s.includes("JPY") || s.includes("XAG") || s.includes("NGAS") || s.includes("OIL") || s.includes("COPPER")) {
-        pricescale = 1000; // 3 decimals (e.g., 150.123, 30.550)
-      } else if (s.includes("XRP") || s.includes("ADA") || s.includes("DOGE")) {
-        pricescale = 100000; // 5 decimals (Crypto micros)
-      }
-
-      //Sanket v2.0 - Differentiate sessions to prevent timeline gaps
-      const symbolDef = ALL_SYMBOLS.find(sym => sym.symbol === normalizedName);
-      const forcedType = symbolDef ? symbolDef.type : (s.includes("BTC") || s.includes("ETH") || s.includes("BNB") || s.includes("SOL") || s.includes("XRP") ? "crypto" : "forex");
-
-      // CLEAN ARCHITECTURE: Tell TradingView exactly when the market is open.
-      // Forex is exactly 5 continuous 24-hour sessions: Sun 22:00 -> Fri 22:00.
-      // In TradingView, 2200-2200 spanning 1(Sun)-5(Thu) means the 5th session ends Fri 22:00.
-      let session = "24x7";
-      if (forcedType === "forex" || forcedType === "commodity" || forcedType === "index") {
-        session = "2200-2200:12345";
-      }
-
+      const symbolItem = ALL_SYMBOLS.find(s => s.symbol === cleanName);
+      
       const symbolInfo = {
-        name: normalizedName,
-        ticker: normalizedName,
-        description: symbolDef ? symbolDef.description : normalizedName,
-        type: forcedType,
-        session: session,
-        timezone: "Etc/UTC",
-        exchange: "AllTick",
+        name: symbolName,
+        ticker: symbolName,
+        description: symbolItem ? symbolItem.description : symbolName,
+        type: symbolItem ? symbolItem.type : 'forex',
+        session: session, // ✅ THE FIX: Native session support
+        timezone: 'Etc/UTC',
+        exchange: 'AllTick',
         minmov: 1,
         pricescale: pricescale,
         has_intraday: true,
@@ -232,9 +244,9 @@ const Datafeed = {
         has_weekly_and_monthly: true,
         supported_resolutions: configurationData.supported_resolutions,
         volume_precision: 2,
-        data_status: "streaming"
+        data_status: 'streaming'
       };
-      console.log(`[v7.50] resolveSymbol: ${symbolName} using pricescale ${pricescale}`);
+      console.log(`[v7.77] resolveSymbol: ${symbolName} using session ${session} and pricescale ${pricescale}`);
       setTimeout(() => onSymbolResolvedCallback(symbolInfo), 0);
     } catch (err) {
       console.error(`[DATAFEED] resolveSymbol failed for ${symbolName}:`, err.message);
@@ -320,14 +332,13 @@ const Datafeed = {
    * Logic: Listens to priceUpdate events and creates proper OHLC candle updates
    */
   subscribeBars: (symbolInfo, resolution, onRealtimeCallback, subscriberUID) => {
-    // Parse resolution correctly - can be "1", "5", "15", "30", "60", "120", "240", "1D", "1W", "1M"
     let resolutionMinutes = 1;
     if (resolution === '1M' || resolution === 'M') {
-      resolutionMinutes = 30 * 24 * 60; // Approximate for throttling/candle logic
+      resolutionMinutes = 30 * 24 * 60;
     } else if (resolution === '1W' || resolution === 'W') {
-      resolutionMinutes = 7 * 24 * 60; // 10080 minutes in a week
+      resolutionMinutes = 7 * 24 * 60;
     } else if (resolution === '1D' || resolution === 'D') {
-      resolutionMinutes = 24 * 60; // 1440 minutes in a day
+      resolutionMinutes = 24 * 60;
     } else if (resolution === '4h' || resolution === '240') {
       resolutionMinutes = 4 * 60;
     } else if (resolution === '2h' || resolution === '120') {
@@ -338,7 +349,7 @@ const Datafeed = {
       resolutionMinutes = parseInt(resolution) || 1;
     }
     
-    const resolutionMs = resolutionMinutes * 60 * 1000; // Convert to milliseconds
+    const resolutionMs = resolutionMinutes * 60 * 1000;
     const timeframe = formatResolution(resolution);
     const historyKey = `${normalizeRealtimeSymbol(symbolInfo.name)}|${timeframe}`;
     
@@ -350,11 +361,6 @@ const Datafeed = {
     const throttleMs = 50;
     let isActive = true;
 
-    // No smooth close-price interpolation natively inside the feed
-    // We let TradingView handle the pure streaming ticks, which prevents fluctuating candles.
-
-    // Seed real-time aggregation from the last historical bar so refresh during a forming
-    // candle does not restart OHLC from a single tick (dot-like candle issue).
     const seededBar = Datafeed._lastHistoryBars?.[historyKey];
     if (seededBar && Number.isFinite(seededBar.time)) {
       currentBar = { ...seededBar };
@@ -362,14 +368,10 @@ const Datafeed = {
       lastUpdateTime = Date.now();
     }
 
-    //Sanket v2.0 - Guard against backward-in-time pushes that corrupt TradingView's internal bar cache.
-    // Race condition: handleCandleUpdate may push bar at 14:00, then handlePriceUpdate
-    // fires a "new bucket" transition that also pushes the OLD 12:00 bar to finalize it.
-    // TV sees 14:00 -> 12:00 and throws putToCacheNewBar time violation, breaking 1D/1W/1M history.
     let lastPushedBarTime = seededBar ? seededBar.time : -Infinity;
     const pushBar = (bar) => {
       if (!bar || !Number.isFinite(bar.time)) return;
-      if (bar.time < lastPushedBarTime) return; // silently drop backwards-in-time bars
+      if (bar.time < lastPushedBarTime) return;
       lastPushedBarTime = bar.time;
       onRealtimeCallback(bar);
       try {
@@ -384,8 +386,6 @@ const Datafeed = {
       } catch {}
     };
 
-    // Bootstrap with latest live-preferred history so opening mid-candle (e.g. 15:57 on 15:55 bar)
-    // can render already-formed OHLC instead of starting from a single incoming tick.
     const bootstrapLiveBar = async () => {
       try {
         const params = new URLSearchParams();
@@ -413,7 +413,6 @@ const Datafeed = {
           Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
           Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
           pushBar(currentBar);
-          console.log(`[DATAFEED] 🧩 Bootstrapped live bar for ${symbolInfo.name} ${timeframe} @ ${new Date(latest.time).toISOString()}`);
           return;
         }
 
@@ -424,68 +423,33 @@ const Datafeed = {
           Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
           Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
         }
-      } catch (error) {
-        // Keep stream alive if bootstrap fails; tick updates will continue normally.
-      }
+      } catch (error) {}
     };
 
     bootstrapLiveBar();
     
-    // ✅ Backend Candle Authority: Join resolution-agnostic symbol room on backend
     priceStreamService.subscribeBars(symbolInfo.name);
     
-    console.log(`[DATAFEED] ✅ subscribeBars: ${symbolInfo.name}, resolution=${resolution}m`);
-    
-    // ✅ PROACTIVE HEARTBEAT INTERPOLATION: Keep chart moving during silent periods.
-    // If no ticks arrive for > 5s, we manually 'tick' the current bar to keep the 
-    // chart line solid and prevent dotted-line gaps.
-    const heartbeatTimer = setInterval(() => {
-      if (!isActive || !currentBar) return;
-      
-      const now = Date.now();
-      const timeSinceLastUpdate = now - lastUpdateTime;
-      
-      // If we haven't seen a tick in 2s, but the clock has moved, proactive 'tick' 
-      // the datafeed with the last price to prevent visual 'sticking'.
-      if (timeSinceLastUpdate > 2000) {
-        const interpolated = buildCandleFromTick({
-          currentBar,
-          tickPrice: currentBar.close,
-          tickTime: now,
-          resolutionMs,
-          symbol: symbolInfo.name
-        });
+    const normalizedSym = normalizeRealtimeSymbol(symbolInfo.name);
+    const existingPriority = Array.isArray(priceStreamService.prioritySymbols) ? priceStreamService.prioritySymbols : [];
+    if (!existingPriority.includes(normalizedSym)) {
+      priceStreamService.setPrioritySymbols([...existingPriority, normalizedSym]);
+    }
 
-        if (interpolated.accepted) {
-          interpolated.bars.forEach(bar => {
-            currentBar = { ...bar };
-            lastBarTime = bar.time;
-            pushBar(currentBar);
-          });
-          lastUpdateTime = now;
-        }
-      }
-    }, 5000);
-
-    // ✅ Monitor for data gaps - production-grade health check
+    // ✅ Monitor for data gaps
     const dataGapMonitor = setInterval(() => {
       const now = Date.now();
       if (lastTickTime > 0) {
         const timeSinceLastTick = now - lastTickTime;
         if (timeSinceLastTick > 15000) {
-          console.warn(`[DATAFEED] ⚠️  DATA GAP: No ticks for ${symbolInfo.name} for ${(timeSinceLastTick / 1000).toFixed(1)}s`);
+          console.warn(`[DATAFEED] ⚠️ DATA GAP for ${symbolInfo.name} for ${(timeSinceLastTick/1000).toFixed(1)}s`);
         }
       }
     }, 10000);
 
-    // ✅ Backend Candle Authority: Authoritative bar updates (Source of Truth)
     const handleCandleUpdate = (e) => {
       const { symbol, timeframe: incomingTimeframe, candle } = e.detail;
-      
-      // Symbol match
-      if (normalizeRealtimeSymbol(symbol) !== normalizeRealtimeSymbol(symbolInfo.name)) return;
-      
-      // Resolution match (only process bars for the resolution we are watching)
+      if (normalizeRealtimeSymbol(symbol) !== normalizedSym) return;
       if (incomingTimeframe !== timeframe) return;
 
       const bar = {
@@ -496,39 +460,26 @@ const Datafeed = {
         close: candle.close,
         volume: candle.volume
       };
-      const prevBarTime = lastBarTime;
-
+      
       const validatedBar = validateRealtimeBar({
         symbol: symbolInfo.name,
         bar,
         previousBar: currentBar
       });
       if (!validatedBar.accepted) return;
-
-      //Sanket v2.0 - Reject stale candle updates that would rewind our time state.
-      // On higher timeframes (1D/1W/1M) the backend emits the last COMPLETED bar alongside the
-      // current forming bar. If we accept the old bar, currentBar/lastBarTime reset backwards,
-      // handlePriceUpdate sees "new bucket" at a misaligned timestamp, pushBar emits a bar older
-      // than TV's cache → putToCacheNewBar time violation → chart shows only 1 candle.
       if (currentBar !== null && validatedBar.bar.time < lastBarTime) return;
 
-      // Apply Retail Lens Markup to AUTHORITATIVE bar
       const authoritativeBar = applyChartPriceModeToBar(validatedBar.bar, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
 
       currentBar = { ...authoritativeBar };
       lastBarTime = validatedBar.bar.time;
       lastUpdateTime = Date.now();
 
-      // Update the singleton cache so History -> Realtime is seamless.
-      // Only update when this bar is at least as recent as the cached entry to prevent
-      // stale candle updates from corrupting the seed value for the next subscription.
       Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
-      const existingCachedBar = Datafeed._lastHistoryBars[historyKey];
-      if (!existingCachedBar || validatedBar.bar.time >= existingCachedBar.time) {
+      const existing = Datafeed._lastHistoryBars[historyKey];
+      if (!existing || validatedBar.bar.time >= existing.time) {
         Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
       }
-
-      const isSameBarUpdate = Number.isFinite(prevBarTime) && validatedBar.bar.time === prevBarTime;
 
       pushBar(currentBar);
     };
@@ -539,67 +490,50 @@ const Datafeed = {
       const { symbol, bid, ask, time } = e.detail;
       lastTickTime = Date.now();
       
-      // Robust symbol matching
-      if (normalizeRealtimeSymbol(symbol) !== normalizeRealtimeSymbol(symbolInfo.name)) return;
+      if (normalizeRealtimeSymbol(symbol) !== normalizedSym) return;
 
-      // Throttle: don't aggregate OHLC faster than needed
       const now = Date.now();
       if ((now - lastUpdateTime) < throttleMs) return;
       lastUpdateTime = now;
 
-      // Keep chart execution price aligned with selected-side execution semantics.
       const price = getChartExecutionPrice(bid, ask, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
       if (!isFinite(price) || price <= 0) return;
 
-      const tickTime = toMs(time) || now;
-      const candleUpdate = buildCandleFromTick({
-        currentBar,
-        tickPrice: price,
-        tickTime,
-        resolutionMs,
-        symbol: symbolInfo.name
-      });
-      
-      if (!candleUpdate.accepted) return;
-
-      // 🚀 THE FIX: Update the local currentBar state and push all results (supports multi-bar interpolation)
-      candleUpdate.bars.forEach(bar => {
-        currentBar = { ...bar };
-        lastBarTime = bar.time;
+      // 🏆 REAL-TIME SMOOTHING: Update current bar with live sub-second price.
+      // We rely on handleCandleUpdate from the backend for actual bar creation/transitions.
+      if (currentBar) {
+        const updatedBar = {
+          ...currentBar,
+          high: Math.max(currentBar.high, price),
+          low: Math.min(currentBar.low, price),
+          close: price
+        };
+        currentBar = updatedBar;
         pushBar(currentBar);
-      });
+      }
     };
 
-    //Sanket v2.0 - Store both listeners so unsubscribeBars can clean up everything
     Datafeed._subscribers = Datafeed._subscribers || {};
     Datafeed._subscribers[subscriberUID] = {
       priceUpdate: handlePriceUpdate,
       candleUpdate: handleCandleUpdate,
       symbol: symbolInfo.name,
-      dataGapMonitor,
-      //Sanket v2.0 - Expose callback and bar ref so updateInterpolatedTick can push smooth candle updates
-      _onRealtimeCallback: onRealtimeCallback,
-      get _currentBar() { return currentBar; }
+      dataGapMonitor
     };
 
-    console.log(`[DATAFEED] 👂 Real-time subscription: ${symbolInfo.name}`);
-    const sub = Datafeed._subscribers[subscriberUID];
-    sub.handleCandleUpdate = handleCandleUpdate;
-    sub.handlePriceUpdate = handlePriceUpdate;
-
-    getPriceEvents().addEventListener("candleUpdate", sub.handleCandleUpdate);
-    getPriceEvents().addEventListener("priceUpdate", sub.handlePriceUpdate);
+    getPriceEvents().addEventListener("candleUpdate", handleCandleUpdate);
+    getPriceEvents().addEventListener("priceUpdate", handlePriceUpdate);
     
-    // Return cleanup function so TradingView can call it when unsubscribing
     return function cleanup() {
       isActive = false;
-      clearInterval(heartbeatTimer);
       clearInterval(dataGapMonitor);
       priceStreamService.unsubscribeBars(symbolInfo.name);
       getPriceEvents().removeEventListener("candleUpdate", handleCandleUpdate);
       getPriceEvents().removeEventListener("priceUpdate", handlePriceUpdate);
       delete Datafeed._subscribers[subscriberUID];
-      console.log(`[DATAFEED] ❌ Unsubscribed: ${symbolInfo.name}, received ${tickCount} ticks`);
+      
+      const remainingPriority = (priceStreamService.prioritySymbols || []).filter(s => s !== normalizedSym);
+      priceStreamService.setPrioritySymbols(remainingPriority);
     };
   },
 
