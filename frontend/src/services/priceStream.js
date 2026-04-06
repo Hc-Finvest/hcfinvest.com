@@ -123,9 +123,14 @@ class PriceStreamService {
       // Update local price cache with all prices
       if (prices) {
         //Sanket v2.0 - Only merge prices with valid bid to prevent overwriting good cache with zero/null values
+        //Sanket v2.0 - Skip symbols with recent live ticks to avoid overwriting realtime data with stale batch prices
+        const _batchNow = Date.now();
         Object.entries(prices).forEach(([sym, p]) => {
           if (p && p.bid && p.bid > 0) {
-            this.prices[normalizeSym(sym)] = p;
+            const _normalizedSym = normalizeSym(sym);
+            const _lastLiveTick = this._lastTickTsBySymbol.get(_normalizedSym) || 0;
+            if (_batchNow - _lastLiveTick <= 3000) return;
+            this.prices[_normalizedSym] = p;
           }
         });
       }
@@ -139,10 +144,14 @@ class PriceStreamService {
       // While tickUpdate (high frequency) is the preferred driver for smooth chart movement,
       // priceStream ensuring the chart moves at least every 1s if the tick stream is quiet.
     if (prices) {
+      const _dispatchNow = Date.now();
       const priceEventTarget = getPriceEvents();
       Object.entries(updated || prices).forEach(([rawSymbol, p]) => {
         if (p && p.bid > 0) {
           const symbol = normalizeSym(rawSymbol);
+          //Sanket v2.0 - Skip stale batch dispatch for symbols with recent live ticks
+          const _lastLiveTick = this._lastTickTsBySymbol.get(symbol) || 0;
+          if (_dispatchNow - _lastLiveTick <= 3000) return;
           const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
           if (!acceptedTick.accepted) return
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
@@ -178,16 +187,27 @@ class PriceStreamService {
       
       // Full update of price cache
       if (prices) {
-        // Rebuild normalized price cache
-        this.prices = {}
+        //Sanket v2.0 - Rebuild snapshot but preserve live tick data for actively ticking symbols
+        const _snapNow = Date.now();
+        const _newPrices = {};
         Object.entries(prices).forEach(([sym, p]) => {
-          this.prices[normalizeSym(sym)] = p;
+          const _normalized = normalizeSym(sym);
+          const _lastLiveTick = this._lastTickTsBySymbol.get(_normalized) || 0;
+          if (_snapNow - _lastLiveTick <= 3000 && this.prices[_normalized]) {
+            _newPrices[_normalized] = this.prices[_normalized];
+          } else {
+            _newPrices[_normalized] = p;
+          }
         });
+        this.prices = _newPrices;
         
-        // ✅ BROADCAST to chart datafeed
+        // ✅ BROADCAST to chart datafeed (only for symbols without recent live ticks)
         const priceEventTarget = getPriceEvents()
         Object.entries(prices).forEach(([rawSymbol, p]) => {
           const symbol = normalizeSym(rawSymbol);
+          //Sanket v2.0 - Skip stale snapshot dispatch for symbols with recent live ticks
+          const _lastLiveTick = this._lastTickTsBySymbol.get(symbol) || 0;
+          if (_snapNow - _lastLiveTick <= 3000) return;
           const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
           if (!acceptedTick.accepted) return
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
