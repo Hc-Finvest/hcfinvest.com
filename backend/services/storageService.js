@@ -990,7 +990,16 @@ class StorageService extends EventEmitter {
         }
       }
 
-      return this.mapDbCandles(dbCandles);
+      let mappedCandles = this.mapDbCandles(dbCandles);
+      // Filter out weekend candles for XAUUSD (and similar symbols if needed)
+      if (['XAUUSD', 'XAUUSD.i', 'XAUUSD.I'].includes(String(symbol).toUpperCase())) {
+        mappedCandles = mappedCandles.filter(candle => {
+          const day = (candle.time instanceof Date ? candle.time : new Date(candle.time)).getUTCDay();
+          // 0 = Sunday, 6 = Saturday
+          return day !== 0 && day !== 6;
+        });
+      }
+      return mappedCandles;
     }
 
     // DB cache miss: fetch once (deduped), store, then serve from DB.
