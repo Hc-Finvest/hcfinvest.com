@@ -2,8 +2,8 @@ import { API_URL } from "../config/api";
 import { normalizeSymbol } from "../utils/symbolUtils";
 import priceStreamService from "./priceStream";
 import { getPriceEvents } from "./eventSystem";
-import { buildCandleFromTick, validateRealtimeBar } from "../utils/realtimeCandleBuilder";
-import { sanitizeBatch, validateRealtimeUpdate, getSpikeThreshold } from "../utils/chartSanitizer";
+import { validateRealtimeBar } from "../utils/realtimeCandleBuilder";
+import { sanitizeBatch, validateRealtimeUpdate } from "../utils/chartSanitizer";
 
 /**
  * Custom Datafeed for TradingView Charting Library
