@@ -140,17 +140,18 @@ class PriceStreamService {
       // priceStream ensuring the chart moves at least every 1s if the tick stream is quiet.
     if (prices) {
       const priceEventTarget = getPriceEvents();
+      //Sanket v2.0 - Removed _acceptRealtimeTick filter here. Spike filtering belongs in datafeed.js
+      // (validateRealtimeUpdate) not in the broadcaster. Filtering here caused chart + buy/sell buttons
+      // to freeze after any legitimate rapid move once lastMid diverged from real price.
       Object.entries(updated || prices).forEach(([rawSymbol, p]) => {
         if (p && p.bid > 0) {
           const symbol = normalizeSym(rawSymbol);
-          const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
-          if (!acceptedTick.accepted) return
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
             detail: {
               symbol: symbol,
-              bid: acceptedTick.bid,
-              ask: acceptedTick.ask,
-              time: acceptedTick.tickTime
+              bid: p.bid,
+              ask: p.ask,
+              time: timestamp || p.time
             }
           }));
         }
@@ -185,17 +186,17 @@ class PriceStreamService {
         });
         
         // ✅ BROADCAST to chart datafeed
+        //Sanket v2.0 - Removed _acceptRealtimeTick filter (same fix as priceUpdate handler above)
         const priceEventTarget = getPriceEvents()
         Object.entries(prices).forEach(([rawSymbol, p]) => {
+          if (!p || !(p.bid > 0)) return
           const symbol = normalizeSym(rawSymbol);
-          const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
-          if (!acceptedTick.accepted) return
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
             detail: {
               symbol: symbol,
-              bid: acceptedTick.bid,
-              ask: acceptedTick.ask,
-              time: acceptedTick.tickTime
+              bid: p.bid,
+              ask: p.ask,
+              time: timestamp || p.time
             }
           }))
         })
@@ -226,8 +227,12 @@ class PriceStreamService {
       //Sanket v2.0 - Drop ticks with invalid/zero bid to prevent PnL flicker to $0
       if (!symbol || !bid || bid <= 0) return
 
-      const acceptedTick = this._acceptRealtimeTick(symbol, bid, ask, time)
-      if (!acceptedTick.accepted) return
+      //Sanket v2.0 - Removed _acceptRealtimeTick spike filter from tickUpdate path.
+      // Previously this blocked ticks that jumped > 5% from lastMid. Since lastMid only updates
+      // on ACCEPTED ticks, any rapid legitimate market move (e.g. NFP release) would cause ALL
+      // subsequent ticks to be silently dropped until LONG_GAP_MS (45min) reset the check.
+      // Result: chart + buy/sell buttons completely frozen during real price moves.
+      // Fix: let raw ticks through; datafeed.js validateRealtimeUpdate handles chart-side filtering.
 
       //Sanket v2.0 - Drop duplicate ticks arriving back-to-back for same symbol.
       const tickKey = `${symbol}|${bid}|${ask}|${time || ''}`
@@ -240,11 +245,11 @@ class PriceStreamService {
       
       // ✅ BROADCAST to all price subscribers (P/L table, etc.)
       const priceObj = { 
-        bid: acceptedTick.bid,
-        ask: acceptedTick.ask,
-        rawBid: rawBid || acceptedTick.bid,
-        rawAsk: rawAsk || acceptedTick.ask,
-        time: acceptedTick.tickTime
+        bid,
+        ask,
+        rawBid: rawBid || bid,
+        rawAsk: rawAsk || ask,
+        time: time || new Date().toISOString()
       }
       
       this.prices[symbol] = priceObj
@@ -259,9 +264,9 @@ class PriceStreamService {
         priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
           detail: {
             symbol: symbol,
-            bid: acceptedTick.bid,
-            ask: acceptedTick.ask,
-            time: acceptedTick.tickTime
+            bid,
+            ask,
+            time: time || new Date().toISOString()
           }
         }))
       } catch (e) {}

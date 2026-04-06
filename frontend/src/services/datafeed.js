@@ -3,7 +3,7 @@ import { normalizeSymbol } from "../utils/symbolUtils";
 import priceStreamService from "./priceStream";
 import { getPriceEvents } from "./eventSystem";
 import { validateRealtimeBar } from "../utils/realtimeCandleBuilder";
-import { sanitizeBatch, validateRealtimeUpdate } from "../utils/chartSanitizer";
+import { validateRealtimeUpdate } from "../utils/chartSanitizer";
 
 /**
  * Custom Datafeed for TradingView Charting Library
@@ -54,19 +54,29 @@ const toNumber = (value) => {
 
 const normalizeBars = (candles = [], symbol = '') => {
   if (!candles || candles.length === 0) return [];
-  
-  // 1. Basic formatting (timestamps and numbers)
-  const rawBars = candles.map(c => ({
+
+  //Sanket v2.0 - Backend prices.js already runs sanitizeHistoricalSeries before sending.
+  // Do NOT run sanitizeBatch here — it deletes candles with >5% close-to-close jump from
+  // the already-clean result, which silently removes valid large-move candles from the chart.
+  // Just normalize timestamps/numbers and correct OHLC consistency without removing any bars.
+  return candles.map(c => ({
     time: toMs(c?.time),
     open: toNumber(c?.open),
     high: toNumber(c?.high),
     low: toNumber(c?.low),
     close: toNumber(c?.close),
     volume: Number.isFinite(Number(c?.volume)) ? Number(c.volume) : 0
-  })).filter(b => Number.isFinite(b.time) && b.time > 0);
-
-  // 2. Production Sanitization (Anti-Spike, OHLC correction, Sorting)
-  return sanitizeBatch(rawBars, symbol);
+  }))
+  .filter(b =>
+    Number.isFinite(b.time) && b.time > 0 &&
+    [b.open, b.high, b.low, b.close].every(Number.isFinite)
+  )
+  .map(b => ({
+    ...b,
+    high: Math.max(b.high, b.open, b.close, b.low),
+    low:  Math.min(b.low,  b.open, b.close, b.high)
+  }))
+  .sort((a, b) => a.time - b.time);
 };
 
 const applyChartPriceModeToBar = (bar, symbol, adminSpreads, side = 'MID') => {
@@ -504,7 +514,12 @@ const Datafeed = {
 
       // New bucket: finalize old bar, open new one
       if (bucketTime > currentBar.time) {
-        pushBar({ ...currentBar }); // close the completed candle
+        //Sanket v2.0 - Restored from April 2: only push the directly-preceding bar.
+        // Pushing any stale old bar (e.g. bootstrap bar from 13:00 when it's 14:07) causes TV
+        // putToCacheNewBar time violations because getBars already served those bars.
+        if (currentBar.time === bucketTime - resolutionMs) {
+          pushBar({ ...currentBar });
+        }
         currentBar = { time: bucketTime, open: currentBar.close, high: price, low: price, close: price, volume: 1 };
         lastBarTime = bucketTime;
         pushBar(currentBar);
@@ -518,9 +533,10 @@ const Datafeed = {
         symbol: symbolInfo.name
       });
       
-      if (!result.accepted) return; // Drop spikes
+      if (!result.accepted) return; // Drop true spikes (>5% jump)
       
-      currentBar = result.bar;
+      //Sanket v2.0 - Restored from April 2: accumulate volume per tick so volume bars are accurate.
+      currentBar = { ...result.bar, volume: (currentBar.volume || 0) + 1 };
       pushBar(currentBar);
     };
 
