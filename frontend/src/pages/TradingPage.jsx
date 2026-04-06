@@ -895,7 +895,7 @@
 //       // For pending orders, use entry price; fallback to live prices
 //       const pendingPrice = entryPrice ? parseFloat(entryPrice) : null
 //       //Sanket v2.0 - Single source: metaApiPrices (per-tick)
-      const livePrice = metaApiPrices[selectedInstrument.symbol]
+//       const livePrice = metaApiPrices[selectedInstrument.symbol]
 //       const currentBid = livePrice?.bid || selectedInstrument.bid
 //       const currentAsk = livePrice?.ask || selectedInstrument.ask
       
