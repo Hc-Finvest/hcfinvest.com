@@ -5,7 +5,7 @@ import { requireOpsAuth } from '../middleware/opsAuth.js'
 import { opsRateLimit, getOpsRateLimitStats } from '../middleware/opsRateLimit.js'
 import OpsActionLog from '../models/OpsActionLog.js'
 import redisClient from '../services/redisClient.js'
-import { aggregateToTimeframe, fillGaps, validateContinuity } from '../utils/candleAggregator.js'
+import { aggregateToTimeframe, fillGaps, validateContinuity, filterClosedMarketCandles } from '../utils/candleAggregator.js'
 
 const router = express.Router()
 
@@ -391,7 +391,9 @@ router.get('/history', async (req, res) => {
   try {
     const cached = await redisClient.get(cacheKey);
     if (cached) {
-      const candles = JSON.parse(cached);
+      let candles = JSON.parse(cached);
+      // 🔥 THE FIX: Actively strip any cached weekend candles
+      candles = filterClosedMarketCandles(candles, cleanSymbol);
       console.log(`[History] ⚡ Served ${candles.length} candles from Redis Cache`);
       return res.json({ success: true, symbol, timeframe, candles, count: candles.length, provider: 'alltick (cached)' });
     }
@@ -414,6 +416,9 @@ router.get('/history', async (req, res) => {
     
     // 1. Sort (Clean)
     finalCandles.sort((a, b) => a.time - b.time);
+
+    // 2. Filter out raw provider weekend candles
+    finalCandles = filterClosedMarketCandles(finalCandles, cleanSymbol);
 
     //Sanket v2.0 - Fill gaps even with sparse data (was > 5, now > 1)
     if (finalCandles.length > 1 && targetMinutes <= 1440) {

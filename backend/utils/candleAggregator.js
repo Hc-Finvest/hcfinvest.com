@@ -34,6 +34,11 @@ export const isMarketOpen = (timestamp, symbol) => {
   return true;
 };
 
+export const filterClosedMarketCandles = (candles, symbol) => {
+  if (!candles || !Array.isArray(candles)) return [];
+  return candles.filter(c => isMarketOpen(c.time, symbol));
+};
+
 /**
  * Aggregates 1-minute candles into a larger timeframe with gap filling.
  * This is the "Iterative Bucket" approach which guarantees continuity.
