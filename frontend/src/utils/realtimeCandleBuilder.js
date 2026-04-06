@@ -160,13 +160,15 @@ export const buildCandleFromTick = ({ currentBar, tickPrice, tickTime, resolutio
   }
 
   if (bucketTime > currentBar.time) {
-    const open = Number.isFinite(previousClose) ? previousClose : tickPrice;
+    // 🔥 THE FIX: The open price of a new candle must ALWAYS be the first tick of that bucket!
+    // Forcing open = previousClose creates massive phantom wicks across time gaps if the market jumped.
+    const open = tickPrice;
     const nextBar = {
       time: bucketTime,
-      open,
-      high: Math.max(open, tickPrice),
-      low: Math.min(open, tickPrice),
-      close: tickPrice,
+      open: open,
+      high: open,
+      low: open,
+      close: open,
       volume: 1
     };
     return { accepted: true, bar: nextBar, isNewBar: true, bucketTime };

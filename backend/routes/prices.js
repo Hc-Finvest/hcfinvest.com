@@ -386,7 +386,7 @@ router.get('/history', async (req, res) => {
   // Always use 'latest' for the end if not specified, to match live tier-sync
   const cacheSuffix = isPreferLive ? 'live' : 'std';
   const effectiveEnd = (isPreferLive && !to) ? 'latest' : (endTime || 'latest');
-  const cacheKey = `hist:${cleanSymbol}:${timeframe}:end:${effectiveEnd}:${requestLimit}:${cacheSuffix}`;
+  const cacheKey = `hist:${cleanSymbol}:${timeframe}:end:${effectiveEnd}:${requestLimit}:${cacheSuffix}:v3`;
   
   try {
     const cached = await redisClient.get(cacheKey);

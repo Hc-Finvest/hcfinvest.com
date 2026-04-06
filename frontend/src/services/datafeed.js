@@ -265,6 +265,7 @@ const Datafeed = {
       if (Number.isFinite(to)) params.set('to', String(to));
       params.set('limit', String(limit));
       if (useLiveCache) params.set('preferLive', '1');
+      params.set('v', '3'); // 🔥 THE FIX: Bust Browser HTTP Cache so TradingView pulls the newly pruned payload
       const url = `${API_URL}/prices/history?${params.toString()}`;
       
       console.log(`[DATAFEED] getBars: ${symbolInfo.name} (${resolution}→${timeframe}) from=${from} to=${to} limit=${limit}`);
@@ -349,21 +350,8 @@ const Datafeed = {
     const throttleMs = 50;
     let isActive = true;
 
-    //Sanket v2.0 - Smooth close-price interpolation for the chart's current price line.
-    // Raw ticks arrive at 50ms intervals. Without lerping, TV's right-side price label and the
-    // forming candle's close digit jump discretely each tick — same "jumping decimals" problem
-    // as the BUY/SELL buttons had before AnimatedPrice.
-    // Solution: a single RAF loop lerps displayClose → targetClose at 60fps and is the ONLY
-    // place that calls pushBar for same-candle updates. Only the close is interpolated; the
-    // real OHLC open/high/low stay raw (they matter for wick/body accuracy).
-    let targetClose = null;    // latest raw (markup-adjusted) close from a tick
-    let displayClose = null;   // smoothly-interpolated close pushed to TV
-    let lastMarkupBar = null;  // latest full markup bar (open/high/low always raw)
-    let prevRafTime;
-    let rafId;
-    let hasNewTick = false;   // true while lerp is in-flight; gates RAF pushBar
-    const displayTargetThrottleMs = 0;
-    let lastDisplayTargetAt = 0;
+    // No smooth close-price interpolation natively inside the feed
+    // We let TradingView handle the pure streaming ticks, which prevents fluctuating candles.
 
     // Seed real-time aggregation from the last historical bar so refresh during a forming
     // candle does not restart OHLC from a single tick (dot-like candle issue).
@@ -511,22 +499,7 @@ const Datafeed = {
 
       const isSameBarUpdate = Number.isFinite(prevBarTime) && validatedBar.bar.time === prevBarTime;
 
-      // New bars should snap immediately for strict bar-boundary correctness.
-      // Same-bar updates should lerp to prevent visible jumpiness in the active candle.
-      if (!isSameBarUpdate) {
-        pushBar(currentBar);
-      }
-
-      lastMarkupBar = { ...currentBar };
-      targetClose = currentBar.close;
-      lastDisplayTargetAt = Date.now();
-
-      if (displayClose === null || !isSameBarUpdate) {
-        displayClose = currentBar.close;
-        hasNewTick = false;
-      } else {
-        hasNewTick = true;
-      }
+      pushBar(currentBar);
     };
     
     const handlePriceUpdate = (e) => {
@@ -557,62 +530,9 @@ const Datafeed = {
       });
       if (!candleUpdate.accepted) return;
 
-      //Sanket v2.0 - Track whether this tick starts a new candle so we can snap displayClose.
-      let snapDisplay = candleUpdate.isNewBar;
-
-      if (currentBar && candleUpdate.isNewBar) {
-        // New candle period — only finalize the immediately preceding bar to avoid pushing stale bars.
-        //Sanket v2.0 - If seededBar was from months ago, currentBar.time will be far in the past.
-        // Pushing it would violate TV's time order (TV already has recent bars from getBars).
-        // Only push if currentBar is the direct predecessor of the new bucket.
-        if (currentBar.time === candleUpdate.bucketTime - resolutionMs) {
-          //Sanket v2.0 - Finalise the closed candle with the real close (not smoothed).
-          pushBar({ ...currentBar });
-        }
-      }
-
-      currentBar = candleUpdate.bar;
-      lastBarTime = currentBar.time;
-
-      // Refresh display target on every eligible tick for tighter sync with the UI.
-      const shouldRefreshDisplayTarget = snapDisplay || (now - lastDisplayTargetAt) >= displayTargetThrottleMs;
-      if (!shouldRefreshDisplayTarget) return;
-
-      lastMarkupBar = { ...currentBar };
-      targetClose = currentBar.close;
-      lastDisplayTargetAt = now;
-      hasNewTick = true; // signal RAF loop to start/continue lerping
-      if (displayClose === null || snapDisplay) {
-        //Sanket v2.0 - First tick or new candle: snap immediately so chart doesn't wait one RAF frame
-        displayClose = targetClose;
-        pushBar({ ...currentBar, close: displayClose });
-      }
+      // Pure instantaneous push
+      pushBar({ ...currentBar });
     };
-
-    //Sanket v2.0 - RAF smooth loop: lerps displayClose → targetClose at 60fps.
-    // Equivalent to AnimatedPrice for React state, but drives TV's onRealtimeCallback instead.
-    // The close is the only interpolated field; high/low/open always stay on real values so
-    // candle bodies and wicks remain accurate.
-    const runSmoothClose = (time) => {
-      if (!isActive) return;
-      if (prevRafTime !== undefined && lastMarkupBar !== null &&
-          targetClose !== null && displayClose !== null && hasNewTick) {
-        const dt = (time - prevRafTime) / 1000;
-        const lerpFactor = Math.min(1, 0.9 * 60 * dt);
-        const diff = targetClose - displayClose;
-        if (Math.abs(diff) > 0.00001) {
-          displayClose = displayClose + diff * lerpFactor;
-          pushBar({ ...lastMarkupBar, close: displayClose });
-        } else {
-          displayClose = targetClose;
-          pushBar({ ...lastMarkupBar, close: displayClose });
-          hasNewTick = false; // snapped — stop driving RAF until next tick
-        }
-      }
-      prevRafTime = time;
-      rafId = requestAnimationFrame(runSmoothClose);
-    };
-    rafId = requestAnimationFrame(runSmoothClose);
 
     //Sanket v2.0 - Store both listeners so unsubscribeBars can clean up everything
     Datafeed._subscribers = Datafeed._subscribers || {};
@@ -637,7 +557,6 @@ const Datafeed = {
     // Return cleanup function so TradingView can call it when unsubscribing
     return function cleanup() {
       isActive = false;
-      if (rafId) cancelAnimationFrame(rafId);
       clearInterval(dataGapMonitor);
       priceStreamService.unsubscribeBars(symbolInfo.name);
       priceEventTarget.removeEventListener("candleUpdate", handleCandleUpdate);
@@ -647,7 +566,6 @@ const Datafeed = {
     };
   },
 
-  //Sanket v2.0 - Now removes both priceUpdate AND candleUpdate listeners to prevent memory leaks
   unsubscribeBars: (subscriberUID) => {
     const sub = Datafeed._subscribers && Datafeed._subscribers[subscriberUID];
     if (sub) {
@@ -657,27 +575,6 @@ const Datafeed = {
       if (sub.symbol) priceStreamService.unsubscribeBars(sub.symbol);
       delete Datafeed._subscribers[subscriberUID];
     }
-  },
-
-  //Sanket v2.0 - Feed interpolated smooth price into active chart candles to prevent jumpy chart during slow ticks
-  updateInterpolatedTick(symbol, midPrice) {
-    if (!midPrice || !isFinite(midPrice) || midPrice <= 0) return;
-    const canonSymbol = String(symbol || '').toUpperCase().replace(/\.I$/i, '');
-    const subs = Datafeed._subscribers || {};
-    Object.values(subs).forEach(sub => {
-      const subSymbol = String(sub.symbol || '').toUpperCase().replace(/\.I$/i, '');
-      if (subSymbol !== canonSymbol) return;
-      if (sub._onRealtimeCallback && sub._currentBar) {
-        const bar = sub._currentBar;
-        const updated = {
-          ...bar,
-          high: Math.max(bar.high, midPrice),
-          low: Math.min(bar.low, midPrice),
-          close: midPrice
-        };
-        try { sub._onRealtimeCallback(updated); } catch {}
-      }
-    });
   }
 };
 

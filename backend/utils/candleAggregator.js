@@ -48,8 +48,13 @@ export const aggregateToTimeframe = (candles1m, timeframeMinutes) => {
     }
 
     if (!found) {
-      // 🔥 THE FIX: Gap found in 1m source for this timeframe bucket
-      // We fill with the last known price to prevent chart disconnects.
+      // Skip emitting flat candles if the gap to the next real data point is >= 12 hours (weekend)
+      if (i < sorted.length && sorted[i].time - t >= 12 * 60 * 60 * 1000) {
+        // Fast-forward t to the bucket of the next real candle
+        const nextRealCandleBucket = Math.floor(sorted[i].time / intervalMs) * intervalMs;
+        t = nextRealCandleBucket - intervalMs; // -intervalMs because the loop will += intervalMs
+        continue;
+      }
       open = high = low = close = lastClose;
       volume = 0;
     }
@@ -94,12 +99,10 @@ export const fillGaps = (candles, intervalMinutes) => {
     let currentTime = current.time;
     const nextTime = next.time;
 
-    // Detect and fill gaps larger than 1.5x the interval (to allow for minor jitter)
-    // but typically it should be exactly intervalMs.
-    // Skip only truly huge gaps (>7 days) to avoid massive synthetic backfills.
+    // Skip filling if the gap is >= 12 hours (implies market closure / weekend)
     const gapMs = nextTime - currentTime;
     
-    if (gapMs > intervalMs * 1.5 && gapMs < (7 * 24 * 60 * 60 * 1000)) {
+    if (gapMs > intervalMs * 1.5 && gapMs < (12 * 60 * 60 * 1000)) {
       //Sanket v2.0 - Use bucket-aligned fill to prevent overshoot: stop BEFORE the next real candle's bucket
       const nextBucket = Math.floor(nextTime / intervalMs) * intervalMs;
       let fillTime = Math.floor(currentTime / intervalMs) * intervalMs + intervalMs;
