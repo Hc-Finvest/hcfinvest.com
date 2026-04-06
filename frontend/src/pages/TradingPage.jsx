@@ -4092,13 +4092,14 @@ const TradingPage = () => {
         const side = String(trade.side || '').toUpperCase();
         const contractSize = Number(trade.contractSize) > 0 ? Number(trade.contractSize) : getMarginContractSize(targetSym);
 
-        // MT5-style mark price with resilient fallback for partial ticks.
-        const liveBid = livePrice?.rawBid || livePrice?.bid || null;
-        const liveAsk = livePrice?.rawAsk || livePrice?.ask || liveBid;
+        //Sanket v2.0 - MT5-style mark price: prefer inst.bid/ask (per-tick via instruments state)
+        // over livePrices (300ms throttled) so floating PnL tracks chart price in real-time.
         const instBid = inst?.rawBid || inst?.bid || null;
         const instAsk = inst?.rawAsk || inst?.ask || instBid;
-        const effectiveBid = liveBid || instBid;
-        const effectiveAsk = liveAsk || instAsk;
+        const liveBid = livePrice?.rawBid || livePrice?.bid || null;
+        const liveAsk = livePrice?.rawAsk || livePrice?.ask || liveBid;
+        const effectiveBid = instBid || liveBid;
+        const effectiveAsk = instAsk || liveAsk;
         
         // Only calculate if we have a valid price
         const currentPrice = side === 'BUY' ? effectiveBid : effectiveAsk;
@@ -5787,10 +5788,10 @@ const TradingPage = () => {
                       
                       //Sanket v2.0 - Resolve raw bid/ask with all fallbacks; passed to AnimatedTradeRow
                       // which interpolates them internally at 60fps so current-price and P/L columns
-                      // never jump. TradingPage re-renders only at the normal 300ms price-stream rate.
+                      // never jump. Prefer inst.bid/ask (per-tick via instruments state) over livePrices (300ms).
                       const cachePrices = lastValidPricesRef.current[targetSym] || lastValidPricesRef.current[baseSym];
-                      const rawBid = (livePrice?.rawBid || livePrice?.bid) || (cachePrices?.rawBid || cachePrices?.bid) || (inst?.rawBid || inst?.bid) || 0;
-                      const rawAsk = (livePrice?.rawAsk || livePrice?.ask) || (cachePrices?.rawAsk || cachePrices?.ask) || (inst?.rawAsk || inst?.ask) || 0;
+                      const rawBid = (inst?.rawBid || inst?.bid) || (livePrice?.rawBid || livePrice?.bid) || (cachePrices?.rawBid || cachePrices?.bid) || 0;
+                      const rawAsk = (inst?.rawAsk || inst?.ask) || (livePrice?.rawAsk || livePrice?.ask) || (cachePrices?.rawAsk || cachePrices?.ask) || 0;
                       const priceDecimals = isJpyPair(trade.symbol) ? 3
                         : (isCryptoSymbol(trade.symbol) || getBaseSymbol(trade.symbol) === 'XAUUSD') ? 2
                         : getBaseSymbol(trade.symbol) === 'XAGUSD' ? 4
@@ -6318,8 +6319,10 @@ const TradingPage = () => {
                   <div className="flex gap-2 mb-3">
                     {(() => {
                       const sym = selectedInstrument.symbol;
-                      const sellRaw = selectedLiveQuote.bid;
-                      const buyRaw = selectedLiveQuote.ask;
+                      //Sanket v2.0 - Apply admin markup via getDisplayPrice so buy/sell buttons show the
+                      // same retail prices (bid-markup / ask+markup) as AnimatedInstrumentPrices panel.
+                      const sellRaw = getDisplayPrice(sym, 'SELL', selectedLiveQuote.bid, selectedLiveQuote.ask);
+                      const buyRaw = getDisplayPrice(sym, 'BUY', selectedLiveQuote.bid, selectedLiveQuote.ask);
                       const decimals = isJpyPair(sym) ? 3
                         : (isCryptoSymbol(sym) || getBaseSymbol(sym) === 'XAUUSD') ? 2
                         : 5;
