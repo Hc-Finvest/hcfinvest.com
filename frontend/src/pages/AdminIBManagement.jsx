@@ -8,12 +8,12 @@ import {
   UserPlus, Award, Target, Calendar, ShieldCheck, Wallet
 } from 'lucide-react'
 
-// --- Premium Shared Styles ---
-const cardBase = "bg-white border border-slate-200 rounded-2xl shadow-sm transition-all duration-200";
-const inputBase = "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none";
-const primaryBtn = "flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md shadow-blue-200 active:scale-95 transition-all";
-const secondaryBtn = "flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all border border-slate-200";
-const dangerBtn = "flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 px-6 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all border border-red-100";
+// --- Professional Minimalist SaaS Styles ---
+const cardBase = "bg-white border border-slate-200 rounded-xl shadow-sm";
+const inputBase = "w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none";
+const primaryBtn = "flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm active:scale-95 transition-all outline-none";
+const secondaryBtn = "flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-lg font-semibold text-sm active:scale-95 transition-all border border-slate-300 shadow-sm outline-none";
+const dangerBtn = "flex items-center justify-center gap-2 hover:bg-red-50 text-red-600 px-5 py-2.5 rounded-lg font-semibold text-sm active:scale-95 transition-all border border-red-200 outline-none";
 
 const AdminIBManagement = () => {
   const { modeColors } = useTheme()
@@ -175,123 +175,102 @@ const AdminIBManagement = () => {
   );
 
   return (
-    <AdminLayout title="IB Management" subtitle="System-wide IB hierarchies and commission logic">
-      {/* Stats Cards Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <AdminLayout title="IB Management" subtitle="Manage Introducing Brokers, levels, and commission plans">
+      {/* Modern Dashboard Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Active IBs', value: dashboard?.ibs?.total || '0', sub: `${dashboard?.ibs?.pending || 0} pending review`, icon: UserCog, color: 'blue' },
-          { label: 'Total Referrals', value: dashboard?.referrals?.total || '0', sub: 'Active network reach', icon: Users, color: 'indigo' },
-          { label: 'Commissions Paid', value: `$${(dashboard?.commissions?.total?.totalCommission || 0).toLocaleString()}`, sub: 'Lifetime yield', icon: DollarSign, color: 'emerald' },
-          { label: 'Withdrawal Queue', value: `$${(dashboard?.withdrawals?.pending?.totalPending || 0).toLocaleString()}`, sub: 'Requires Review', icon: Wallet, color: 'orange' }
+          { label: 'Active IBs', value: dashboard?.ibs?.total || '0', sub: `${dashboard?.ibs?.pending || 0} pending`, icon: UserCog, color: 'blue' },
+          { label: 'Total Referrals', value: dashboard?.referrals?.total || '0', sub: 'Active network', icon: Users, color: 'slate' },
+          { label: 'Commissions Paid', value: `$${(dashboard?.commissions?.total?.totalCommission || 0).toLocaleString()}`, sub: 'Lifetime paid', icon: DollarSign, color: 'slate' },
+          { label: 'Pending Withdrawals', value: `$${(dashboard?.withdrawals?.pending?.totalPending || 0).toLocaleString()}`, sub: 'Requires Review', icon: Wallet, color: 'slate' }
         ].map((stat, idx) => (
-          <div key={idx} className={`${cardBase} p-6 overflow-hidden relative group`}>
-            <div className={`absolute top-0 right-0 w-24 h-24 bg-${stat.color}-500/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-125 duration-500`}></div>
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className={`p-3 bg-${stat.color}-50 rounded-xl`}>
-                <stat.icon size={22} className={`text-${stat.color}-600`} />
-              </div>
+          <div key={idx} className={`${cardBase} p-5 flex items-center justify-between`}>
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.label}</h4>
+              <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+              <div className="text-xs font-medium text-slate-400 mt-1">{stat.sub}</div>
             </div>
-            <div className="relative z-10">
-              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-tight">{stat.label}</h4>
-              <p className="text-3xl font-black text-slate-900 mt-1">{stat.value}</p>
-              <div className="flex items-center gap-1.5 mt-2.5">
-                <span className={`text-xs font-bold text-${stat.color}-600 bg-${stat.color}-50 px-2 py-0.5 rounded-full`}>{stat.sub}</span>
-              </div>
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <stat.icon size={20} className="text-slate-400" />
             </div>
           </div>
         ))}
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex gap-2 overflow-x-auto mb-8 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm shadow-slate-100">
+      <div className="flex gap-1 overflow-x-auto mb-8 bg-slate-100 p-1 rounded-xl">
         {[
-          { id: 'ibs', label: 'Active IBs', icon: ShieldCheck },
-          { id: 'applications', label: 'Pending Applications', icon: UserPlus },
-          { id: 'levels', label: 'IB Levels', icon: Award },
-          { id: 'plans', label: 'Commission Plans', icon: Percent },
-          { id: 'transfer', label: 'Transfer Referrals', icon: ArrowRightLeft },
-          { id: 'settings', label: 'Settings', icon: Settings }
+          { id: 'ibs', label: 'Active IBs' },
+          { id: 'applications', label: 'Pending Applications' },
+          { id: 'levels', label: 'IB Levels' },
+          { id: 'plans', label: 'Commission Plans' },
+          { id: 'transfer', label: 'Transfer Referrals' },
+          { id: 'settings', label: 'Settings' }
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} 
-            className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === t.id 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 translate-y-[-1px]' 
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                ? 'bg-white text-blue-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}>
-            <t.icon size={18} />
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Dynamic Content Sections */}
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Content Content Interface */}
+      <div>
         {activeTab === 'ibs' && (
-          <div className={`${cardBase} p-8`}>
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Active IB Registry</h2>
-                <p className="text-slate-500 text-sm font-medium mt-1">Verified partner network and commercial standing</p>
-              </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-80">
-                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input type="text" placeholder="Search name, email, or code..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`${inputBase} pl-11`} />
+          <div className={`${cardBase} overflow-hidden`}>
+            <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <h2 className="text-lg font-bold text-slate-900">Active IB Database</h2>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-72">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input type="text" placeholder="Search partners..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`${inputBase} pl-10`} />
                 </div>
-                <button onClick={() => { fetchIBs(); fetchDashboard(); }} className={`${secondaryBtn} px-4`}><RefreshCw size={18} className={loading ? 'animate-spin' : ''}/></button>
+                <button onClick={() => { fetchIBs(); fetchDashboard(); }} className={`${secondaryBtn} px-3`}><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></button>
               </div>
             </div>
             {loading ? (
-              <div className="py-20 flex flex-col items-center justify-center opacity-30">
-                <RefreshCw size={40} className="animate-spin mb-4" />
-                <p className="font-bold">Syncing IB Ledger...</p>
-              </div>
+              <div className="py-20 text-center text-slate-400">Loading data...</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/50 rounded-xl overflow-hidden">
-                      <th className="py-4 px-4 text-xs font-black text-slate-500 uppercase tracking-widest">Partner Identity</th>
-                      <th className="py-4 px-4 text-xs font-black text-slate-500 uppercase tracking-widest">Referral Link</th>
-                      <th className="py-4 px-4 text-xs font-black text-slate-500 uppercase tracking-widest">Tier & Policy</th>
-                      <th className="py-4 px-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">Network</th>
-                      <th className="py-4 px-4 text-xs font-black text-slate-500 uppercase tracking-widest">Status</th>
-                      <th className="py-4 px-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase">Partner Name / Email</th>
+                      <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase">Referral Code</th>
+                      <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase">Level & Plan</th>
+                      <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase text-center">Referrals</th>
+                      <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase">Status</th>
+                      <th className="py-3 px-6 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredIBs.map(ib => (
-                      <tr key={ib._id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="py-5 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-black text-lg group-hover:scale-110 transition-transform">{ib.firstName?.[0]}</div>
-                            <div>
-                              <div className="font-black text-slate-900 text-sm tracking-tight">{ib.firstName} {ib.lastName}</div>
-                              <div className="text-xs text-slate-400 font-bold font-mono">{ib.email}</div>
-                            </div>
-                          </div>
+                      <tr key={ib._id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-6">
+                          <div className="font-bold text-slate-900">{ib.firstName} {ib.lastName}</div>
+                          <div className="text-xs text-slate-400">{ib.email}</div>
                         </td>
-                        <td className="py-5 px-4"><span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 font-mono tracking-wider">{ib.referralCode || '-'}</span></td>
-                        <td className="py-5 px-4">
-                          <div className="text-sm font-bold text-slate-700">{ib.ibLevelId?.name || `Tier ${ib.ibLevel || 1}`}</div>
-                          <div className="text-[10px] uppercase font-black text-slate-400 tracking-widest">{ib.ibPlanId?.name || 'Standard Yield'}</div>
+                        <td className="py-4 px-6 font-mono text-sm">{ib.referralCode || '-'}</td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm font-semibold">{ib.ibLevelId?.name || `Level ${ib.ibLevel || 1}`}</div>
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">{ib.ibPlanId?.name || 'Default Plan'}</div>
                         </td>
-                        <td className="py-5 px-4 text-center">
-                          <div className="inline-flex items-center gap-1.5 font-black text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                            <Users size={12}/>
-                            {ib.referralCount || 0}
-                          </div>
+                        <td className="py-4 px-6 text-center">
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">{ib.referralCount || 0}</span>
                         </td>
-                        <td className="py-5 px-4">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                            ib.ibStatus === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'
+                        <td className="py-4 px-6">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                            ib.ibStatus === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${ib.ibStatus === 'ACTIVE' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                             {ib.ibStatus}
                           </span>
                         </td>
-                        <td className="py-5 px-4 text-right">
-                          <div className="flex justify-end gap-2">
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex justify-end gap-1">
                             <button onClick={() => {
                               setViewingIB(ib); setIbCommission(ib.ibLevelId?._id || ''); setIbPlan(ib.ibPlanId?._id || '');
                               setIbAutoUpgradeEnabled(ib.autoUpgradeEnabled !== false); setIbManualCommissionEnabled(Boolean(ib.ibCommissionOverride?.enabled));
@@ -299,15 +278,12 @@ const AdminIBManagement = () => {
                               setIbManualCommissionLevels(ib.ibCommissionOverride?.levels || { level1: 0, level2: 0, level3: 0, level4: 0, level5: 0 });
                               setIbManualCommissionNotes(ib.ibCommissionOverride?.notes || '');
                               setShowIBModal(true);
-                            }} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100 active:scale-90"><Edit size={18} /></button>
-                            {ib.ibStatus === 'ACTIVE' && <button onClick={() => handleBlock(ib._id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100 active:scale-90"><X size={18} /></button>}
+                            }} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Edit size={16} /></button>
+                            {ib.ibStatus === 'ACTIVE' && <button onClick={() => handleBlock(ib._id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><X size={16} /></button>}
                           </div>
                         </td>
                       </tr>
                     ))}
-                    {filteredIBs.length === 0 && (
-                      <tr><td colSpan="6" className="py-20 text-center text-slate-400 font-bold italic">No active partners found for this query.</td></tr>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -316,45 +292,28 @@ const AdminIBManagement = () => {
         )}
 
         {activeTab === 'applications' && (
-          <div className={`${cardBase} p-8`}>
-            <div className="mb-8">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Review Queue</h2>
-              <p className="text-slate-500 text-sm font-medium mt-1">Pending partner applications awaiting manual verification</p>
-            </div>
-            {applications.length === 0 ? (
-              <div className="py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-slate-200 rounded-3xl">
-                <Check size={40} className="text-slate-400 mb-4" />
-                <p className="font-bold">Queue clear. No pending reviews.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
+          <div className={`${cardBase} p-6`}>
+            <h2 className="text-lg font-bold text-slate-900 mb-6">Pending Applications</h2>
+            {applications.length === 0 ? <p className="text-slate-400 text-sm">No applications to review.</p> : (
+              <div className="space-y-3">
                 {applications.map(app => (
-                  <div key={app._id} className={`${cardBase} p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:border-blue-200 hover:shadow-md`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-2xl">{app.firstName?.[0]}</div>
-                      <div>
-                        <div className="font-black text-slate-900 text-lg tracking-tight">{app.firstName} {app.lastName}</div>
-                        <div className="text-sm text-slate-400 font-bold font-mono">{app.email}</div>
-                        <div className="mt-1 text-[10px] uppercase font-black text-slate-300 tracking-widest flex items-center gap-1"><Calendar size={10}/> Applied {new Date(app.createdAt).toLocaleDateString()}</div>
-                      </div>
+                  <div key={app._id} className="border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <div className="font-bold text-slate-900">{app.firstName} {app.lastName}</div>
+                      <div className="text-xs text-slate-400">{app.email} &bull; Applied {new Date(app.createdAt).toLocaleDateString()}</div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                      <div className="relative">
-                        <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <select id={`plan-${app._id}`} className={`${inputBase} pr-10 w-full sm:w-48 appearance-none`}>
-                          <option value="">Select Yield Tier...</option>
-                          {plans.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                          <option value="default">Default Baseline</option>
-                        </select>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => {
-                          const val = document.getElementById(`plan-${app._id}`).value;
-                          if (!val) return alert('Selection required');
-                          handleApprove(app._id, val === 'default' ? null : val);
-                        }} className={primaryBtn}>Approve</button>
-                        <button onClick={() => handleReject(app._id)} className={dangerBtn}>Decline</button>
-                      </div>
+                    <div className="flex gap-2 items-center">
+                      <select id={`plan-${app._id}`} className={`${inputBase} w-40 h-10`}>
+                        <option value="">Assign Plan...</option>
+                        {plans.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                        <option value="default">Default Plan</option>
+                      </select>
+                      <button onClick={() => {
+                        const val = document.getElementById(`plan-${app._id}`).value;
+                        if (!val) return alert('Select plan first');
+                        handleApprove(app._id, val === 'default' ? null : val);
+                      }} className={primaryBtn}>Approve</button>
+                      <button onClick={() => handleReject(app._id)} className={dangerBtn}>Reject</button>
                     </div>
                   </div>
                 ))}
@@ -363,39 +322,26 @@ const AdminIBManagement = () => {
           </div>
         )}
 
-        {/* ... Other tabs follow similar premium patterns ... */}
         {activeTab === 'levels' && (
-          <div className={`${cardBase} p-8`}>
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4 text-center sm:text-left">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">IB Hierarchy Levels</h2>
-                <p className="text-slate-500 text-sm font-medium mt-1">Autonomous growth paths and progression targets</p>
-              </div>
-              <button onClick={() => { setEditingLevel(null); setShowLevelModal(true); }} className={primaryBtn}><Plus size={18}/> Provision New Echelon</button>
+          <div className={`${cardBase} p-6`}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-slate-900">IB Levels</h2>
+              <button onClick={() => { setEditingLevel(null); setShowLevelModal(true); }} className={primaryBtn}><Plus size={16}/> Add New Level</button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ibLevels.sort((a,b) => a.order - b.order).map(level => (
-                <div key={level._id} className={`${cardBase} p-6 relative group hover:border-blue-400 hover:shadow-lg`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ibLevels.map(level => (
+                <div key={level._id} className="border border-slate-200 rounded-lg p-5">
                   <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><Award size={20}/></div>
-                      <div className="font-black text-slate-900 tracking-tight">{level.name}</div>
-                    </div>
-                    <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg tracking-widest border border-slate-100">Order {level.order}</span>
+                    <div className="font-bold text-slate-900">{level.name}</div>
+                    <span className="text-[10px] font-bold text-slate-400 border border-slate-200 px-2 rounded-full">Level {level.order}</span>
                   </div>
-                  <div className="space-y-3.5 mt-6">
-                    <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Users size={12}/> Entry Bar</span>
-                      <span className="text-sm font-black text-slate-700">{level.referralTarget} Referrals</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Percent size={12}/> Yield Rate</span>
-                      <span className="text-sm font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">{level.commissionRate}{level.commissionType === 'PER_LOT' ? ' $/Lot' : '%'}</span>
-                    </div>
+                  <div className="space-y-2 mb-6">
+                    <div className="flex justify-between text-xs"><span className="text-slate-400">Target</span><span className="font-bold">{level.referralTarget} Referrals</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-slate-400">Commission</span><span className="font-bold text-green-600">{level.commissionRate}{level.commissionType === 'PER_LOT' ? ' $/Lot' : '%'}</span></div>
                   </div>
-                  <div className="flex justify-end gap-2 mt-6">
-                    <button onClick={() => { setEditingLevel(level); setShowLevelModal(true); }} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100 active:scale-95"><Edit size={18} /></button>
-                    <button onClick={() => handleDeleteLevel(level._id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100 active:scale-95"><Trash2 size={18} /></button>
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => { setEditingLevel(level); setShowLevelModal(true); }} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
+                    <button onClick={() => handleDeleteLevel(level._id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
                   </div>
                 </div>
               ))}
@@ -403,34 +349,30 @@ const AdminIBManagement = () => {
           </div>
         )}
 
-        {/* ... commission plans ... */}
         {activeTab === 'plans' && (
-          <div className={`${cardBase} p-8`}>
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Contractual Archetypes</h2>
-                <p className="text-slate-500 text-sm font-medium mt-1">Multi-tier commission distribution models</p>
-              </div>
-              <button onClick={() => { setEditingPlan(null); setShowPlanModal(true); }} className={primaryBtn}><Plus size={18}/> Synthesize Plan</button>
+          <div className={`${cardBase} p-6`}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-slate-900">Commission Plans</h2>
+              <button onClick={() => { setEditingPlan(null); setShowPlanModal(true); }} className={primaryBtn}><Plus size={16}/> Create Plan</button>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {plans.map(plan => (
-                <div key={plan._id} className={`${cardBase} p-8 flex flex-col hover:border-blue-400 hover:shadow-lg`}>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="max-w-[70%]">
-                      <h3 className="font-black text-xl text-slate-900 tracking-tight flex items-center gap-2.5">
+                <div key={plan._id} className="border border-slate-200 rounded-lg p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-slate-900">
                         {plan.name}
-                        {plan.isDefault && <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">Baseline</span>}
+                        {plan.isDefault && <span className="ml-2 text-[10px] bg-blue-100 text-blue-600 px-2 rounded-full">Default</span>}
                       </h3>
-                      <p className="text-slate-400 text-xs font-bold mt-1.5 leading-relaxed">{plan.description || "System standard yield policy."}</p>
+                      <p className="text-xs text-slate-400 mt-1">{plan.description}</p>
                     </div>
-                    <button onClick={() => { setEditingPlan(plan); setShowPlanModal(true); }} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-transparent hover:border-blue-100 active:scale-95 transition-all"><Edit size={18}/></button>
+                    <button onClick={() => { setEditingPlan(plan); setShowPlanModal(true); }} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16}/></button>
                   </div>
-                  <div className="mt-auto grid grid-cols-5 gap-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div className="grid grid-cols-5 gap-1 pt-4 border-t border-slate-100">
                     {[1,2,3,4,5].map(lvl => (
                       <div key={lvl} className="text-center">
-                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">G{lvl}</div>
-                        <div className="text-sm font-black text-slate-600 italic">{(plan.levelCommissions?.[`level${lvl}`] || 0)}{plan.commissionType === 'PERCENTAGE' ? '%' : ''}</div>
+                        <div className="text-[10px] font-bold text-slate-300 uppercase">G{lvl}</div>
+                        <div className="text-sm font-bold text-slate-600">{(plan.levelCommissions?.[`level${lvl}`] || 0)}{plan.commissionType === 'PERCENTAGE' ? '%' : ''}</div>
                       </div>
                     ))}
                   </div>
@@ -440,144 +382,78 @@ const AdminIBManagement = () => {
           </div>
         )}
 
-        {/* ... settings ... */}
-        {activeTab === 'settings' && settings && (
-          <div className={`${cardBase} p-8 max-w-3xl overflow-hidden`}>
-            <div className="mb-10">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">System Configuration</h2>
-              <p className="text-slate-500 text-sm font-medium mt-1">Global logic injection and operational master toggles</p>
-            </div>
-            <div className="space-y-5">
-              {[
-                { label: 'Ecosystem Vitality', subText: 'Master toggle to enable/disable all IB operations globally.', key: 'isEnabled', val: settings.isEnabled, icon: ShieldCheck },
-                { label: 'Open Inbound Enrollment', subText: 'Allow clients to apply for partnership through the dashboard.', key: 'allowNewApplications', val: settings.allowNewApplications, icon: UserPlus },
-                { label: 'Autonomous Onboarding', subText: 'Automatically verify and approve incoming applications.', key: 'autoApprove', val: settings.autoApprove, icon: RefreshCw }
-              ].map(t => (
-                <div key={t.key} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-slate-50/50 border border-slate-100 rounded-3xl hover:bg-white hover:shadow-md hover:border-blue-100 transition-all gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-2xl ${t.val ? 'bg-blue-50 text-blue-600' : 'bg-slate-200 text-slate-400'}`}>
-                      <t.icon size={20} />
+        {activeTab === 'transfer' && (
+          <div className={`${cardBase} p-8`}>
+            <h2 className="text-lg font-bold text-slate-900 mb-2">Transfer Referrals</h2>
+            <p className="text-xs text-slate-400 mb-8">Move users from one IB to another. This will update the user's parent IB reference.</p>
+            
+            <div className="grid lg:grid-cols-2 gap-10">
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">1. Choose New Parent IB</h3>
+                <select value={targetIB} onChange={e => setTargetIB(e.target.value)} className={`${inputBase} h-12`}>
+                  <option value="">Select target IB...</option>
+                  {ibs.filter(ib => ib.ibStatus === 'ACTIVE').map(ib => <option key={ib._id} value={ib._id}>{ib.firstName} {ib.lastName} ({ib.referralCode})</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">2. Select Users to Move</h3>
+                  <span className="text-xs font-bold text-blue-600">{selectedUsers.length} selected</span>
+                </div>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input type="text" placeholder="Filter users..." value={userSearchTerm} onChange={e => setUserSearchTerm(e.target.value)} className={`${inputBase} pl-9 h-11`} />
+                </div>
+                <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50/30">
+                  {filteredUsers.map(user => (
+                    <div key={user._id} onClick={() => { setSelectedUsers(p => p.includes(user._id) ? p.filter(id => id !== user._id) : [...p, user._id]) }}
+                      className={`flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors ${selectedUsers.includes(user._id) ? 'bg-blue-50 border border-blue-200' : 'bg-white border border-transparent'}`}>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedUsers.includes(user._id) ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'}`}>
+                        {selectedUsers.includes(user._id) && <Check size={12} className="text-white" />}
+                      </div>
+                      <div className="text-xs font-semibold">{user.firstName} {user.lastName} <span className="text-slate-400 font-normal">({user.email})</span></div>
                     </div>
-                    <div>
-                      <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">{t.label}</h4>
-                      <p className="text-xs text-slate-400 font-bold max-w-md">{t.subText}</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handleUpdateSettings({ [t.key]: !t.val })} 
-                    className={`relative w-14 h-8 rounded-full transition-all flex items-center p-1 cursor-pointer ${t.val ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-slate-300'}`}
-                  >
-                    <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${t.val ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                  </button>
+                  ))}
                 </div>
-              ))}
-              <div className="p-8 bg-slate-50 border border-slate-100 rounded-3xl mt-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl"><Wallet size={18}/></div>
-                  <label className="text-sm font-black text-slate-900 uppercase tracking-tight">Minimum Settlement Threshold</label>
-                </div>
-                <div className="relative max-w-xs">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
-                  <input type="number" value={settings.commissionSettings?.minWithdrawalAmount || 50} 
-                    onChange={e => handleUpdateSettings({ commissionSettings: { ...settings.commissionSettings, minWithdrawalAmount: parseFloat(e.target.value) } })} 
-                    className={`${inputBase} pl-8 text-xl font-black`} />
-                </div>
-                <p className="text-[10px] text-slate-400 font-black uppercase mt-3 tracking-widest">Internal Payout Vector Limit</p>
+                <button disabled={transferLoading || !targetIB || !selectedUsers.length} onClick={handleTransferReferrals} 
+                  className={`${primaryBtn} w-full h-12 mt-4`}> 
+                  {transferLoading ? 'Processing...' : 'Transfer Selected Users'} 
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ... transfer ... */}
-        {activeTab === 'transfer' && (
-          <div className={`${cardBase} p-8`}>
-            <div className="mb-10">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Hierarchy Redistribution</h2>
-              <p className="text-slate-500 text-sm font-medium mt-1">Mass migration of network users between different IB entities</p>
-            </div>
-            <div className="grid lg:grid-cols-12 gap-8 items-start">
-              <div className="lg:col-span-5 p-8 bg-slate-50/50 border border-slate-100 rounded-3xl shadow-inner">
-                <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-6 flex items-center gap-2"><Target size={16} className="text-blue-500"/> Select Target Recipient</h3>
-                <div className="relative">
-                  <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <select value={targetIB} onChange={e => setTargetIB(e.target.value)} className={`${inputBase} h-14 appearance-none pr-10 font-black text-slate-700`}>
-                    <option value="">Choose Landing IB Vector...</option>
-                    {ibs.filter(ib => ib.ibStatus === 'ACTIVE').map(ib => <option key={ib._id} value={ib._id}>{ib.firstName} {ib.lastName} — CID:{ib.referralCode}</option>)}
-                  </select>
+        {activeTab === 'settings' && settings && (
+          <div className={`${cardBase} p-8 max-w-2xl`}>
+            <h2 className="text-lg font-bold text-slate-900 mb-6">System Settings</h2>
+            <div className="space-y-6">
+              {[
+                { label: 'Enable IB System', key: 'isEnabled', val: settings.isEnabled },
+                { label: 'Allow Public Applications', key: 'allowNewApplications', val: settings.allowNewApplications },
+                { label: 'Auto-Approve Applications', key: 'autoApprove', val: settings.autoApprove }
+              ].map(t => (
+                <div key={t.key} className="flex justify-between items-center py-4 border-b border-slate-100 last:border-0">
+                  <span className="text-sm font-semibold text-slate-700">{t.label}</span>
+                  <button onClick={() => handleUpdateSettings({ [t.key]: !t.val })} 
+                    className={`w-12 h-6 rounded-full transition-all relative ${t.val ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all ${t.val ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                  </button>
                 </div>
-                <div className="mt-8 p-6 bg-white border border-slate-100 rounded-2xl shadow-sm italic text-slate-400 text-xs font-medium leading-relaxed">
-                  Warning: This operation will rewrite the parental database entries for all selected identity vectors. This action is logged to the system audit trail.
-                </div>
-              </div>
-
-              <div className="lg:col-span-7 flex flex-col gap-6">
-                <div className="flex justify-between items-center px-2">
-                  <div>
-                    <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-1 leading-none">Source Identification</h3>
-                    <p className="text-blue-600 font-bold text-xs tracking-tight">{selectedUsers.length} targets currently locked</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setSelectedUsers(filteredUsers.map(u => u._id))} className="text-[10px] font-black uppercase px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg border border-slate-200 hover:bg-slate-200 transition-all">Lock All Match</button>
-                    <button onClick={() => setSelectedUsers([])} className="text-[10px] font-black uppercase px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg border border-slate-200 hover:bg-slate-200 transition-all">Flush Buffer</button>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
-                  <input type="text" placeholder="Identity filter: name or email hash..." value={userSearchTerm} onChange={e => setUserSearchTerm(e.target.value)} className={`${inputBase} h-14 pl-14 font-black shadow-inner`} />
-                </div>
-
-                <div className="max-h-[400px] overflow-y-auto space-y-2.5 p-1 rounded-2xl border border-slate-100 bg-white shadow-inner custom-scrollbar pr-2">
-                  {filteredUsers.length === 0 ? (
-                    <div className="py-20 text-center text-slate-300 font-black italic">No identity vectors matching this hash.</div>
-                  ) : (
-                    filteredUsers.map(user => (
-                      <div 
-                        key={user._id} 
-                        onClick={() => { setSelectedUsers(p => p.includes(user._id) ? p.filter(id => id !== user._id) : [...p, user._id]) }}
-                        className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all border-2 group ${
-                          selectedUsers.includes(user._id) 
-                            ? 'bg-blue-50/50 border-blue-500/20 shadow-sm' 
-                            : 'bg-slate-50/30 border-transparent hover:border-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
-                            selectedUsers.includes(user._id) 
-                              ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-200' 
-                              : 'border-slate-200 bg-white group-hover:border-blue-300'
-                          }`}>
-                            {selectedUsers.includes(user._id) && <Check size={16} className="text-white" />}
-                          </div>
-                          <div>
-                            <p className="font-black text-slate-900 text-sm tracking-tight">{user.firstName} {user.lastName}</p>
-                            <p className="text-[10px] font-bold text-slate-400 font-mono italic">{user.email}</p>
-                          </div>
-                        </div>
-                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono">ID_{user._id?.slice(-8)}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <button 
-                  disabled={transferLoading || !targetIB || !selectedUsers.length} 
-                  onClick={handleTransferReferrals} 
-                  className={`mt-4 w-full h-16 rounded-3xl font-black text-base uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
-                    transferLoading || !targetIB || !selectedUsers.length 
-                      ? 'bg-slate-100 text-slate-300 cursor-not-allowed' 
-                      : 'bg-blue-600 text-white shadow-blue-300 hover:bg-blue-700'
-                  }`}
-                > 
-                  {transferLoading ? <><RefreshCw size={24} className="animate-spin" /> Committing Cycles...</> : <><ArrowRightLeft size={24}/> Commit Hierarchy Migration</>} 
-                </button>
+              ))}
+              <div className="pt-4">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Minimum Withdrawal ($)</label>
+                <input type="number" value={settings.commissionSettings?.minWithdrawalAmount || 50} 
+                  onChange={e => handleUpdateSettings({ commissionSettings: { ...settings.commissionSettings, minWithdrawalAmount: parseFloat(e.target.value) } })} 
+                  className={`${inputBase} w-32 font-bold`} />
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Premium Modal Management */}
+      {/* Simplified Modal Components */}
       {showPlanModal && <PlanModal plan={editingPlan} onSave={handleSavePlan} onClose={() => {setShowPlanModal(false); setEditingPlan(null)}} colors={modeColors} />}
       {showLevelModal && <LevelModal level={editingLevel} onSave={handleSaveLevel} onClose={() => {setShowLevelModal(false); setEditingLevel(null)}} orders={ibLevels.map(l=>l.order)} colors={modeColors} />}
       {showIBModal && <IBDetailsModal ib={viewingIB} plans={plans} levels={ibLevels} ibCommission={ibCommission} setIbCommission={setIbCommission} ibPlan={ibPlan} setIbPlan={setIbPlan} autoUpgrade={ibAutoUpgradeEnabled} setAutoUpgrade={setIbAutoUpgradeEnabled} overrideEnabled={ibManualCommissionEnabled} setOverrideEnabled={setIbManualCommissionEnabled} overrideType={ibManualCommissionType} setOverrideType={setIbManualCommissionType} overrideLevels={ibManualCommissionLevels} setOverrideLevels={setIbManualCommissionLevels} notes={ibManualCommissionNotes} setNotes={setIbManualCommissionNotes} onSave={handleSaveIBDetails} onClose={()=>setShowIBModal(false)} saving={savingIB} colors={modeColors} />}
@@ -585,184 +461,119 @@ const AdminIBManagement = () => {
   )
 }
 
-// --- Premium Component: Modal Wrapper ---
-const ModalWrapper = ({ title, children, onClose, colors, icon: Icon = UserCog }) => (
+const ModalWrapper = ({ title, children, onClose }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
-    <div className="w-full max-w-xl bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative z-[101] animate-in zoom-in-95 duration-300">
-      <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-blue-600 text-white rounded-[1.25rem] shadow-xl shadow-blue-200">
-            <Icon size={24} />
-          </div>
-          <div>
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">{title}</h3>
-            <p className="text-slate-400 text-xs font-bold mt-1.5 uppercase tracking-widest">Administrative Override Protocol</p>
-          </div>
-        </div>
-        <button onClick={onClose} className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all border border-transparent hover:border-slate-200">
-          <X size={24} />
-        </button>
+    <div className="absolute inset-0 bg-slate-900/50" onClick={onClose}></div>
+    <div className="w-full max-w-lg bg-white rounded-xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden relative z-[101]">
+      <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><X size={20} /></button>
       </div>
-      <div className="p-10 overflow-y-auto custom-scrollbar flex-1">{children}</div>
+      <div className="p-8 overflow-y-auto">{children}</div>
     </div>
   </div>
 )
 
-// --- Premium Component: Plan Modal ---
-const PlanModal = ({ plan, onSave, onClose, colors }) => {
+const PlanModal = ({ plan, onSave, onClose }) => {
   const [fd, setFd] = useState({ name: plan?.name||'', description: plan?.description||'', maxLevels: plan?.maxLevels||3, commissionType: plan?.commissionType||'PER_LOT', levelCommissions: plan?.levelCommissions||{level1:5, level2:3, level3:2, level4:1, level5:0.5}, isDefault: plan?.isDefault||false })
   return (
-    <ModalWrapper title={plan ? "Edit Yield Archetype" : "Forge Commission Plan"} onClose={onClose} colors={colors} icon={Percent}>
-      <form onSubmit={e => { e.preventDefault(); onSave(fd); }} className="space-y-6">
-        <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Identifier</label><input required placeholder="VIP_INSTITUTIONAL_A..." className={inputBase} value={fd.name} onChange={e=>setFd({...fd, name: e.target.value})} /></div>
-        <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Policy Scope</label><textarea placeholder="Describe the model logic..." className={inputBase} value={fd.description} onChange={e=>setFd({...fd, description: e.target.value})} rows={3} /></div>
+    <ModalWrapper title={plan ? "Edit Commission Plan" : "Create Commission Plan"} onClose={onClose}>
+      <form onSubmit={e => { e.preventDefault(); onSave(fd); }} className="space-y-5">
+        <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Plan Name</label><input required className={inputBase} value={fd.name} onChange={e=>setFd({...fd, name: e.target.value})} /></div>
+        <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Description</label><textarea className={inputBase} value={fd.description} onChange={e=>setFd({...fd, description: e.target.value})} rows={2} /></div>
         <div className="grid grid-cols-2 gap-4">
-          <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Payload Format</label><select className={`${inputBase} appearance-none cursor-pointer`} value={fd.commissionType} onChange={e=>setFd({...fd, commissionType: e.target.value})}><option value="PER_LOT">Fixed USD / Lot</option><option value="PERCENTAGE">Equity Share %</option></select></div>
-          <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Generational Depth</label><select className={`${inputBase} appearance-none cursor-pointer`} value={fd.maxLevels} onChange={e=>setFd({...fd, maxLevels: parseInt(e.target.value)})}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} Tiers Active</option>)}</select></div>
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Commission Type</label><select className={inputBase} value={fd.commissionType} onChange={e=>setFd({...fd, commissionType: e.target.value})}><option value="PER_LOT">$/Lot</option><option value="PERCENTAGE">%</option></select></div>
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Max Levels</label><select className={inputBase} value={fd.maxLevels} onChange={e=>setFd({...fd, maxLevels: parseInt(e.target.value)})}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} Levels</option>)}</select></div>
         </div>
-        <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 block text-center">Multi-Generation Yield Coefficients</label>
-          <div className="grid grid-cols-5 gap-3">
+        <div className="p-4 bg-slate-50 rounded-lg">
+          <label className="text-xs font-bold text-slate-500 mb-3 block text-center">Commission per Generation</label>
+          <div className="grid grid-cols-5 gap-2">
             {[1,2,3,4,5].map(l => (
-              <div key={l} className="text-center"><label className="text-[8px] font-black text-slate-300 mb-1 block">LVL {l}</label><input type="number" step="0.1" disabled={l > fd.maxLevels} className={`${inputBase} text-center px-1 font-black ${l > fd.maxLevels ? 'opacity-20 grayscale' : ''}`} value={fd.levelCommissions[`level${l}`]||0} onChange={e=>setFd({...fd, levelCommissions:{...fd.levelCommissions, [`level${l}`]: parseFloat(e.target.value)}})} /></div>
+              <div key={l}><label className="text-[10px] text-slate-400 mb-1 block text-center">G{l}</label><input type="number" step="0.1" disabled={l > fd.maxLevels} className={`${inputBase} px-1 text-center font-bold ${l > fd.maxLevels ? 'opacity-30' : ''}`} value={fd.levelCommissions[`level${l}`]||0} onChange={e=>setFd({...fd, levelCommissions:{...fd.levelCommissions, [`level${l}`]: parseFloat(e.target.value)}})} /></div>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl cursor-pointer select-none" onClick={()=>setFd({...fd, isDefault: !fd.isDefault})}>
-          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${fd.isDefault ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-200' : 'bg-white border-slate-200'}`}>
-            {fd.isDefault && <Check size={16} className="text-white" />}
-          </div>
-          <span className="text-sm font-black text-slate-600 uppercase tracking-tight">Lock as Ecosystem Baseline</span>
-        </div>
-        <div className="flex gap-4 pt-4 border-t border-slate-100">
-          <button type="button" onClick={onClose} className={secondaryBtn + " flex-1"}>Abort</button>
-          <button type="submit" className={primaryBtn + " flex-1"}>Commit Plan</button>
+        <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={fd.isDefault} onChange={e=>setFd({...fd, isDefault: e.target.checked})} /> Set as Default Plan</label>
+        <div className="flex gap-3 pt-4 border-t">
+          <button type="button" onClick={onClose} className={`${secondaryBtn} flex-1`}>Cancel</button>
+          <button type="submit" className={`${primaryBtn} flex-1`}>Save Plan</button>
         </div>
       </form>
     </ModalWrapper>
   )
 }
 
-// --- Premium Component: Level Modal ---
-const LevelModal = ({ level, onSave, onClose, orders, colors }) => {
+const LevelModal = ({ level, onSave, onClose, orders }) => {
   const [fd, setFd] = useState({ name: level?.name||'', order: level?.order||(Math.max(0, ...orders)+1), referralTarget: level?.referralTarget||0, commissionRate: level?.commissionRate||0, commissionType: level?.commissionType||'PER_LOT', isActive: level?.isActive!==false })
   return (
-    <ModalWrapper title={level ? "Modify Echelon" : "Synthesize Tier"} onClose={onClose} colors={colors} icon={Award}>
-      <form onSubmit={e => { e.preventDefault(); onSave(fd); }} className="space-y-8">
-        <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Tier Designation</label><input required placeholder="e.g. TITANIUM_LEAD" className={inputBase} value={fd.name} onChange={e=>setFd({...fd, name: e.target.value})} /></div>
-        <div className="grid grid-cols-2 gap-6">
-          <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Hierarchical Order</label><input type="number" required className={inputBase} value={fd.order} onChange={e=>setFd({...fd, order: parseInt(e.target.value)})} /></div>
-          <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Entry Threshold</label><div className="relative"><Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"/><input type="number" required className={`${inputBase} pl-10`} value={fd.referralTarget} onChange={e=>setFd({...fd, referralTarget: parseInt(e.target.value)})} /></div></div>
+    <ModalWrapper title={level ? "Edit Level" : "New IB Level"} onClose={onClose}>
+      <form onSubmit={e => { e.preventDefault(); onSave(fd); }} className="space-y-5">
+        <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Level Name</label><input required className={inputBase} value={fd.name} onChange={e=>setFd({...fd, name: e.target.value})} /></div>
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Order #</label><input type="number" required className={inputBase} value={fd.order} onChange={e=>setFd({...fd, order: parseInt(e.target.value)})} /></div>
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Target Referrals</label><input type="number" required className={inputBase} value={fd.referralTarget} onChange={e=>setFd({...fd, referralTarget: parseInt(e.target.value)})} /></div>
         </div>
-        <div className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block text-center">Primary Yield</label><input type="number" step="0.1" required className={`${inputBase} text-center font-black text-lg h-14 bg-white`} value={fd.commissionRate} onChange={e=>setFd({...fd, commissionRate: parseFloat(e.target.value)})} /></div>
-            <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block text-center">Format Vector</label><select className={`${inputBase} appearance-none cursor-pointer h-14 bg-white text-center font-black`} value={fd.commissionType} onChange={e=>setFd({...fd, commissionType: e.target.value})}><option value="PER_LOT">USD / Lot</option><option value="PERCENTAGE">% Yield Share</option></select></div>
-          </div>
-          <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">Base incentive structure for this hierarchy level</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Base Rate</label><input type="number" step="0.1" required className={inputBase} value={fd.commissionRate} onChange={e=>setFd({...fd, commissionRate: parseFloat(e.target.value)})} /></div>
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Rate Type</label><select className={inputBase} value={fd.commissionType} onChange={e=>setFd({...fd, commissionType: e.target.value})}><option value="PER_LOT">$/Lot</option><option value="PERCENTAGE">%</option></select></div>
         </div>
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-4 cursor-pointer" onClick={()=>setFd({...fd, isActive: !fd.isActive})}>
-            <button type="button" className={`relative w-14 h-8 rounded-full transition-all flex items-center p-1 ${fd.isActive ? 'bg-emerald-600 shadow-lg shadow-emerald-200' : 'bg-slate-300'}`}>
-              <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${fd.isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
-            </button>
-            <span className="text-sm font-black text-slate-600 uppercase tracking-tight">Protocol Operational</span>
-          </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className={secondaryBtn}>Flush</button>
-            <button type="submit" className={primaryBtn}>Synthesize</button>
-          </div>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={fd.isActive} onChange={e=>setFd({...fd, isActive: e.target.checked})} /> Level Active</label>
+        <div className="flex gap-3 pt-4 border-t">
+          <button type="button" onClick={onClose} className={`${secondaryBtn} flex-1`}>Cancel</button>
+          <button type="submit" className={`${primaryBtn} flex-1`}>Save Level</button>
         </div>
       </form>
     </ModalWrapper>
   )
 }
 
-// --- Premium Component: IB Details Modal ---
-const IBDetailsModal = ({ ib, plans, levels, ibCommission, setIbCommission, ibPlan, setIbPlan, autoUpgrade, setAutoUpgrade, overrideEnabled, setOverrideEnabled, overrideType, setOverrideType, overrideLevels, setOverrideLevels, notes, setNotes, onSave, onClose, saving, colors }) => {
+const IBDetailsModal = ({ ib, plans, levels, ibCommission, setIbCommission, ibPlan, setIbPlan, autoUpgrade, setAutoUpgrade, overrideEnabled, setOverrideEnabled, overrideType, setOverrideType, overrideLevels, setOverrideLevels, notes, setNotes, onSave, onClose, saving }) => {
   if(!ib) return null;
   return (
-    <ModalWrapper title="Identity Configuration" onClose={onClose} colors={colors} icon={UserCog}>
-      <div className="space-y-8">
-        <div className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] flex items-center gap-6 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-125 transition-transform duration-700"></div>
-          <div className="w-20 h-20 bg-white shadow-xl shadow-blue-100 rounded-3xl flex flex-col justify-center items-center border border-slate-50 relative z-10 transition-transform hover:rotate-3 duration-500">
-            <span className="text-blue-600 font-black text-3xl leading-none">{ib.firstName?.[0]}</span>
-            <span className="text-[8px] font-black text-blue-300 uppercase tracking-widest mt-1">Vector</span>
-          </div>
-          <div className="relative z-10">
-            <h4 className="font-black text-2xl text-slate-900 tracking-tight leading-none">{ib.firstName} {ib.lastName}</h4>
-            <p className="text-sm text-slate-500 font-bold mt-2 flex items-center gap-1.5"><Calendar size={14}/> CID: {ib.referralCode || 'UNASSIGNED'}</p>
-            <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-black text-slate-400 font-mono italic">{ib.email}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">Echelon Assignment</label>
-            <select className={`${inputBase} h-14 font-black text-slate-700 appearance-none`} value={ibCommission} onChange={e=>setIbCommission(e.target.value)}>
-              <option value="">Choose Tier...</option>
-              {levels.map(l=><option key={l._id} value={l._id}>{l.name} — Order {l.order}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">Yield Directive Override</label>
-            <select className={`${inputBase} h-14 font-black text-slate-700 appearance-none`} value={ibPlan} onChange={e=>setIbPlan(e.target.value)}>
-              <option value="">System Default...</option>
-              {plans.map(p=><option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="p-6 bg-blue-50/30 border border-blue-100 rounded-2xl flex items-center justify-between">
+    <ModalWrapper title="IB Configuration" onClose={onClose}>
+      <div className="space-y-6">
+        <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xl">{ib.firstName?.[0]}</div>
           <div>
-            <p className="text-sm font-black text-blue-900 uppercase tracking-tight">Autonomous Upgrades</p>
-            <p className="text-[10px] text-blue-500 font-bold">Enabled growth tracking and tier escalation logic.</p>
+            <h4 className="font-bold text-slate-900">{ib.firstName} {ib.lastName}</h4>
+            <p className="text-xs text-slate-400 font-medium">{ib.email} &bull; Code: {ib.referralCode || '-'}</p>
           </div>
-          <button type="button" onClick={()=>setAutoUpgrade(!autoUpgrade)} className={`relative w-14 h-8 rounded-full transition-all flex items-center p-1 ${autoUpgrade ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-slate-300'}`}>
-            <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${autoUpgrade ? 'translate-x-6' : 'translate-x-0'}`}></div>
-          </button>
         </div>
 
-        <div className="space-y-6 pt-2">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className={overrideEnabled ? 'text-orange-500' : 'text-slate-300'} size={20}/>
-              <label className="text-sm font-black text-slate-900 uppercase tracking-tight">Manual Commercial Override</label>
-            </div>
-            <button type="button" onClick={()=>setOverrideEnabled(!overrideEnabled)} className={`relative w-14 h-8 rounded-full transition-all flex items-center p-1 ${overrideEnabled ? 'bg-orange-500 shadow-lg shadow-orange-100' : 'bg-slate-300'}`}>
-              <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${overrideEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+        <div className="space-y-4">
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Assigned Level</label><select className={inputBase} value={ibCommission} onChange={e=>setIbCommission(e.target.value)}><option value="">Select Level...</option>{levels.map(l=><option key={l._id} value={l._id}>{l.name}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-slate-500 mb-1.5 block">Commission Plan</label><select className={inputBase} value={ibPlan} onChange={e=>setIbPlan(e.target.value)}><option value="">Use Default Plan</option>{plans.map(p=><option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer"><input type="checkbox" checked={autoUpgrade} onChange={e=>setAutoUpgrade(e.target.checked)} /> Automatic Level Upgrades</label>
+        </div>
+
+        <div className="pt-4 border-t">
+          <div className="flex items-center justify-between mb-4">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Manual Override</label>
+            <button onClick={() => setOverrideEnabled(!overrideEnabled)} 
+              className={`w-10 h-5 rounded-full transition-all relative ${overrideEnabled ? 'bg-orange-500' : 'bg-slate-300'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all ${overrideEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
             </button>
           </div>
 
           {overrideEnabled && (
-            <div className="p-8 border-2 border-orange-100 rounded-[2rem] space-y-6 bg-orange-50/30 animate-in slide-in-from-top-4 duration-300">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h5 className="text-xs font-black text-orange-900 uppercase tracking-widest leading-none">Generational Yield Vector</h5>
-                  <select className="bg-white border border-orange-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase text-orange-600 focus:outline-none" value={overrideType} onChange={e=>setOverrideType(e.target.value)}>
-                    <option value="PER_LOT">$/Lot</option>
-                    <option value="PERCENTAGE">Equity %</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-5 gap-3">
-                  {[1,2,3,4,5].map(l => (
-                    <div key={l} className="text-center">
-                      <label className="text-[9px] font-black text-orange-300 mb-1.5 block uppercase">G{l}</label>
-                      <input type="number" step="0.1" className={`${inputBase} h-12 text-center px-1 font-black bg-white border-orange-100 focus:border-orange-400 focus:ring-orange-500/10`} value={overrideLevels[`level${l}`]||0} onChange={e=>setOverrideLevels({...overrideLevels, [`level${l}`]: parseFloat(e.target.value)})} />
-                    </div>
-                  ))}
-                </div>
+            <div className="p-5 border border-orange-100 rounded-lg space-y-5 bg-orange-50/20">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-orange-900 uppercase">Override Rates</span>
+                <select className="bg-white border border-orange-200 rounded px-2 py-1 text-[10px] font-bold" value={overrideType} onChange={e=>setOverrideType(e.target.value)}><option value="PER_LOT">$/Lot</option><option value="PERCENTAGE">%</option></select>
               </div>
-              <textarea className={`${inputBase} bg-white border-orange-100 resize-none`} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Documentation of manual commercial terms override justification..." rows={3} />
+              <div className="grid grid-cols-5 gap-2">
+                {[1,2,3,4,5].map(l => (
+                  <div key={l}><label className="text-[9px] font-bold text-orange-400 mb-1 block text-center">G{l}</label><input type="number" step="0.1" className={`${inputBase} px-1 text-center h-9 border-orange-100`} value={overrideLevels[`level${l}`]||0} onChange={e=>setOverrideLevels({...overrideLevels, [`level${l}`]: parseFloat(e.target.value)})} /></div>
+                ))}
+              </div>
+              <textarea className={`${inputBase} border-orange-100 text-xs`} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Reason for override..." rows={2} />
             </div>
           )}
         </div>
 
-        <div className="flex gap-4 pt-8 border-t border-slate-100">
-          <button type="button" onClick={onClose} className={secondaryBtn + " flex-1"}>Abort</button>
-          <button onClick={onSave} disabled={saving} className={primaryBtn + " flex-1"}>{saving ? <RefreshCw size={20} className="animate-spin text-white"/> : 'Commit Changes'}</button>
+        <div className="flex gap-3 pt-4 border-t">
+          <button type="button" onClick={onClose} className={`${secondaryBtn} flex-1`}>Close</button>
+          <button onClick={onSave} disabled={saving} className={`${primaryBtn} flex-1`}>{saving ? 'Saving...' : 'Save Changes'}</button>
         </div>
       </div>
     </ModalWrapper>
