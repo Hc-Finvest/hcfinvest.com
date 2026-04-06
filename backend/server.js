@@ -167,7 +167,8 @@ redisSubscriber.on('message', (channel, message) => {
       
       const isBeingWatched = activeChartSymbols.has(String(symbol).toUpperCase());
       
-      // ≡ƒ¢í∩╕Å ELITE: Emit to 'prices' room for BOTH active charts AND table updates (always emit if priceSubscribers exist)
+      // 🏆 AUTHORITATIVE BROADCAST
+      // Emit to 'prices' room for BOTH active charts AND table updates (always emit if priceSubscribers exist)
       if (priceSubscribers.size > 0) {
         const payload = {
           symbol,
@@ -176,13 +177,24 @@ redisSubscriber.on('message', (channel, message) => {
           rawBid: priceData.rawBid,
           rawAsk: priceData.rawAsk,
           time: priceData.time || now,
+          isHeartbeat: priceData.isHeartbeat || false,
           provider: priceData.provider || 'alltick'
         }
 
         io.to('prices').emit('tickUpdate', payload);
       }
 
-      if (ENABLE_LIVE_PERSIST && !priceData.mappedFrom) {
+      // 🏆 PULSE: Forward authoritative candle heartbeats to the chart rooms
+      // This ensures the chart 'moves' horizontally every 10s even in silence.
+      if (priceData.isHeartbeat && priceData.candle) {
+        io.to(`candles:${symbol}`).emit('candleUpdate', {
+          symbol: symbol,
+          timeframe: priceData.timeframe || '1m',
+          candle: priceData.candle
+        });
+      }
+
+      if (ENABLE_LIVE_PERSIST && !priceData.mappedFrom && !priceData.isHeartbeat) {
         storageService.ingestTick(symbol, priceData).catch(err => {
           console.error(`[StorageService] Live tick persist error for ${symbol}:`, err.message)
         });

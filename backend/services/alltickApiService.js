@@ -122,8 +122,7 @@ class AllTickApiService {
         });
 
         // 🏆 AUTHORITATIVE BROADCAST
-        // This ensures the frontend doesn't need its own heartbeat or interpolation logic.
-        const priceEventTarget = await redisClient; 
+        // We include bid/ask so the Instruments Sidebar and Order Panel also 'Pulse' every 10s.
         const candle = {
           time: Math.floor(now / 60000) * 60000,
           open: last.bid,
@@ -133,12 +132,22 @@ class AllTickApiService {
           volume: 0.0001 // Micro-volume pulse to maintain solid Rendering
         };
 
-        // Emit for the 1m timeframe specifically (standard driver for live charts)
+        // Update internal state so getAllPrices() (Sidebar) stays current
+        if (this.prices[clean]) {
+          this.prices[clean].time = now;
+        }
+
         await redisClient.publish('price_updates', JSON.stringify({
           symbol: clean,
+          bid: last.bid,
+          ask: last.ask,
+          rawBid: last.bid,
+          rawAsk: last.ask,
+          time: now,
           timeframe: '1m',
           candle,
-          isHeartbeat: true
+          isHeartbeat: true,
+          provider: 'heartbeat'
         }));
       }
     }, 10000); // 10 second pulse
