@@ -757,7 +757,7 @@ class AllTickApiService {
           if (cached) {
             const candles = JSON.parse(cached);
             if (candles.length > 0) {
-              const updated = updateCandleListWithTick(candles, tick, mins);
+              const updated = updateCandleListWithTick(candles, tick, mins, cleanSymbol);
               // Save back with short TTL (5 mins) as it's a live-updated cache
               await redisClient.set(key, JSON.stringify(updated), 'EX', 300);
             }
