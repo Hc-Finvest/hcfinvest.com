@@ -313,7 +313,8 @@ const Datafeed = {
           //Sanket v2.0 - CRITICAL: Inject current running candle into history array on first request
           //Sanket v2.0 - TradingView sets lastBarsCache from the LAST bar in onHistoryCallback
           //Sanket v2.0 - If the live candle is NOT in this array, TV creates a new empty bar on first tick
-          //Sanket v2.0 - This is the root cause of "chart stuck / empty candle on load"
+          //Sanket v2.0 - Also gap-fill any intermediate closed buckets between history end and live candle
+          //Sanket v2.0 - Without gap-fill: history ends at 06:04, live jumps to 06:08 → blank visual gap
           if (useLiveCache) {
             try {
               const liveRes = await fetch(
@@ -337,7 +338,21 @@ const Datafeed = {
                     bars[bars.length - 1] = liveBar;
                     console.log(`[DATAFEED] ✅ Live candle merged (replaced) for ${symbolInfo.name} t=${liveBar.time}`);
                   } else if (liveBar.time > lastHistoryBar.time) {
-                    //Sanket v2.0 - Newer bucket: append live candle as the current in-progress bar
+                    //Sanket v2.0 - Newer bucket: first fill any gap between history end and live candle
+                    //Sanket v2.0 - This prevents blank empty space on the chart when cache is a few minutes stale
+                    const _tfMsMap = { '1m':60000,'5m':300000,'15m':900000,'30m':1800000,'1h':3600000,'2h':7200000,'4h':14400000,'1d':86400000,'1w':604800000,'1M':2592000000 };
+                    const _resMs = _tfMsMap[timeframe] || 60000;
+                    const _gapMs = liveBar.time - lastHistoryBar.time;
+                    if (_gapMs > _resMs && _gapMs < 2 * 60 * 60 * 1000) {
+                      //Sanket v2.0 - Gap is more than 1 bucket but less than 2 hours — fill with flat bars
+                      const _prevClose = lastHistoryBar.close;
+                      let _fillTime = lastHistoryBar.time + _resMs;
+                      while (_fillTime < liveBar.time) {
+                        bars.push({ time: _fillTime, open: _prevClose, high: _prevClose, low: _prevClose, close: _prevClose, volume: 0.0001 });
+                        _fillTime += _resMs;
+                      }
+                      console.log(`[DATAFEED] ✅ Gap-filled ${Math.round(_gapMs / _resMs) - 1} candles for ${symbolInfo.name}`);
+                    }
                     bars.push(liveBar);
                     console.log(`[DATAFEED] ✅ Live candle appended for ${symbolInfo.name} t=${liveBar.time}`);
                   }
