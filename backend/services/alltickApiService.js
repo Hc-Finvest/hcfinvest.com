@@ -608,6 +608,23 @@ class AllTickApiService {
             candles = aggregated;
           }
 
+          const startMs = Number.isFinite(Number(startTime))
+            ? (Number(startTime) > 10000000000 ? Number(startTime) : Number(startTime) * 1000)
+            : null;
+          const endMs = Number.isFinite(Number(effectiveEndTime))
+            ? (Number(effectiveEndTime) > 10000000000 ? Number(effectiveEndTime) : Number(effectiveEndTime) * 1000)
+            : null;
+
+          if (startMs || endMs) {
+            candles = candles.filter((candle) => {
+              const time = Number(candle?.time);
+              if (!Number.isFinite(time) || time <= 0) return false;
+              if (startMs && time < startMs) return false;
+              if (endMs && time >= endMs) return false;
+              return true;
+            });
+          }
+
           this.historyCache.set(cacheKey, {
             timestamp: Date.now(),
             data: candles

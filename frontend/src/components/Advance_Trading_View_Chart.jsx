@@ -8,6 +8,7 @@ import { canonicalSymbol, normalizeSymbol } from "../utils/symbolUtils.js";
 
 // ─── v7.60 Configuration ───────────────────────────────────────────────────
 const DEBOUNCE_SAVE_MS = 2000; // Auto-save after 2 seconds of inactivity
+const CHART_LAYOUT_VERSION = 2;
 
 /**
  * Institutional-Grade Trading Chart Component — v7.60
@@ -52,6 +53,7 @@ const Advance_Trading_View_Chart = ({
   const [isChartReady, setIsChartReady] = useState(false);
   const chartReadyRef = useRef(false);
   const [targetPrice, setTargetPrice] = useState(0);
+  const [feedStatus, setFeedStatus] = useState({ status: 'connecting' });
 
   // ─── SMOOTH INTERPOLATION ──────────────────────────────────────────────────
   const displayPrice = useInterpolation(targetPrice, 0.2);
@@ -76,11 +78,21 @@ const Advance_Trading_View_Chart = ({
     }
   };
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    };
+  };
+
   // ─── BACKEND PERSISTENCE LOGIC ────────────────────────────────────────────
   
   const saveChartToBackend = useCallback(async () => {
     const userId = getUserId();
-    if (!userId || !widgetRef.current || !chartReadyRef.current) return;
+    const headers = getAuthHeaders();
+    if (!userId || !headers || !widgetRef.current || !chartReadyRef.current) return;
 
     try {
       widgetRef.current.save((layoutJson) => {
@@ -106,9 +118,8 @@ const Advance_Trading_View_Chart = ({
 
         fetch(`${API_URL}/chart/save`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
-            userId,
             symbol: 'GLOBAL',
             layoutJson
           })
@@ -127,15 +138,30 @@ const Advance_Trading_View_Chart = ({
     saveTimeoutRef.current = setTimeout(saveChartToBackend, DEBOUNCE_SAVE_MS);
   }, [saveChartToBackend]);
 
+  const resetLegacyLayout = useCallback(async (headers) => {
+    try {
+      await fetch(`${API_URL}/chart/reset?symbol=GLOBAL`, {
+        method: 'DELETE',
+        headers
+      });
+    } catch {}
+  }, []);
+
   const loadChartFromBackend = async (widget) => {
     const userId = getUserId();
-    if (!userId) return;
+    const headers = getAuthHeaders();
+    if (!userId || !headers) return;
 
     try {
-      const res = await fetch(`${API_URL}/chart/load/${userId}?symbol=GLOBAL`);
+      const res = await fetch(`${API_URL}/chart/load?symbol=GLOBAL`, { headers });
       const data = await res.json();
       
       if (data.success && data.layoutJson) {
+        if (Number(data.layoutVersion || 1) !== CHART_LAYOUT_VERSION) {
+          await resetLegacyLayout(headers);
+          return;
+        }
+
         //Sanket v2.0 - Strip stale price line sources from saved layout before loading.
         // Old sessions may have baked-in HorzLine/PriceLine shapes with dead IDs → schema errors on load.
         try {
@@ -155,7 +181,7 @@ const Advance_Trading_View_Chart = ({
           }
           widget.load(layout);
         } catch (e) {
-          widget.load(data.layoutJson);
+          await resetLegacyLayout(headers);
         }
       } else {
       }
@@ -350,15 +376,75 @@ const Advance_Trading_View_Chart = ({
     };
   }, [symbol]);
 
+  useEffect(() => {
+    const priceEvents = getPriceEvents();
+    const handleFeedStatus = (e) => {
+      const detail = e.detail || {};
+      const detailSymbol = normalizeSymbol(detail.symbol || '');
+      if (!detailSymbol || detailSymbol !== normalizeSymbol(symbol)) return;
+      setFeedStatus(detail);
+    };
+
+    priceEvents.addEventListener('chartFeedStatus', handleFeedStatus);
+    const initialStatus = Datafeed.getFeedStatus(symbol);
+    if (initialStatus) {
+      setFeedStatus(initialStatus);
+    } else {
+      setFeedStatus({ status: 'connecting', symbol: normalizeSymbol(symbol) });
+    }
+
+    return () => {
+      priceEvents.removeEventListener('chartFeedStatus', handleFeedStatus);
+    };
+  }, [symbol]);
+
+  const statusPalette = {
+    live: { label: 'Live feed', bg: 'rgba(16, 185, 129, 0.14)', color: '#10b981', border: 'rgba(16, 185, 129, 0.34)' },
+    stale: { label: 'Feed stale', bg: 'rgba(245, 158, 11, 0.14)', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.34)' },
+    reconnecting: { label: 'Reconnecting', bg: 'rgba(59, 130, 246, 0.14)', color: '#60a5fa', border: 'rgba(96, 165, 250, 0.34)' },
+    degraded: { label: 'Feed degraded', bg: 'rgba(239, 68, 68, 0.14)', color: '#f87171', border: 'rgba(248, 113, 113, 0.34)' },
+    connecting: { label: 'Connecting', bg: 'rgba(148, 163, 184, 0.14)', color: '#cbd5e1', border: 'rgba(203, 213, 225, 0.28)' },
+    disconnected: { label: 'Disconnected', bg: 'rgba(148, 163, 184, 0.14)', color: '#cbd5e1', border: 'rgba(203, 213, 225, 0.28)' }
+  };
+  const feedBadge = statusPalette[feedStatus?.status] || statusPalette.connecting;
+
   return (
     <div
-      ref={containerRef}
       style={{
+        position: "relative",
         width: "100%",
         height: "100%",
         backgroundColor: "#0d0d0d"
       }}
-    />
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 4,
+          padding: "6px 10px",
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 600,
+          letterSpacing: "0.02em",
+          background: feedBadge.bg,
+          color: feedBadge.color,
+          border: `1px solid ${feedBadge.border}`,
+          backdropFilter: "blur(10px)"
+        }}
+      >
+        {feedBadge.label}
+      </div>
+      <div
+        ref={containerRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#0d0d0d"
+        }}
+      />
+    </div>
   );
 };
 

@@ -3785,9 +3785,6 @@ const TradingPage = () => {
         const selectedBid = selectedTick.bid
         const selectedAsk = selectedTick.ask || selectedTick.bid
 
-        // uD83DuDD0D DEBUG-BUYSELL: Log what the buy/sell panel receives
-        console.log(`[BUYSELL-UPDATE] ${selectedSymbol} bid=${selectedBid} ask=${selectedAsk} spread=${Math.abs(selectedAsk-selectedBid).toFixed(5)}`)
-
         setLivePrices(prev => ({
           ...prev,
           [selectedSymbol]: {
@@ -3824,11 +3821,6 @@ const TradingPage = () => {
         setLivePrices(prev => ({ ...prev, ...currentPrices }));
         updateQuoteCache(currentPrices)
         
-        // Update instruments only if they are actually in the category being viewed
-        // uD83DuDD0D DEBUG-INSTRUMENTS: Log XAUUSD price arriving in instruments list
-        const _dbgXau = currentPrices['XAUUSD']
-        if (_dbgXau) console.log(`[INSTRUMENTS-UPDATE] XAUUSD bid=${_dbgXau.bid} ask=${_dbgXau.ask} freshness=${_dbgXau.quoteFreshness}`)
-
         setInstruments(prev => prev.map(inst => {
           const priceData = currentPrices[inst.symbol]
           if (priceData && priceData.bid && priceData.bid > 0) {

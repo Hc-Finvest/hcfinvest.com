@@ -6,7 +6,7 @@ import { opsRateLimit, getOpsRateLimitStats } from '../middleware/opsRateLimit.j
 import OpsActionLog from '../models/OpsActionLog.js'
 import redisClient from '../services/redisClient.js'
 import { aggregateToTimeframe, fillGaps, validateContinuity } from '../utils/candleAggregator.js'
-import { normalizeSymbol as canonicalizeSymbol } from '../config/symbols.js'
+import { normalizeSymbol as canonicalizeSymbol, getSymbolMetadata } from '../config/symbols.js'
 
 const router = express.Router()
 
@@ -38,15 +38,185 @@ const writeOpsAudit = async (req, action, status, payload = null, reason = '') =
   }
 }
 
+const toEpochMs = (raw) => {
+  if (!raw) return 0
+  if (raw instanceof Date) return raw.getTime()
+  if (typeof raw === 'number') return raw > 10000000000 ? raw : raw * 1000
+  const parsed = Date.parse(raw)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const getFeedStateFromFreshness = ({ isConnected, freshness = 'degraded', degraded = false, quoteAgeMs = null }) => {
+  if (!isConnected) return 'reconnecting'
+  if (degraded) return 'degraded'
+  if (Number.isFinite(quoteAgeMs) && quoteAgeMs > 90_000) return 'stale'
+  if (freshness === 'stale') return 'stale'
+  if (freshness === 'degraded') return 'degraded'
+  return 'live'
+}
+
+const getQuoteAgeMs = (quote) => {
+  if (!quote?.time) return null
+  const quoteTimeMs = toEpochMs(quote.time)
+  if (!quoteTimeMs) return null
+  return Math.max(0, Date.now() - quoteTimeMs)
+}
+
+const normalizeHistoryCachePayload = (payload, symbol, timeframe) => {
+  if (Array.isArray(payload)) {
+    return {
+      success: true,
+      symbol,
+      timeframe,
+      candles: payload,
+      count: payload.length,
+      provider: 'storage-cache',
+      source: 'redis_history_response',
+      freshness: 'cached',
+      degraded: false
+    }
+  }
+
+  return {
+    success: true,
+    symbol,
+    timeframe,
+    ...payload,
+    source: payload.source || 'redis_history_response',
+    freshness: payload.freshness || 'cached',
+    degraded: payload.degraded === true
+  }
+}
+
+const isWeekendClosedBucket = (timeMs) => {
+  const date = new Date(timeMs)
+  const day = date.getUTCDay()
+  const hour = date.getUTCHours()
+
+  if (day === 5 && hour >= 22) return true
+  if (day === 6) return true
+  if (day === 0 && hour < 22) return true
+  return false
+}
+
+const isDailyMaintenanceBreakBucket = (symbol, timeMs) => {
+  const metadata = getSymbolMetadata(symbol)
+  if (!metadata || !['commodity', 'index'].includes(metadata.type)) return false
+
+  const date = new Date(timeMs)
+  const day = date.getUTCDay()
+  const hour = date.getUTCHours()
+
+  return day >= 1 && day <= 5 && hour === 21
+}
+
+const isTradableBucket = (symbol, timeMs) => {
+  if (isWeekendClosedBucket(timeMs)) return false
+  if (isDailyMaintenanceBreakBucket(symbol, timeMs)) return false
+  return true
+}
+
+const filterCandlesToRequestedWindow = (candles, startTime, endTime) => {
+  if (!Array.isArray(candles) || candles.length === 0) return []
+
+  const startMs = Number.isFinite(Number(startTime))
+    ? (Number(startTime) > 10000000000 ? Number(startTime) : Number(startTime) * 1000)
+    : null
+  const endMs = Number.isFinite(Number(endTime))
+    ? (Number(endTime) > 10000000000 ? Number(endTime) : Number(endTime) * 1000)
+    : null
+
+  return candles.filter((candle) => {
+    const time = Number(candle?.time)
+    if (!Number.isFinite(time) || time <= 0) return false
+    if (startMs && time < startMs) return false
+    if (endMs && time >= endMs) return false
+    return true
+  })
+}
+
+const fillGapsSessionAware = (candles, intervalMinutes, until, symbol) => {
+  if (!Array.isArray(candles) || candles.length === 0) return candles
+
+  const intervalMs = intervalMinutes * 60 * 1000
+  const filled = []
+  const sorted = [...candles].sort((a, b) => a.time - b.time)
+
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const current = sorted[i]
+    const next = sorted[i + 1]
+    filled.push(current)
+
+    const currentTime = Number(current.time)
+    const nextTime = Number(next.time)
+    const gapMs = nextTime - currentTime
+
+    if (gapMs > intervalMs * 1.5 && gapMs < (12 * 60 * 60 * 1000)) {
+      const nextBucket = Math.floor(nextTime / intervalMs) * intervalMs
+      let fillTime = Math.floor(currentTime / intervalMs) * intervalMs + intervalMs
+
+      while (fillTime < nextBucket) {
+        if (isTradableBucket(symbol, fillTime)) {
+          filled.push({
+            time: fillTime,
+            open: current.close,
+            high: current.close,
+            low: current.close,
+            close: current.close,
+            volume: 0.0001,
+            isFilled: true
+          })
+        }
+        fillTime += intervalMs
+      }
+    }
+  }
+
+  const lastReal = sorted[sorted.length - 1]
+  filled.push(lastReal)
+
+  if (until && Number.isFinite(until)) {
+    const untilMs = until < 10000000000 ? until * 1000 : until
+    const lastBucket = Math.floor(lastReal.time / intervalMs) * intervalMs
+    const untilBucket = Math.floor(untilMs / intervalMs) * intervalMs
+    const maxPadding = 2 * 60 * 60 * 1000
+    const actualUntil = Math.min(untilBucket, lastBucket + maxPadding)
+
+    let fillTime = lastBucket + intervalMs
+    while (fillTime <= actualUntil) {
+      if (isTradableBucket(symbol, fillTime)) {
+        filled.push({
+          time: fillTime,
+          open: lastReal.close,
+          high: lastReal.close,
+          low: lastReal.close,
+          close: lastReal.close,
+          volume: 0.0001,
+          isFilled: true,
+          isPadding: true
+        })
+      }
+      fillTime += intervalMs
+    }
+  }
+
+  return filled
+}
+
 // GET /api/prices/status - Get market data service status
 router.get('/status', async (req, res) => {
   try {
     const status = { connected: alltickApiService.isConnected, provider: 'alltick' }
     const livePersistence = storageService.getLivePersistenceStats()
     const syncStats = storageService.getSyncStats()
+    const historyHealth = storageService.getHistoryHealthStats()
     const lockStatus = await storageService.getLockStatus()
     const opsRateLimit = getOpsRateLimitStats()
-    res.json({ success: true, status, livePersistence, syncStats, lockStatus, opsRateLimit })
+    const feedHealth = {
+      state: alltickApiService.isConnected ? 'live' : 'reconnecting',
+      provider: 'alltick'
+    }
+    res.json({ success: true, status, feedHealth, livePersistence, syncStats, historyHealth, lockStatus, opsRateLimit })
   } catch (error) {
     console.error('Error fetching status:', error)
     res.status(500).json({ success: false, message: error.message })
@@ -74,11 +244,15 @@ router.get('/current-candle', async (req, res) => {
     const serverNow = Date.now();
     const timeframeMs = storageService.timeframeToSeconds(resolution) * 1000;
     const currentBucketStart = Math.floor(serverNow / timeframeMs) * timeframeMs;
+    const latestQuote = await alltickApiService.getPrice(cleanSymbol);
+    const quoteAgeMs = getQuoteAgeMs(latestQuote);
 
     // ── Current open bar from in-memory liveBars ──
     const barKey = `${cleanSymbol}|${resolution}`;
     const liveBar = storageService.liveBars.get(barKey);
     let currentCandle = null;
+    let authority = 'live_bar';
+    let source = 'storage_live_bar';
     if (liveBar && liveBar.timeMs >= currentBucketStart) {
       currentCandle = {
         time: liveBar.timeMs,
@@ -95,19 +269,80 @@ router.get('/current-candle', async (req, res) => {
     //Sanket v2.0 - These are tick-accurate bars built by storageService.ingestTick → pushToRedisRolling
     //Sanket v2.0 - They are missing from AllTick history due to 5-minute Redis response cache lag
     const fromSec = Math.floor((serverNow - 30 * 60 * 1000) / 1000);
-    const toSec = Math.floor((currentBucketStart - 1) / 1000);
-    const rawRecent = await storageService.getCandlesFromRedis(cleanSymbol, resolution, fromSec, toSec, 60);
-    const recentClosed = rawRecent
+    const toSec = Math.floor(serverNow / 1000);
+    const rawRecent = await storageService.getCandlesFromRedis(cleanSymbol, resolution, fromSec, toSec, 120);
+    const recentBars = rawRecent
       .map(b => {
         const t = b.time instanceof Date ? b.time.getTime() : Number(b.time);
         return { time: t, open: Number(b.open), high: Number(b.high), low: Number(b.low), close: Number(b.close), volume: Number(b.volume) || 0 };
       })
       .filter(b => Number.isFinite(b.time) && b.time > 0 && Number.isFinite(b.close) && b.close > 0);
+    const recentClosed = recentBars.filter(b => b.time < currentBucketStart);
+    const redisCurrentBar = [...recentBars].reverse().find(b => b.time >= currentBucketStart);
+
+    if (!currentCandle && redisCurrentBar) {
+      currentCandle = {
+        ...redisCurrentBar,
+        isClosed: false
+      };
+      authority = 'redis_rolling';
+      source = 'storage_redis_rolling';
+    }
+
+    let bootstrap = null;
+    if (!currentCandle) {
+      const latestStored = await storageService.getLatestCloseQuote(cleanSymbol, resolution);
+      if (latestStored && Number(latestStored.close) > 0) {
+        const latestTimeMs = toEpochMs(latestStored.time);
+        bootstrap = {
+          time: latestTimeMs,
+          close: Number(latestStored.close),
+          source: latestStored.source || 'storage_latest_close'
+        };
+
+        if (latestTimeMs >= currentBucketStart) {
+          currentCandle = {
+            time: currentBucketStart,
+            open: Number(latestStored.close),
+            high: Number(latestStored.close),
+            low: Number(latestStored.close),
+            close: Number(latestStored.close),
+            volume: 0,
+            isClosed: false,
+            synthesized: true
+          };
+          authority = 'stored_close_bootstrap';
+          source = latestStored.source || 'storage_latest_close';
+        }
+      }
+    }
+
+    const freshnessResult = storageService.estimateSeriesFreshness(
+      currentCandle ? [currentCandle] : recentClosed,
+      resolution
+    );
+    const degraded = !currentCandle && recentClosed.length === 0 && !bootstrap;
+    const feedState = getFeedStateFromFreshness({
+      isConnected: alltickApiService.isConnected,
+      freshness: freshnessResult.freshness,
+      degraded,
+      quoteAgeMs
+    });
+    const effectiveAuthority = currentCandle ? authority : (bootstrap ? 'stored_close_reference' : 'none');
+    const effectiveSource = currentCandle ? source : (bootstrap?.source || 'none');
 
     return res.json({
       success: true,
       candle: currentCandle,
-      recentClosed
+      recentClosed,
+      authority: effectiveAuthority,
+      source: effectiveSource,
+      freshness: freshnessResult.freshness,
+      degraded,
+      feedState,
+      quoteAgeMs,
+      bootstrap,
+      serverTime: Math.floor(serverNow / 1000)
     });
   } catch (error) {
     console.error('[current-candle] error:', error.message);
@@ -369,6 +604,60 @@ router.get('/history', async (req, res) => {
     return [...byBucket.values()].sort((a, b) => a.time - b.time)
   }
 
+  const buildStorageFallbackCandles = async () => {
+    const fallbackCandles = []
+
+    try {
+      const rolling = await storageService.getCandlesFromRedis(cleanSymbol, timeframe, startTime, endTime, requestLimit)
+      if (Array.isArray(rolling)) {
+        rolling.forEach((bar) => {
+          const time = bar?.time instanceof Date ? bar.time.getTime() : toEpochMs(bar?.time)
+          const open = Number(bar?.open)
+          const high = Number(bar?.high)
+          const low = Number(bar?.low)
+          const close = Number(bar?.close)
+          const volume = Number.isFinite(Number(bar?.volume)) ? Number(bar.volume) : 0
+          if (![time, open, high, low, close].every(Number.isFinite) || time <= 0) return
+          fallbackCandles.push({ time, open, high, low, close, volume })
+        })
+      }
+    } catch {}
+
+    const liveBar = storageService.liveBars.get(`${cleanSymbol}|${timeframe}`)
+    if (liveBar && Number.isFinite(liveBar.timeMs) && Number(liveBar.close) > 0) {
+      fallbackCandles.push({
+        time: Number(liveBar.timeMs),
+        open: Number(liveBar.open),
+        high: Number(liveBar.high),
+        low: Number(liveBar.low),
+        close: Number(liveBar.close),
+        volume: Number(liveBar.volume) || 0
+      })
+    }
+
+    if (fallbackCandles.length === 0) {
+      try {
+        const latestStored = await storageService.getLatestCloseQuote(cleanSymbol, timeframe)
+        if (latestStored && Number(latestStored.close) > 0) {
+          const time = toEpochMs(latestStored.time)
+          if (time > 0) {
+            const close = Number(latestStored.close)
+            fallbackCandles.push({
+              time,
+              open: close,
+              high: close,
+              low: close,
+              close,
+              volume: 0
+            })
+          }
+        }
+      } catch {}
+    }
+
+    return fallbackCandles
+  }
+
   const getHistoryJumpThresholdPct = (sym = '') => {
     const upper = String(sym).toUpperCase()
     if (upper.includes('BTC') || upper.includes('ETH') || upper.includes('BNB') || upper.includes('SOL') || upper.includes('XRP') || upper.includes('ADA') || upper.includes('DOGE') || upper.includes('LTC')) {
@@ -433,6 +722,8 @@ router.get('/history', async (req, res) => {
   const serverNow = Math.floor(Date.now() / 1000);
   const startTime = from ? parseInt(from) : undefined;
   const endTime = to ? parseInt(to) : (isPreferLive ? serverNow : undefined);
+  const liveFallbackWindowSec = Math.max(targetMinutes * 60 * 3, 15 * 60);
+  const canUseLiveFallback = isPreferLive || !Number.isFinite(endTime) || (serverNow - endTime) <= liveFallbackWindowSec;
 
   console.log(`[History] Elite Request: ${cleanSymbol} (${resolution} → ${timeframe}) from=${from} to=${endTime} limit=${requestLimit}`);
 
@@ -449,24 +740,103 @@ router.get('/history', async (req, res) => {
   try {
     const cached = await redisClient.get(cacheKey);
     if (cached) {
-      const candles = JSON.parse(cached);
+      const cachedPayload = normalizeHistoryCachePayload(JSON.parse(cached), symbol, timeframe);
+      const candles = Array.isArray(cachedPayload.candles) ? cachedPayload.candles : [];
+      const candleCount = candles.length;
+      console.log(`[History] cache hit ${cleanSymbol} ${timeframe}: ${candleCount} candles`);
       console.log(`[History] ⚡ Served ${candles.length} candles from Redis Cache`);
-      return res.json({ success: true, symbol, timeframe, candles, count: candles.length, provider: 'alltick (cached)' });
+      return res.json({
+        ...cachedPayload,
+        count: candleCount,
+        cachedResponse: true,
+        feedState: getFeedStateFromFreshness({
+          isConnected: alltickApiService.isConnected,
+          freshness: cachedPayload.freshness,
+          degraded: cachedPayload.degraded
+        })
+      });
     }
   } catch (e) {}
 
   try {
     // 🚀 STEP 1: Direct Native Fetch (Fast & Accurate)
     // We fetch the requested resolution directly from AllTick instead of aggregating 1m candles manually.
-    const result = await alltickApiService.getHistoricalCandles(cleanSymbol, timeframe, startTime, endTime, requestLimit, isPreferLive);
+    const historyResult = await storageService.getCandlesWithMetadata(
+      cleanSymbol,
+      timeframe,
+      startTime,
+      endTime,
+      requestLimit,
+      { refreshOnSparse: true, preferLive: isPreferLive }
+    );
+    const latestQuote = await alltickApiService.getPrice(cleanSymbol);
+    const quoteAgeMs = getQuoteAgeMs(latestQuote);
     
-    if (!result.success || !result.candles || result.candles.length === 0) {
-      console.warn(`[History] ⚠️ No native data found for ${symbol} @ ${timeframe}. Faking empty response.`);
-      return res.json({ success: true, symbol, timeframe, candles: [], count: 0, provider: 'alltick' });
+    if ((!historyResult.candles || historyResult.candles.length === 0) && canUseLiveFallback) {
+      const storageFallback = await buildStorageFallbackCandles()
+      if (storageFallback.length > 0) {
+        historyResult.candles = storageFallback
+        historyResult.source = historyResult.source ? `${historyResult.source}_storage_fallback` : 'storage_fallback'
+        historyResult.freshness = storageService.estimateSeriesFreshness(storageFallback, timeframe).freshness
+        historyResult.degraded = historyResult.degraded === true
+        historyResult.lastCandleTimeMs = toEpochMs(storageFallback[storageFallback.length - 1]?.time)
+        console.log(`[History] ✅ Bootstrapped ${storageFallback.length} candles for ${cleanSymbol} ${timeframe} from storage fallback`)
+      } else {
+        console.warn(`[History] ⚠️ No native data found for ${symbol} @ ${timeframe}. Faking empty response.`);
+        return res.json({
+          success: true,
+          symbol,
+          timeframe,
+          candles: [],
+          count: 0,
+          provider: historyResult.refreshedFromProvider ? 'alltick' : 'storage',
+          source: historyResult.source,
+          freshness: historyResult.freshness || 'degraded',
+          degraded: true,
+          lastCandleTimeMs: historyResult.lastCandleTimeMs || null,
+          ageMs: historyResult.ageMs ?? null,
+          refreshedFromProvider: historyResult.refreshedFromProvider === true,
+          quoteAgeMs,
+          feedState: getFeedStateFromFreshness({
+            isConnected: alltickApiService.isConnected,
+            freshness: historyResult.freshness,
+            degraded: true,
+            quoteAgeMs
+          })
+        });
+      }
     }
 
-    let finalCandles = normalizeToBucketSeries(result.candles, targetMinutes);
+    if (!historyResult.candles || historyResult.candles.length === 0) {
+      return res.json({
+        success: true,
+        symbol,
+        timeframe,
+        candles: [],
+        count: 0,
+        provider: historyResult.refreshedFromProvider ? 'alltick' : 'storage',
+        source: historyResult.source,
+        freshness: historyResult.freshness || 'degraded',
+        degraded: true,
+        lastCandleTimeMs: historyResult.lastCandleTimeMs || null,
+        ageMs: historyResult.ageMs ?? null,
+        refreshedFromProvider: historyResult.refreshedFromProvider === true,
+        quoteAgeMs,
+        feedState: getFeedStateFromFreshness({
+          isConnected: alltickApiService.isConnected,
+          freshness: historyResult.freshness,
+          degraded: true,
+          quoteAgeMs
+        })
+      });
+    }
+
+    let finalCandles = normalizeToBucketSeries(historyResult.candles, targetMinutes);
     finalCandles = sanitizeHistoricalSeries(finalCandles, targetMinutes, cleanSymbol);
+    finalCandles = filterCandlesToRequestedWindow(finalCandles, startTime, endTime)
+    if (targetMinutes <= 1440) {
+      finalCandles = finalCandles.filter((candle) => isTradableBucket(cleanSymbol, Number(candle.time)))
+    }
 
     // 🚀 ELITE PIPELINE: Clean -> Fill -> Validate
     
@@ -475,7 +845,7 @@ router.get('/history', async (req, res) => {
 
     if (finalCandles.length > 0 && targetMinutes <= 1440) {
        const prevCount = finalCandles.length;
-       finalCandles = fillGaps(finalCandles, targetMinutes, endTime);
+       finalCandles = fillGapsSessionAware(finalCandles, targetMinutes, endTime, cleanSymbol);
        if (finalCandles.length > prevCount) {
          console.log(`[History] 🔗 Continuity Fix: Filled ${finalCandles.length - prevCount} gaps in ${timeframe} data (until=${endTime})`);
        }
@@ -491,18 +861,33 @@ router.get('/history', async (req, res) => {
 
     // 🏆 STEP 3: Return & Cache
     // We cache for 5 minutes (standard for historical requests)
+    const responsePayload = {
+        success: true,
+        symbol,
+        timeframe,
+        candles: finalCandles,
+        count: finalCandles.length,
+        provider: historyResult.refreshedFromProvider ? 'alltick' : 'storage',
+        source: historyResult.source,
+        freshness: historyResult.freshness || storageService.estimateSeriesFreshness(finalCandles, timeframe).freshness,
+        degraded: historyResult.degraded || finalCandles.length === 0,
+        lastCandleTimeMs: historyResult.lastCandleTimeMs || (finalCandles.length > 0 ? toEpochMs(finalCandles[finalCandles.length - 1].time) : null),
+        ageMs: historyResult.ageMs ?? null,
+        refreshedFromProvider: historyResult.refreshedFromProvider === true,
+        quoteAgeMs,
+        feedState: getFeedStateFromFreshness({
+          isConnected: alltickApiService.isConnected,
+          freshness: historyResult.freshness,
+          degraded: historyResult.degraded || finalCandles.length === 0,
+          quoteAgeMs
+        })
+      };
     if (finalCandles.length > 0) {
-      await redisClient.set(cacheKey, JSON.stringify(finalCandles), 'EX', 300);
+      const cacheTtlSeconds = responsePayload.freshness === 'live' ? 60 : 300;
+      await redisClient.set(cacheKey, JSON.stringify(responsePayload), 'EX', cacheTtlSeconds);
     }
 
-    res.json({
-      success: true,
-      symbol,
-      timeframe,
-      candles: finalCandles,
-      count: finalCandles.length,
-      provider: 'alltick (production+)'
-    });
+    res.json(responsePayload);
 
   } catch (error) {
     console.error(`[PricesAPI] Error in history route:`, error.message);
@@ -524,7 +909,7 @@ router.get('/:symbol', async (req, res) => {
     }
     
     // Get price from AllTick api service
-    const price = alltickApiService.getPrice(symbol)
+    const price = await alltickApiService.getPrice(symbol)
     const symbolInfo = alltickApiService.getSymbolInfo(symbol)
     
     if (price && price.bid) {

@@ -5,6 +5,13 @@ import { getPriceEvents } from "./eventSystem";
 import { buildCandleFromTick, validateRealtimeBar } from "../utils/realtimeCandleBuilder";
 import { sanitizeBatch, validateRealtimeUpdate, getSpikeThreshold } from "../utils/chartSanitizer";
 
+const DATAFEED_DEBUG = false;
+const debugDatafeed = (...args) => {
+  if (DATAFEED_DEBUG) {
+    console.log(...args);
+  }
+};
+
 /**
  * Custom Datafeed for TradingView Charting Library
  * Integrates with AllTick data through our optimized backend caching service.
@@ -70,6 +77,48 @@ const normalizeBars = (candles = [], symbol = '') => {
   return sanitizeBatch(rawBars, symbol);
 };
 
+const buildBootstrapBarsFromPayload = (payload = {}, symbol = '') => {
+  const seedBars = [];
+
+  if (Array.isArray(payload.recentClosed)) {
+    seedBars.push(...payload.recentClosed);
+  }
+
+  if (payload.candle) {
+    seedBars.push(payload.candle);
+  } else if (payload.bootstrap && Number(payload.bootstrap.close) > 0) {
+    const bootstrapTime = toMs(payload.bootstrap.time);
+    if (Number.isFinite(bootstrapTime) && bootstrapTime > 0) {
+      seedBars.push({
+        time: bootstrapTime,
+        open: payload.bootstrap.close,
+        high: payload.bootstrap.close,
+        low: payload.bootstrap.close,
+        close: payload.bootstrap.close,
+        volume: 0
+      });
+    }
+  }
+
+  const bars = normalizeBars(seedBars, symbol);
+  if (bars.length === 0) return [];
+
+  const byTime = new Map();
+  bars.forEach((bar) => {
+    byTime.set(bar.time, bar);
+  });
+
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+};
+
+const normalizeFeedState = (value = '') => {
+  const next = String(value || '').toLowerCase();
+  if (['live', 'stale', 'reconnecting', 'degraded', 'connecting', 'disconnected'].includes(next)) {
+    return next;
+  }
+  return 'degraded';
+};
+
 const applyChartPriceModeToBar = (bar, symbol, adminSpreads, side = 'MID') => {
   if (!bar) return bar;
 
@@ -103,16 +152,16 @@ const SYMBOL_REGISTRY_FE = {
   'AUDUSD': { pricescale: 100000, session: '2200-2200:12345' },
   'NZDUSD': { pricescale: 100000, session: '2200-2200:12345' },
   'USDCAD': { pricescale: 100000, session: '2200-2200:12345' },
-  'XAUUSD': { pricescale: 100,    session: '2200-2200:12345' },
-  'XAGUSD': { pricescale: 1000,   session: '2200-2200:12345' },
+  'XAUUSD': { pricescale: 100,    session: '2200-2100:12345' },
+  'XAGUSD': { pricescale: 1000,   session: '2200-2100:12345' },
   'BTCUSD': { pricescale: 100,    session: '24x7' },
   'ETHUSD': { pricescale: 100,    session: '24x7' },
   'BNBUSD': { pricescale: 100,    session: '24x7' },
   'SOLUSD': { pricescale: 100,    session: '24x7' },
-  'US30':   { pricescale: 10,     session: '2200-2200:12345' },
-  'US500':  { pricescale: 100,    session: '2200-2200:12345' },
-  'US100':  { pricescale: 10,     session: '2200-2200:12345' },
-  'UK100':  { pricescale: 10,     session: '2200-2200:12345' },
+  'US30':   { pricescale: 10,     session: '2200-2100:12345' },
+  'US500':  { pricescale: 100,    session: '2200-2100:12345' },
+  'US100':  { pricescale: 10,     session: '2200-2100:12345' },
+  'UK100':  { pricescale: 10,     session: '2200-2100:12345' },
 };
 
 const ALL_SYMBOLS = [
@@ -162,16 +211,46 @@ const Datafeed = {
   interval: null,
   _adminSpreads: {},
   _chartPriceSide: 'MID',
+  _feedStatusBySymbol: {},
+  _historyMetaBySymbol: {},
+  _subscribers: {},
+  _priorityRefs: {},
   //Sanket v2.0 - Offset in ms between server clock and local Date.now(); set by getServerTime on each call
   _serverTimeOffsetMs: 0,
 
   setAdminSpreads: (spreads) => {
     Datafeed._adminSpreads = spreads || {};
-    console.log('[DATAFEED] Admin spreads updated', Object.keys(Datafeed._adminSpreads).length);
+    debugDatafeed('[DATAFEED] Admin spreads updated', Object.keys(Datafeed._adminSpreads).length);
   },
 
   setChartPriceSide: (side) => {
     Datafeed._chartPriceSide = side === 'BUY' || side === 'SELL' ? side : 'MID';
+  },
+
+  setFeedStatus: (symbol, status, meta = {}) => {
+    const normalizedSymbol = normalizeRealtimeSymbol(symbol);
+    if (!normalizedSymbol) return;
+
+    const nextStatus = normalizeFeedState(status);
+    const nextMeta = {
+      ...(Datafeed._feedStatusBySymbol[normalizedSymbol] || {}),
+      ...meta,
+      symbol: normalizedSymbol,
+      status: nextStatus,
+      updatedAt: Date.now()
+    };
+
+    Datafeed._feedStatusBySymbol[normalizedSymbol] = nextMeta;
+    try {
+      getPriceEvents().dispatchEvent(new CustomEvent('chartFeedStatus', {
+        detail: nextMeta
+      }));
+    } catch {}
+  },
+
+  getFeedStatus: (symbol) => {
+    const normalizedSymbol = normalizeRealtimeSymbol(symbol);
+    return Datafeed._feedStatusBySymbol[normalizedSymbol] || null;
   },
 
   onReady: (callback) => {
@@ -225,11 +304,15 @@ const Datafeed = {
       // v7.77 Strict Normalization using Registry
       const cleanName = normalizeRealtimeSymbol(symbolName);
       const meta = SYMBOL_REGISTRY_FE[cleanName] || {};
+      const symbolItem = ALL_SYMBOLS.find(s => s.symbol === cleanName);
       
       const pricescale = meta.pricescale || 100000;
-      const session = meta.session || '24x7';
-      
-      const symbolItem = ALL_SYMBOLS.find(s => s.symbol === cleanName);
+      const defaultSession = symbolItem?.type === 'crypto'
+        ? '24x7'
+        : (symbolItem?.type === 'commodity' || symbolItem?.type === 'index')
+          ? '2200-2100:12345'
+          : '2200-2200:12345';
+      const session = meta.session || defaultSession;
       
       const symbolInfo = {
         name: symbolName,
@@ -249,7 +332,7 @@ const Datafeed = {
         volume_precision: 2,
         data_status: 'streaming'
       };
-      console.log(`[v7.77] resolveSymbol: ${symbolName} using session ${session} and pricescale ${pricescale}`);
+      debugDatafeed(`[v7.77] resolveSymbol: ${symbolName} using session ${session} and pricescale ${pricescale}`);
       setTimeout(() => onSymbolResolvedCallback(symbolInfo), 0);
     } catch (err) {
       console.error(`[DATAFEED] resolveSymbol failed for ${symbolName}:`, err.message);
@@ -282,8 +365,14 @@ const Datafeed = {
       if (useLiveCache) params.set('preferLive', '1');
       params.set('v', '3'); // 🔥 THE FIX: Bust Browser HTTP Cache so TradingView pulls the newly pruned payload
       const url = `${API_URL}/prices/history?${params.toString()}`;
+      Datafeed.setFeedStatus(symbolInfo.name, 'connecting', { path: 'history', timeframe });
+      const resolutionSeconds = ({
+        '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '1d': 86400, '1w': 604800, '1M': 2592000
+      })[timeframe] || 60;
+      const serverNowSec = Math.floor((Date.now() + (Datafeed._serverTimeOffsetMs || 0)) / 1000);
+      const canBootstrapFromCurrent = useLiveCache || !Number.isFinite(to) || (serverNowSec - Number(to || 0)) <= Math.max(resolutionSeconds * 3, 15 * 60);
       
-      console.log(`[DATAFEED] getBars: ${symbolInfo.name} (${resolution}→${timeframe}) from=${from} to=${to} limit=${limit}`);
+      debugDatafeed(`[DATAFEED] getBars: ${symbolInfo.name} (${resolution}->${timeframe}) from=${from} to=${to} limit=${limit}`);
       
       const res = await fetch(url);
       if (!res.ok) {
@@ -291,13 +380,29 @@ const Datafeed = {
         // CRITICAL: Call onError instead of onHistory([], {noData: true})
         // This prevents TradingView from permanently marking this timeframe as "EMPTY"
         // if we are just experiencing a temporary 429 rate limit.
+        Datafeed.setFeedStatus(symbolInfo.name, 'degraded', { timeframe, reason: `history_http_${res.status}` });
         onErrorCallback(`HTTP ${res.status}`);
         return;
       }
 
       const result = await res.json();
+      Datafeed._historyMetaBySymbol[historyKey] = {
+        source: result.source || 'unknown',
+        freshness: result.freshness || 'degraded',
+        degraded: result.degraded === true,
+        feedState: normalizeFeedState(result.feedState || (result.degraded ? 'degraded' : 'live')),
+        quoteAgeMs: result.quoteAgeMs ?? null,
+        updatedAt: Date.now()
+      };
+      Datafeed.setFeedStatus(symbolInfo.name, Datafeed._historyMetaBySymbol[historyKey].feedState, {
+        timeframe,
+        source: result.source,
+        freshness: result.freshness,
+        degraded: result.degraded === true,
+        quoteAgeMs: result.quoteAgeMs ?? null
+      });
       const candleCount = result.candles?.length || 0;
-      console.log(`[DATAFEED] ✓ getBars received ${candleCount} candles for ${symbolInfo.name}`);
+      debugDatafeed(`[DATAFEED] getBars received ${candleCount} candles for ${symbolInfo.name}`);
 
       let bars = [];
       if (result.success && result.candles && result.candles.length > 0) {
@@ -307,7 +412,43 @@ const Datafeed = {
       }
 
       if (bars.length === 0) {
-          console.log(`[DATAFEED] ⚠️ No valid bars for ${symbolInfo.name}. Returning noData.`);
+          if (canBootstrapFromCurrent) {
+          try {
+            const bootstrapRes = await fetch(
+              `${API_URL}/prices/current-candle?symbol=${encodeURIComponent(symbolInfo.name)}&resolution=${encodeURIComponent(timeframe)}`
+            );
+            if (bootstrapRes.ok) {
+              const bootstrapJson = await bootstrapRes.json();
+              const bootstrapBars = buildBootstrapBarsFromPayload(bootstrapJson, symbolInfo.name)
+                .map(bar => applyChartPriceModeToBar(bar, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide));
+
+              if (bootstrapBars.length > 0) {
+                const candidateBar = bootstrapBars[bootstrapBars.length - 1];
+                Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
+                Datafeed._lastHistoryBars[historyKey] = { ...candidateBar };
+                Datafeed.setFeedStatus(symbolInfo.name, bootstrapJson.feedState || result.feedState || 'stale', {
+                  timeframe,
+                  source: bootstrapJson.source || result.source || 'storage_bootstrap',
+                  freshness: bootstrapJson.freshness || result.freshness || 'stale',
+                  degraded: bootstrapJson.degraded === true || result.degraded === true,
+                  quoteAgeMs: bootstrapJson.quoteAgeMs ?? result.quoteAgeMs ?? null,
+                  authority: bootstrapJson.authority || 'bootstrap'
+                });
+                debugDatafeed(`[DATAFEED] Bootstrapped ${bootstrapBars.length} bars for ${symbolInfo.name} from current-candle fallback`);
+                onHistoryCallback(bootstrapBars, { noData: false });
+                return;
+              }
+            }
+          } catch {}
+          }
+
+          debugDatafeed(`[DATAFEED] No valid bars for ${symbolInfo.name}. Returning noData.`);
+          Datafeed.setFeedStatus(symbolInfo.name, result.feedState || 'degraded', {
+            timeframe,
+            source: result.source,
+            freshness: result.freshness,
+            degraded: true
+          });
           onHistoryCallback([], { noData: true });
       } else {
           //Sanket v2.0 - CRITICAL: Inject current running candle into history array on first request
@@ -323,6 +464,13 @@ const Datafeed = {
               if (liveRes.ok) {
                 const liveJson = await liveRes.json();
                 if (liveJson?.success) {
+                  Datafeed.setFeedStatus(symbolInfo.name, liveJson.feedState || result.feedState || 'live', {
+                    timeframe,
+                    source: liveJson.source || result.source,
+                    freshness: liveJson.freshness || result.freshness,
+                    degraded: liveJson.degraded === true,
+                    quoteAgeMs: liveJson.quoteAgeMs ?? result.quoteAgeMs ?? null
+                  });
                   const recentClosed = Array.isArray(liveJson.recentClosed) ? liveJson.recentClosed : [];
                   const liveCandle = liveJson.candle;
 
@@ -344,7 +492,7 @@ const Datafeed = {
                     }
                     // Re-sort after merging (recentClosed may arrive out-of-order)
                     bars.sort((a, b) => a.time - b.time);
-                    console.log(`[DATAFEED] ✅ Merged ${recentClosed.length} Redis candles for ${symbolInfo.name}`);
+                    debugDatafeed(`[DATAFEED] Merged ${recentClosed.length} Redis candles for ${symbolInfo.name}`);
                   }
 
                   // ── Step 2: Append current open bar (or flat-fill any remaining tiny gap) ──
@@ -362,7 +510,7 @@ const Datafeed = {
                     if (liveBar.time === lastHistoryBar.time) {
                       //Sanket v2.0 - Same bucket: replace with live OHLC (more ticks than Redis has)
                       bars[bars.length - 1] = liveBar;
-                      console.log(`[DATAFEED] ✅ Live candle merged for ${symbolInfo.name} t=${liveBar.time}`);
+                      debugDatafeed(`[DATAFEED] Live candle merged for ${symbolInfo.name} t=${liveBar.time}`);
                     } else if (liveBar.time > lastHistoryBar.time) {
                       //Sanket v2.0 - Still a small gap? flat-fill any remaining buckets (should be at most 1-2)
                       const _tfMsMap = {'1m':60000,'5m':300000,'15m':900000,'30m':1800000,'1h':3600000,'2h':7200000,'4h':14400000,'1d':86400000,'1w':604800000,'1M':2592000000};
@@ -373,7 +521,7 @@ const Datafeed = {
                         _fill += _resMs;
                       }
                       bars.push(liveBar);
-                      console.log(`[DATAFEED] ✅ Live candle appended for ${symbolInfo.name} t=${liveBar.time}`);
+                      debugDatafeed(`[DATAFEED] Live candle appended for ${symbolInfo.name} t=${liveBar.time}`);
                     }
                   }
                 }
@@ -393,11 +541,15 @@ const Datafeed = {
           if (!Datafeed._lastHistoryBars[historyKey] || candidateBar.time > Datafeed._lastHistoryBars[historyKey].time) {
             Datafeed._lastHistoryBars[historyKey] = { ...candidateBar };
           }
-          console.log(`[DATAFEED] ✅ Returning ${bars.length} bars, lastBar.time=${candidateBar.time}`);
+          debugDatafeed(`[DATAFEED] Returning ${bars.length} bars, lastBar.time=${candidateBar.time}`);
           onHistoryCallback(bars, { noData: false });
       }
     } catch (err) {
       console.error("[DATAFEED] ❌ getBars Exception:", err.message);
+      Datafeed.setFeedStatus(symbolInfo.name, 'degraded', {
+        timeframe: formatResolution(resolution),
+        reason: err?.message || 'history_fetch_failed'
+      });
       onErrorCallback(err);
     }
   },
@@ -408,6 +560,18 @@ const Datafeed = {
    * Logic: Listens to priceUpdate events and creates proper OHLC candle updates
    */
   subscribeBars: (symbolInfo, resolution, onRealtimeCallback, subscriberUID) => {
+    const existingSubscriberIds = Object.keys(Datafeed._subscribers || {});
+    for (const existingUID of existingSubscriberIds) {
+      if (existingUID !== String(subscriberUID)) {
+        // Single-chart app: force-clean older realtime listeners so stale resolutions
+        // cannot keep pushing duplicate bars after a symbol or interval change.
+        Datafeed.unsubscribeBars(existingUID);
+      }
+    }
+    if (Datafeed._subscribers?.[subscriberUID]) {
+      Datafeed.unsubscribeBars(subscriberUID);
+    }
+
     let resolutionMinutes = 1;
     if (resolution === '1M' || resolution === 'M') {
       resolutionMinutes = 30 * 24 * 60;
@@ -436,6 +600,18 @@ const Datafeed = {
     let lastTickTime = 0;
     const throttleMs = 50;
     let isActive = true;
+    const streamStatusListenerId = `chart-feed-${subscriberUID}`;
+    const unsubscribeStreamStatus = priceStreamService.onStatusChange(
+      streamStatusListenerId,
+      (status, lastTickAt, backendFeedState) => {
+        Datafeed.setFeedStatus(symbolInfo.name, backendFeedState || status, {
+          timeframe,
+          transportStatus: status,
+          backendFeedState,
+          lastTickAt
+        });
+      }
+    );
 
     //Sanket v2.0 - Rolling median spike guard: tracks last N accepted chart prices to detect outlier ticks
     //Sanket v2.0 - AllTick sends stale/cached quotes (e.g. session open price) that create spike wicks on chart
@@ -536,7 +712,9 @@ const Datafeed = {
             Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
             Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
             // Seed spike guard window with the real close
-            if (liveCandle.close > 0 && _priceWindow.length < 5) {
+            //Sanket v2.0 - Always reseed regardless of existing window size so the spike guard is
+            //Sanket v2.0 - calibrated to the actual current price from the server, not a stale seeded close.
+            if (liveCandle.close > 0) {
               _priceWindow = Array(5).fill(liveCandle.close);
             }
             pushBar(currentBar);
@@ -610,9 +788,12 @@ const Datafeed = {
     }, 10000);
 
     const handleCandleUpdate = (e) => {
-      const { symbol, timeframe: incomingTimeframe, candle } = e.detail;
+      const { symbol, timeframe: incomingTimeframe, candle, feedState } = e.detail;
       if (normalizeRealtimeSymbol(symbol) !== normalizedSym) return;
       if (incomingTimeframe !== timeframe) return;
+      if (feedState) {
+        Datafeed.setFeedStatus(symbolInfo.name, feedState, { timeframe, path: 'candle_update' });
+      }
 
       const bar = {
         time: candle.time,
@@ -650,17 +831,23 @@ const Datafeed = {
     const handlePriceUpdate = (e) => {
       tickCount++;
       if (!isActive) return;
-      const { symbol, bid, ask, time } = e.detail;
+      const { symbol, bid, ask, time, feedState } = e.detail;
       lastTickTime = Date.now();
       
       if (normalizeRealtimeSymbol(symbol) !== normalizedSym) return;
+      if (feedState) {
+        Datafeed.setFeedStatus(symbolInfo.name, feedState, {
+          timeframe,
+          path: 'price_update'
+        });
+      }
 
       // 🔍 DEBUG-CHART: Log every tick reaching the chart candle builder
-      console.log(`[CHART-TICK] ${symbol} bid=${bid} ask=${ask} currentBar.close=${currentBar?.close} time=${time}`);
+      debugDatafeed(`[CHART-TICK] ${symbol} bid=${bid} ask=${ask} currentBar.close=${currentBar?.close} time=${time}`);
 
       const now = Date.now();
       if ((now - lastUpdateTime) < throttleMs) {
-        console.log(`[CHART-THROTTLED] ${symbol} tick dropped (throttle ${throttleMs}ms, elapsed ${now-lastUpdateTime}ms)`);
+        debugDatafeed(`[CHART-THROTTLED] ${symbol} tick dropped (throttle ${throttleMs}ms, elapsed ${now-lastUpdateTime}ms)`);
         return;
       }
       lastUpdateTime = now;
@@ -687,13 +874,23 @@ const Datafeed = {
 
       //Sanket v2.0 - buildCandleFromTick handles same-bucket updates, new-minute bar creation, and gap interpolation
       //Sanket v2.0 - replaces validateRealtimeUpdate which could not create new bars nor interpolate gaps
+      //Sanket v2.0 - Apply server time offset so the minute bucket aligns with the actual server-side clock.
+      //Sanket v2.0 - When AllTick sends no timestamp, priceStream.js falls back to Date.now() (client clock).
+      //Sanket v2.0 - Without the offset, a client clock that is even 30s ahead can prematurely open a new bar.
+      const serverAlignedTickTime = (Number.isFinite(time) && time > 0 ? time : Date.now()) + (Datafeed._serverTimeOffsetMs || 0);
       const result = buildCandleFromTick({
         currentBar,
         tickPrice: price,
-        tickTime: time,
+        tickTime: serverAlignedTickTime,
         resolutionMs,
         symbol: symbolInfo.name
       });
+
+      //Sanket v2.0 - SYNC-CHECK log: compare chart execution price to raw bid/ask so price-mode drift is visible
+      if (result.accepted) {
+        const bucketIso = new Date(result.bucketTime || serverAlignedTickTime).toISOString().slice(11, 19);
+        debugDatafeed(`[SYNC-CHECK] ${symbol} bid=${bid} ask=${ask} chartPrice=${price} bucket=${bucketIso} isNewBar=${result.isNewBar} serverOffset=${Datafeed._serverTimeOffsetMs || 0}ms`);
+      }
 
       if (!result.accepted) {
         //Sanket v2.0 - Show actual rejection reason (was mislabeled as CHART-SPIKE-DROPPED for all rejections including out_of_order_bucket)
@@ -706,34 +903,43 @@ const Datafeed = {
       if (_priceWindow.length > SPIKE_WINDOW_SIZE) _priceWindow.shift();
 
       for (const bar of result.bars) {
-        console.log(`[CHART-PUSH] ${symbol} close=${bar.close} high=${bar.high} low=${bar.low} barTime=${bar.time}`);
+        debugDatafeed(`[CHART-PUSH] ${symbol} close=${bar.close} high=${bar.high} low=${bar.low} barTime=${bar.time}`);
         pushBar(bar);
       }
       currentBar = result.bars[result.bars.length - 1];
       lastBarTime = currentBar.time;
     };
 
-    Datafeed._subscribers = Datafeed._subscribers || {};
     Datafeed._subscribers[subscriberUID] = {
       priceUpdate: handlePriceUpdate,
       candleUpdate: handleCandleUpdate,
       symbol: symbolInfo.name,
+      normalizedSymbol: normalizedSym,
       dataGapMonitor
     };
+
+    Datafeed._priorityRefs[normalizedSym] = (Datafeed._priorityRefs[normalizedSym] || 0) + 1;
 
     getPriceEvents().addEventListener("candleUpdate", handleCandleUpdate);
     getPriceEvents().addEventListener("priceUpdate", handlePriceUpdate);
     
     return function cleanup() {
       isActive = false;
+      if (typeof unsubscribeStreamStatus === 'function') {
+        unsubscribeStreamStatus();
+      }
       clearInterval(dataGapMonitor);
       priceStreamService.unsubscribeBars(symbolInfo.name);
       getPriceEvents().removeEventListener("candleUpdate", handleCandleUpdate);
       getPriceEvents().removeEventListener("priceUpdate", handlePriceUpdate);
       delete Datafeed._subscribers[subscriberUID];
       
-      const remainingPriority = (priceStreamService.prioritySymbols || []).filter(s => s !== normalizedSym);
-      priceStreamService.setPrioritySymbols(remainingPriority);
+      if (Datafeed._priorityRefs[normalizedSym] > 1) {
+        Datafeed._priorityRefs[normalizedSym] -= 1;
+      } else {
+        delete Datafeed._priorityRefs[normalizedSym];
+      }
+      priceStreamService.setPrioritySymbols(Object.keys(Datafeed._priorityRefs));
     };
   },
 
@@ -747,6 +953,14 @@ const Datafeed = {
       if (sub.dataGapMonitor) clearInterval(sub.dataGapMonitor);
       if (sub.heartbeatTimer) clearInterval(sub.heartbeatTimer);
       if (sub.symbol) priceStreamService.unsubscribeBars(sub.symbol);
+      if (sub.normalizedSymbol) {
+        if (Datafeed._priorityRefs[sub.normalizedSymbol] > 1) {
+          Datafeed._priorityRefs[sub.normalizedSymbol] -= 1;
+        } else {
+          delete Datafeed._priorityRefs[sub.normalizedSymbol];
+        }
+        priceStreamService.setPrioritySymbols(Object.keys(Datafeed._priorityRefs));
+      }
       delete Datafeed._subscribers[subscriberUID];
     }
   }

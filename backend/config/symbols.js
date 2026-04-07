@@ -14,8 +14,8 @@ export const SYMBOL_REGISTRY = {
   'USDCAD': { type: 'forex', pricescale: 100000, session: '2200-2200:12345', providerCode: 'USDCAD' },
   
   // --- METALS ---
-  'XAUUSD': { type: 'commodity', pricescale: 100, session: '2200-2200:12345', providerCode: 'XAUUSD' },
-  'XAGUSD': { type: 'commodity', pricescale: 1000, session: '2200-2200:12345', providerCode: 'XAGUSD' },
+  'XAUUSD': { type: 'commodity', pricescale: 100, session: '2200-2100:12345', providerCode: 'XAUUSD' },
+  'XAGUSD': { type: 'commodity', pricescale: 1000, session: '2200-2100:12345', providerCode: 'XAGUSD' },
 
   // --- CRYPTO ---
   'BTCUSD': { type: 'crypto', pricescale: 100, session: '24x7', providerCode: 'BTCUSDT' },
@@ -24,10 +24,10 @@ export const SYMBOL_REGISTRY = {
   'SOLUSD': { type: 'crypto', pricescale: 100, session: '24x7', providerCode: 'SOLUSDT' },
 
   // --- INDICES ---
-  'US30':  { type: 'index', pricescale: 10,  session: '2200-2200:12345', providerCode: 'US30' },
-  'US500': { type: 'index', pricescale: 100, session: '2200-2200:12345', providerCode: 'US500' },
-  'US100': { type: 'index', pricescale: 10,  session: '2200-2200:12345', providerCode: 'US100' },
-  'UK100': { type: 'index', pricescale: 10,  session: '2200-2200:12345', providerCode: 'UK100' }
+  'US30':  { type: 'index', pricescale: 10,  session: '2200-2100:12345', providerCode: 'US30' },
+  'US500': { type: 'index', pricescale: 100, session: '2200-2100:12345', providerCode: 'US500' },
+  'US100': { type: 'index', pricescale: 10,  session: '2200-2100:12345', providerCode: 'US100' },
+  'UK100': { type: 'index', pricescale: 10,  session: '2200-2100:12345', providerCode: 'UK100' }
 };
 
 /**

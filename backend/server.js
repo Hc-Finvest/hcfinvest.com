@@ -82,6 +82,8 @@ let broadcastInterval = null
 let syncInterval = null
 let slTpCheckInterval = null
 
+const getSocketFeedState = () => (alltickApiService.isConnected ? 'live' : 'reconnecting')
+
 function refreshPrioritySymbols() {
     // ≡ƒ¢í∩╕Å Senior Dev Fix: Extract all unique symbols from rooms that users are CURRENTLY watching
     const rooms = io.sockets.adapter.rooms;
@@ -120,7 +122,8 @@ if (ENABLE_LIVE_PERSIST) {
     io.to(`candles:${data.originalSymbol}`).emit('candleUpdate', {
       symbol: data.originalSymbol,
       timeframe: data.timeframe,
-      candle: data.candle
+      candle: data.candle,
+      feedState: getSocketFeedState()
     });
   });
 }
@@ -178,7 +181,8 @@ redisSubscriber.on('message', (channel, message) => {
           rawAsk: priceData.rawAsk,
           time: priceData.time || now,
           isHeartbeat: priceData.isHeartbeat || false,
-          provider: priceData.provider || 'alltick'
+          provider: priceData.provider || 'alltick',
+          feedState: getSocketFeedState()
         }
 
         io.to('prices').emit('tickUpdate', payload);
@@ -190,7 +194,8 @@ redisSubscriber.on('message', (channel, message) => {
         io.to(`candles:${symbol}`).emit('candleUpdate', {
           symbol: symbol,
           timeframe: priceData.timeframe || '1m',
-          candle: priceData.candle
+          candle: priceData.candle,
+          feedState: getSocketFeedState()
         });
       }
 
@@ -220,7 +225,8 @@ broadcastInterval = setInterval(async () => {
     prices: allPrices,
     categories: pricesByCategory,
     timestamp: now,
-    provider: 'alltick'
+    provider: 'alltick',
+    feedState: getSocketFeedState()
   })
 }, 1000)
 
@@ -319,7 +325,8 @@ io.on('connection', (socket) => {
     socket.emit('priceStream', {
       prices: initialPrices,
       updated: {},
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      feedState: getSocketFeedState()
     })
     console.log(`Socket ${socket.id} subscribed to price stream`)
   })

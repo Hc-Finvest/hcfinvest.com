@@ -15,7 +15,6 @@ import { canonicalSymbol } from './symbolUtils';
  */
 // ΓöÇΓöÇΓöÇ Auth ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 window.TRADE_ENGINE_VERSION = '7.53-ACTIVE';
-console.log("%c [TradeManager] v7.53 SL/TP ENGINE ACTIVE ", "background: #1a1a1a; color: #00ff00; font-weight: bold; padding: 4px; border-radius: 4px;");
 
 const normalizeToken = (raw) => {
   if (!raw || typeof raw !== 'string') return '';
@@ -311,7 +310,7 @@ export class TradeLineManager {
     }
   }
 
-  async syncTrades(trades, symbol = null) {
+  async syncTrades(trades, symbol = null, force = false) {
     if (this.activeDragId) return; // Locked during interaction
     
     // ≡ƒ¢í∩╕Å v7.46 Instant Cleanup Bypass
@@ -319,7 +318,7 @@ export class TradeLineManager {
     // to remove the lines immediately, otherwise they linger until the timer expires.
     const hasClosures = (trades || []).length < this.trades.length;
 
-    if (Date.now() < this.syncLockUntil && !hasClosures) return; 
+    if (!force && Date.now() < this.syncLockUntil && !hasClosures) return; 
 
     this.trades = trades || [];
     

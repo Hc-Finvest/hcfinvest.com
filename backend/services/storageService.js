@@ -25,6 +25,8 @@ class StorageService extends EventEmitter {
     this.inflightBackfillTasks = new Map();
     this.inflightHistoryRequests = new Map();
     this.liveBars = new Map();
+    this.lastIngestedTickTimeBySymbol = new Map();
+    this.lastIngestedTickFingerprintBySymbol = new Map();
     //Sanket v2.0 - Added '2h' and '1M' so candleUpdate events fire for all supported timeframes
     this.realtimeTimeframes = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '1d', '1w', '1M'];
     this.livePersistedTicks = 0;
@@ -47,6 +49,15 @@ class StorageService extends EventEmitter {
     // Production Backfill Queue
     this.backfillQueue = [];
     this.isProcessingBackfill = false;
+    this.historyResolutionStats = {
+      totalRequests: 0,
+      degradedResponses: 0,
+      providerMisses: 0,
+      bySource: {},
+      lastResolvedAt: null,
+      lastResolvedSource: null,
+      lastResolvedSymbol: null
+    };
 
     this.startLiveFlushWorker();
   }
@@ -203,6 +214,196 @@ class StorageService extends EventEmitter {
       return await leaderLock.inspect(StorageService.SYNC_LOCK_KEY);
     } catch {
       return null;
+    }
+  }
+
+  getHistoryHealthStats() {
+    return {
+      ...this.historyResolutionStats,
+      bySource: { ...this.historyResolutionStats.bySource }
+    };
+  }
+
+  recordHistoryResolution({ source = 'unknown', degraded = false, providerMiss = false, symbol = null } = {}) {
+    this.historyResolutionStats.totalRequests += 1;
+    this.historyResolutionStats.lastResolvedAt = Date.now();
+    this.historyResolutionStats.lastResolvedSource = source;
+    this.historyResolutionStats.lastResolvedSymbol = symbol;
+    this.historyResolutionStats.bySource[source] = (this.historyResolutionStats.bySource[source] || 0) + 1;
+    if (degraded) this.historyResolutionStats.degradedResponses += 1;
+    if (providerMiss) this.historyResolutionStats.providerMisses += 1;
+  }
+
+  toEpochMs(raw) {
+    if (!raw) return 0;
+    if (raw instanceof Date) return raw.getTime();
+    if (typeof raw === 'number') return raw > 10000000000 ? raw : raw * 1000;
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  estimateSeriesFreshness(candles = [], timeframe = '1m') {
+    const lastCandle = Array.isArray(candles) && candles.length > 0 ? candles[candles.length - 1] : null;
+    if (!lastCandle) return { freshness: 'degraded', lastCandleTimeMs: null, ageMs: null };
+
+    const lastCandleTimeMs = this.toEpochMs(lastCandle.time);
+    const timeframeMs = Math.max(60_000, this.timeframeToSeconds(timeframe) * 1000);
+    const ageMs = Math.max(0, Date.now() - lastCandleTimeMs);
+
+    if (ageMs <= timeframeMs * 2) {
+      return { freshness: 'live', lastCandleTimeMs, ageMs };
+    }
+    if (ageMs <= timeframeMs * 12) {
+      return { freshness: 'cached', lastCandleTimeMs, ageMs };
+    }
+    if (ageMs <= timeframeMs * 48) {
+      return { freshness: 'stale', lastCandleTimeMs, ageMs };
+    }
+    return { freshness: 'degraded', lastCandleTimeMs, ageMs };
+  }
+
+  hasEnoughCandles(candles = [], requestedLimit = 500, from = null, to = null, timeframe = '1m') {
+    if (!Array.isArray(candles) || candles.length === 0) return false;
+
+    if (Number.isFinite(from) && Number.isFinite(to) && to > from) {
+      const expected = Math.max(1, Math.floor((to - from) / this.timeframeToSeconds(timeframe)));
+      return candles.length >= Math.max(20, Math.floor(expected * 0.6));
+    }
+
+    return candles.length >= Math.min(requestedLimit, 100);
+  }
+
+  async getCandlesWithMetadata(symbol, timeframe, from, to, limit, options = {}) {
+    const requestedLimit = limit || 500;
+    const resolvedSymbol = this.resolveStorageSymbol(symbol);
+    const Model = getModelForSymbol(resolvedSymbol);
+    const refreshOnSparse = options.refreshOnSparse !== false;
+    const hasBoundedWindow = Number.isFinite(from) && Number.isFinite(to) && to > from;
+
+    try {
+      const redisCandles = await this.getCandlesFromRedis(resolvedSymbol, timeframe, from, to, requestedLimit);
+      if (this.hasEnoughCandles(redisCandles, requestedLimit, from, to, timeframe)) {
+        const mappedRedis = this.mapDbCandles(redisCandles);
+        const freshness = this.estimateSeriesFreshness(mappedRedis, timeframe);
+        const degraded = freshness.freshness === 'degraded';
+        this.recordHistoryResolution({ source: 'redis_rolling', degraded, symbol: resolvedSymbol });
+        return {
+          candles: mappedRedis,
+          source: 'redis_rolling',
+          refreshedFromProvider: false,
+          degraded,
+          ...freshness
+        };
+      }
+
+      if (!Model) {
+        const providerCandles = await this.fetchAndCacheCandles(resolvedSymbol, timeframe, from, to, requestedLimit);
+        const freshness = this.estimateSeriesFreshness(providerCandles, timeframe);
+        const degraded = providerCandles.length === 0 || freshness.freshness === 'degraded';
+        this.recordHistoryResolution({
+          source: providerCandles.length > 0 ? 'provider_refresh' : 'empty',
+          degraded,
+          providerMiss: providerCandles.length === 0,
+          symbol: resolvedSymbol
+        });
+        return {
+          candles: providerCandles || [],
+          source: providerCandles.length > 0 ? 'provider_refresh' : 'empty',
+          refreshedFromProvider: providerCandles.length > 0,
+          degraded,
+          ...freshness
+        };
+      }
+
+      let dbCandles = await this.queryCandles(Model, resolvedSymbol, timeframe, from, to, requestedLimit);
+      let source = 'mongo_candles';
+      let refreshedFromProvider = false;
+
+      if (dbCandles.length === 0) {
+        const providerCandles = await this.fetchAndCacheCandles(resolvedSymbol, timeframe, from, to, requestedLimit);
+        refreshedFromProvider = providerCandles.length > 0;
+        dbCandles = await this.queryCandles(Model, resolvedSymbol, timeframe, from, to, requestedLimit);
+        source = refreshedFromProvider ? 'provider_refresh' : 'mongo_candles';
+      } else if (refreshOnSparse && !this.hasEnoughCandles(dbCandles, requestedLimit, from, to, timeframe)) {
+        if (hasBoundedWindow) {
+          const providerCandles = await this.fetchAndCacheCandles(resolvedSymbol, timeframe, from, to, requestedLimit);
+          if (providerCandles.length > 0) {
+            const refreshedCandles = await this.queryCandles(Model, resolvedSymbol, timeframe, from, to, requestedLimit);
+            if (refreshedCandles.length >= dbCandles.length) {
+              dbCandles = refreshedCandles;
+              refreshedFromProvider = true;
+              source = 'provider_refresh';
+            }
+          }
+        } else {
+          this.fetchAndCacheCandles(resolvedSymbol, timeframe, from, to, requestedLimit).catch(() => {});
+        }
+      }
+
+      if (dbCandles.length === 0) {
+        const aggregated = await this.aggregateCandlesFromSource(Model, resolvedSymbol, timeframe, from, to, requestedLimit);
+        if (aggregated.length > 0) {
+          await this.storeCandles(resolvedSymbol, timeframe, aggregated);
+          const freshness = this.estimateSeriesFreshness(aggregated, timeframe);
+          const degraded = freshness.freshness === 'degraded';
+          this.recordHistoryResolution({ source: 'mongo_aggregated', degraded, symbol: resolvedSymbol });
+          return {
+            candles: aggregated,
+            source: 'mongo_aggregated',
+            refreshedFromProvider,
+            degraded,
+            ...freshness
+          };
+        }
+
+        this.recordHistoryResolution({
+          source: 'empty',
+          degraded: true,
+          providerMiss: true,
+          symbol: resolvedSymbol
+        });
+        return {
+          candles: [],
+          source: 'empty',
+          refreshedFromProvider,
+          degraded: true,
+          freshness: 'degraded',
+          lastCandleTimeMs: null,
+          ageMs: null
+        };
+      }
+
+      let mappedCandles = this.mapDbCandles(dbCandles);
+      if (['XAUUSD', 'XAUUSD.i', 'XAUUSD.I'].includes(String(symbol).toUpperCase())) {
+        mappedCandles = mappedCandles.filter(candle => {
+          const day = new Date(this.toEpochMs(candle.time)).getUTCDay();
+          return day !== 0 && day !== 6;
+        });
+      }
+
+      const stillSparse = refreshOnSparse && !this.hasEnoughCandles(mappedCandles, requestedLimit, from, to, timeframe);
+      if (stillSparse) {
+        const aggregated = await this.aggregateCandlesFromSource(Model, resolvedSymbol, timeframe, from, to, requestedLimit);
+        if (aggregated.length > mappedCandles.length) {
+          await this.storeCandles(resolvedSymbol, timeframe, aggregated);
+          mappedCandles = aggregated;
+          source = 'mongo_aggregated';
+        }
+      }
+
+      const freshness = this.estimateSeriesFreshness(mappedCandles, timeframe);
+      const degraded = freshness.freshness === 'degraded' && mappedCandles.length === 0;
+      this.recordHistoryResolution({ source, degraded, symbol: resolvedSymbol });
+      return {
+        candles: mappedCandles,
+        source,
+        refreshedFromProvider,
+        degraded: freshness.freshness === 'degraded',
+        ...freshness
+      };
+    } catch (error) {
+      this.recordHistoryResolution({ source: 'error', degraded: true, symbol: resolvedSymbol });
+      throw error;
     }
   }
 
@@ -472,6 +673,8 @@ class StorageService extends EventEmitter {
   getAggregationSourceTimeframe(timeframe) {
     //Sanket v2.0 - Added 2h->1h aggregation source
     const sourceMap = {
+      '5m': '1m',
+      '15m': '1m',
       '30m': '1m',
       '2h': '1h',
       '4h': '1h',
@@ -580,6 +783,21 @@ class StorageService extends EventEmitter {
     const tickLow = Math.min(bid, ask);
 
     const tickTimeMs = this.parseTickTimestamp(priceData.time);
+    const lastAcceptedTickTime = this.lastIngestedTickTimeBySymbol.get(resolvedSymbol) || 0;
+    const tickFingerprint = `${tickTimeMs}|${close.toFixed(8)}`;
+    const lastFingerprint = this.lastIngestedTickFingerprintBySymbol.get(resolvedSymbol);
+
+    if (lastFingerprint === tickFingerprint) {
+      return;
+    }
+
+    if (lastAcceptedTickTime > 0 && tickTimeMs < (lastAcceptedTickTime - 1500)) {
+      return;
+    }
+
+    this.lastIngestedTickTimeBySymbol.set(resolvedSymbol, Math.max(lastAcceptedTickTime, tickTimeMs));
+    this.lastIngestedTickFingerprintBySymbol.set(resolvedSymbol, tickFingerprint);
+
     for (const timeframe of this.realtimeTimeframes) {
       const bucketStartMs = this.getBucketStartMs(tickTimeMs, timeframe);
       const barKey = `${resolvedSymbol}|${timeframe}`;
@@ -776,11 +994,28 @@ class StorageService extends EventEmitter {
    */
   async syncAllSymbols() {
     if (this.isSyncing) return;
+    const acquired = await leaderLock.tryAcquire(StorageService.SYNC_LOCK_KEY, StorageService.SYNC_LOCK_TTL_MS);
+    if (!acquired) {
+      console.log('[StorageService] Skipping sync cycle because another instance holds the history lock.');
+      return;
+    }
+
     this.isSyncing = true;
-    
+    let renewTimer = null;
+
     console.log('[StorageService] 🔄 Starting slow sync for all symbols...');
-    
+
     try {
+      renewTimer = setInterval(async () => {
+        const renewed = await leaderLock.renew(StorageService.SYNC_LOCK_KEY, StorageService.SYNC_LOCK_TTL_MS);
+        if (!renewed) {
+          console.warn('[StorageService] History sync lock renewal failed; another node may take over on expiry.');
+        }
+      }, StorageService.SYNC_LOCK_RENEW_MS);
+      if (typeof renewTimer.unref === 'function') {
+        renewTimer.unref();
+      }
+
       const symbols = alltickApiService.getSupportedSymbols();
       const timeframes = ['1m', '5m', '15m', '1h', '1d'];
       
@@ -802,6 +1037,10 @@ class StorageService extends EventEmitter {
     } catch (err) {
       console.error('[StorageService] Sync Error:', err.message);
     } finally {
+      if (renewTimer) {
+        clearInterval(renewTimer);
+      }
+      await leaderLock.release(StorageService.SYNC_LOCK_KEY);
       this.isSyncing = false;
     }
   }
@@ -1128,12 +1367,17 @@ class StorageService extends EventEmitter {
     const Model = getModelForSymbol(symbol);
     if (!Model || !candles || candles.length === 0) return;
 
-    const operations = candles.map(candle => ({
+    const operations = candles
+      .map(candle => {
+        const timeMs = this.toEpochMs(candle.time);
+        if (!Number.isFinite(timeMs) || timeMs <= 0) return null;
+
+        return {
       updateOne: {
         filter: { 
           symbol, 
           timeframe, 
-          time: new Date(candle.time * 1000) 
+          time: new Date(timeMs) 
         },
         update: {
           $set: {
@@ -1148,7 +1392,11 @@ class StorageService extends EventEmitter {
         },
         upsert: true
       }
-    }));
+    };
+      })
+      .filter(Boolean);
+
+    if (operations.length === 0) return;
 
     await Model.bulkWrite(operations);
   }

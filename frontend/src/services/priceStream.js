@@ -3,6 +3,13 @@ import { API_BASE_URL } from '../config/api'
 import { getPriceEvents } from './eventSystem'
 import { validateRealtimeTick } from '../utils/realtimeCandleBuilder'
 
+const PRICE_STREAM_DEBUG = false
+const debugPriceStream = (...args) => {
+  if (PRICE_STREAM_DEBUG) {
+    console.log(...args)
+  }
+}
+
 const SOCKET_URL = API_BASE_URL
 
 //SANKET - Universal Normalization Wrapper for consistent key matching
@@ -28,8 +35,12 @@ class PriceStreamService {
     this.reconnectAttempts = 0
     this.maxReconnectAttempts = 10
     // Connection health tracking
-    this.connectionStatus = 'disconnected' // 'connecting'|'live'|'reconnecting'|'disconnected'
+    this.connectionStatus = 'disconnected' // 'connecting'|'live'|'stale'|'reconnecting'|'degraded'|'disconnected'
     this.lastTickAt = null
+    this.backendFeedState = 'disconnected'
+    this.staleThresholdMs = 15_000
+    this.degradedThresholdMs = 45_000
+    this._healthTimer = null
     this._statusListeners = new Map()
     this.prioritySymbols = []
     this._disconnectTimer = null
@@ -38,6 +49,35 @@ class PriceStreamService {
     this._lastTickTsBySymbol = new Map()
     this._lastAcceptedMidBySymbol = new Map()
     this._lastAcceptedTimeBySymbol = new Map()
+    this._barSubscriptionCounts = new Map()
+  }
+
+  _normalizePriceEnvelope(price = {}, defaults = {}) {
+    const bid = Number(price.bid)
+    const ask = Number(price.ask ?? price.bid)
+    const feedState = String(price.feedState || defaults.feedState || this.backendFeedState || 'live').toLowerCase()
+    const freshnessByFeedState = {
+      live: 'LIVE',
+      stale: 'STALE',
+      degraded: 'STALE',
+      reconnecting: 'STALE',
+      connecting: 'STALE',
+      disconnected: 'OLD'
+    }
+
+    return {
+      bid,
+      ask,
+      rawBid: Number(price.rawBid ?? defaults.rawBid ?? bid),
+      rawAsk: Number(price.rawAsk ?? defaults.rawAsk ?? ask),
+      time: price.time ?? defaults.time ?? Date.now(),
+      spread: Number.isFinite(ask) && Number.isFinite(bid) ? Math.abs(ask - bid) : 0,
+      feedState,
+      quoteFreshness: price.quoteFreshness || defaults.quoteFreshness || freshnessByFeedState[feedState] || 'LIVE',
+      marketState: price.marketState || defaults.marketState || 'OPEN',
+      source: price.source || defaults.source || 'stream_tick',
+      provider: price.provider || defaults.provider || 'alltick'
+    }
   }
 
   _acceptRealtimeTick(symbol, bid, ask, time) {
@@ -63,16 +103,61 @@ class PriceStreamService {
     if (this.connectionStatus === status) return
     this.connectionStatus = status
     this._statusListeners.forEach(cb => {
-      try { cb(status, this.lastTickAt) } catch {}
+      try { cb(status, this.lastTickAt, this.backendFeedState) } catch {}
     })
+  }
+
+  _setBackendFeedState(nextState) {
+    if (!nextState) return
+    this.backendFeedState = nextState
+  }
+
+  _startHealthMonitor() {
+    if (this._healthTimer) return
+    this._healthTimer = setInterval(() => {
+      this._updateStatusFromActivity()
+    }, 5000)
+  }
+
+  _stopHealthMonitor() {
+    if (!this._healthTimer) return
+    clearInterval(this._healthTimer)
+    this._healthTimer = null
+  }
+
+  _updateStatusFromActivity(force = false) {
+    if (!this.socket?.connected) return
+
+    let nextStatus = 'live'
+    if (this.backendFeedState === 'reconnecting') {
+      nextStatus = 'reconnecting'
+    } else if (this.backendFeedState === 'degraded') {
+      nextStatus = 'degraded'
+    } else if (this.lastTickAt) {
+      const ageMs = Date.now() - this.lastTickAt
+      if (ageMs >= this.degradedThresholdMs) nextStatus = 'degraded'
+      else if (ageMs >= this.staleThresholdMs || this.backendFeedState === 'stale') nextStatus = 'stale'
+    }
+
+    if (force || nextStatus !== this.connectionStatus) {
+      this._emitStatus(nextStatus)
+    }
   }
 
   /** Subscribe to connection-status changes. Returns an unsubscribe fn. */
   onStatusChange(id, callback) {
     this._statusListeners.set(id, callback)
     // Immediately deliver current state
-    try { callback(this.connectionStatus, this.lastTickAt) } catch {}
+    try { callback(this.connectionStatus, this.lastTickAt, this.backendFeedState) } catch {}
     return () => this._statusListeners.delete(id)
+  }
+
+  getConnectionHealth() {
+    return {
+      status: this.connectionStatus,
+      lastTickAt: this.lastTickAt,
+      backendFeedState: this.backendFeedState
+    }
   }
 
   connect() {
@@ -107,18 +192,26 @@ class PriceStreamService {
       // v7.51 Silent
       this.isConnected = true
       this.reconnectAttempts = 0
+      this._setBackendFeedState('live')
+      this._startHealthMonitor()
       this._emitStatus('live')
       // Subscribe to price stream
       this.socket.emit('subscribePrices')
       if (this.prioritySymbols.length > 0) {
         this.socket.emit('setPrioritySymbols', { symbols: this.prioritySymbols })
       }
+      Array.from(this._barSubscriptionCounts.entries())
+        .filter(([, count]) => count > 0)
+        .forEach(([symbol]) => {
+          this.socket.emit('subscribeBars', { symbol })
+        })
     })
 
     this.socket.on('priceStream', (data) => {
-      const { prices, categories, updated, timestamp } = data
+      const { prices, categories, updated, timestamp, feedState } = data
       this.lastTickAt = Date.now()
-      if (this.connectionStatus !== 'live') this._emitStatus('live')
+      this._setBackendFeedState(feedState || 'live')
+      this._updateStatusFromActivity(true)
       
       // Update local price cache with all prices
       if (prices) {
@@ -183,7 +276,9 @@ class PriceStreamService {
 
     // Handle full price snapshots (fallback every 2s)
     this.socket.on('priceSnapshot', (data) => {
-      const { prices, categories, timestamp } = data
+      const { prices, categories, timestamp, feedState } = data
+      this._setBackendFeedState(feedState || this.backendFeedState)
+      this._updateStatusFromActivity(true)
       
       // Full update of price cache
       if (prices) {
@@ -210,12 +305,19 @@ class PriceStreamService {
           if (_snapNow - _lastLiveTick <= 3000) return;
           const acceptedTick = this._acceptRealtimeTick(symbol, p.bid, p.ask, timestamp || p.time)
           if (!acceptedTick.accepted) return
+          const normalizedPrice = this._normalizePriceEnvelope(p, {
+            bid: acceptedTick.bid,
+            ask: acceptedTick.ask,
+            time: acceptedTick.tickTime,
+            source: 'snapshot'
+          })
           priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
             detail: {
               symbol: symbol,
-              bid: acceptedTick.bid,
-              ask: acceptedTick.ask,
-              time: acceptedTick.tickTime
+              bid: normalizedPrice.bid,
+              ask: normalizedPrice.ask,
+              time: normalizedPrice.time,
+              feedState: normalizedPrice.feedState
             }
           }))
         })
@@ -238,14 +340,15 @@ class PriceStreamService {
     this.socket.on('tickUpdate', (tickData) => {
       if (!tickData) return
       this.lastTickAt = Date.now()
-      if (this.connectionStatus !== 'live') this._emitStatus('live')
+      this._setBackendFeedState(tickData.feedState || 'live')
+      this._updateStatusFromActivity(true)
       
       const { symbol: rawSymbol, bid, ask, time, rawBid, rawAsk } = tickData
       const symbol = normalizeSym(rawSymbol)
 
       // 🔍 DEBUG-TICK: Log every raw tick arriving from socket
       if (symbol === 'XAUUSD' || symbol === 'EURUSD') {
-        console.log(`[TICK-RAW] ${symbol} bid=${bid} ask=${ask} time=${time} raw=${JSON.stringify(tickData)}`)
+      debugPriceStream(`[TICK-RAW] ${symbol} bid=${bid} ask=${ask} time=${time} raw=${JSON.stringify(tickData)}`)
       }
 
       //Sanket v2.0 - Drop ticks with invalid/zero bid to prevent PnL flicker to $0
@@ -270,19 +373,24 @@ class PriceStreamService {
       this._lastTickTsBySymbol.set(symbol, now)
       
       // ✅ BROADCAST to all price subscribers (P/L table, etc.)
-      const priceObj = { 
+      const priceObj = this._normalizePriceEnvelope({
         bid: acceptedTick.bid,
         ask: acceptedTick.ask,
         rawBid: rawBid || acceptedTick.bid,
         rawAsk: rawAsk || acceptedTick.ask,
-        time: acceptedTick.tickTime
-      }
+        time: acceptedTick.tickTime,
+        feedState: tickData.feedState,
+        marketState: tickData.marketState,
+        quoteFreshness: tickData.quoteFreshness,
+        source: tickData.source || 'tick_update',
+        provider: tickData.provider || 'alltick'
+      })
       
       this.prices[symbol] = priceObj
 
       // 🔍 DEBUG-DISPATCH: Log what gets sent to TradingPage subscribers
       if (symbol === 'XAUUSD' || symbol === 'EURUSD') {
-        console.log(`[TICK-DISPATCH] ${symbol} → subscribers bid=${acceptedTick.bid} ask=${acceptedTick.ask}`)
+      debugPriceStream(`[TICK-DISPATCH] ${symbol} -> subscribers bid=${acceptedTick.bid} ask=${acceptedTick.ask}`)
       }
       
       this.subscribers.forEach((callback) => {
@@ -295,9 +403,10 @@ class PriceStreamService {
         priceEventTarget.dispatchEvent(new CustomEvent('priceUpdate', {
           detail: {
             symbol: symbol,
-            bid: acceptedTick.bid,
-            ask: acceptedTick.ask,
-            time: acceptedTick.tickTime
+            bid: priceObj.bid,
+            ask: priceObj.ask,
+            time: priceObj.time,
+            feedState: priceObj.feedState
           }
         }))
       } catch (e) {}
@@ -306,6 +415,7 @@ class PriceStreamService {
     this.socket.on('disconnect', () => {
       // v7.51 Silent
       this.isConnected = false
+      this._setBackendFeedState('reconnecting')
       this._emitStatus('reconnecting')
     })
 
@@ -327,8 +437,10 @@ class PriceStreamService {
     // ✅ Backend Candle Authority: Handle authoritative candle updates
     this.socket.on('candleUpdate', (data) => {
       if (!data) return
+      this._setBackendFeedState(data.feedState || this.backendFeedState)
+      this._updateStatusFromActivity(true)
       
-      const { symbol, timeframe, candle } = data
+      const { symbol, timeframe, candle, feedState } = data
       
       try {
         const priceEventTarget = getPriceEvents()
@@ -336,7 +448,8 @@ class PriceStreamService {
           detail: {
             symbol,
             timeframe,
-            candle
+            candle,
+            feedState
           }
         }))
       } catch (e) {}
@@ -344,6 +457,7 @@ class PriceStreamService {
 
     this.socket.on('connect_error', (error) => {
       this.reconnectAttempts++
+      this._setBackendFeedState('reconnecting')
       this._emitStatus('reconnecting')
     })
   }
@@ -362,7 +476,9 @@ class PriceStreamService {
       this.socket.disconnect()
       this.socket = null
     }
+    this._stopHealthMonitor()
     this.isConnected = false
+    this.backendFeedState = 'disconnected'
     this._emitStatus('disconnected')
     this.subscribers.clear()
     this.categorySubscribers.clear()
@@ -487,16 +603,51 @@ class PriceStreamService {
 
   // ✅ Backend Candle Authority: Trigger room-based subscription
   subscribeBars(symbol) {
+    const normalizedSymbol = normalizeSym(symbol)
+    if (!normalizedSymbol) return
+
+    const nextCount = (this._barSubscriptionCounts.get(normalizedSymbol) || 0) + 1
+    this._barSubscriptionCounts.set(normalizedSymbol, nextCount)
+    if (nextCount > 1) return
+
     if (this.socket?.connected) {
-      this.socket.emit('subscribeBars', { symbol })
+      this.socket.emit('subscribeBars', { symbol: normalizedSymbol })
     } else if (!this.socket) {
       this.connect();
     }
   }
 
   unsubscribeBars(symbol) {
+    const normalizedSymbol = normalizeSym(symbol)
+    if (!normalizedSymbol) return
+
+    const currentCount = this._barSubscriptionCounts.get(normalizedSymbol) || 0
+    if (currentCount <= 1) {
+      this._barSubscriptionCounts.delete(normalizedSymbol)
+      if (this.socket?.connected) {
+        this.socket.emit('unsubscribeBars', { symbol: normalizedSymbol })
+      }
+      return
+    }
+
+    this._barSubscriptionCounts.set(normalizedSymbol, currentCount - 1)
+  }
+
+  getBarSubscriptionCount(symbol) {
+    const normalizedSymbol = normalizeSym(symbol)
+    return this._barSubscriptionCounts.get(normalizedSymbol) || 0
+  }
+
+  getActiveBarSubscriptions() {
+    return Array.from(this._barSubscriptionCounts.entries())
+      .filter(([, count]) => count > 0)
+      .map(([symbol]) => symbol)
+  }
+
+  clearBarSubscriptionCounts() {
+    this._barSubscriptionCounts.clear()
     if (this.socket?.connected) {
-      this.socket.emit('unsubscribeBars', { symbol })
+      this.socket.emit('unsubscribeBars')
     }
   }
 
