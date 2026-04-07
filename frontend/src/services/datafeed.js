@@ -349,11 +349,39 @@ const Datafeed = {
     const throttleMs = 50;
     let isActive = true;
 
+    //Sanket v2.0 - Rolling median spike guard: tracks last N accepted chart prices to detect outlier ticks
+    //Sanket v2.0 - AllTick sends stale/cached quotes (e.g. session open price) that create spike wicks on chart
+    //Sanket v2.0 - These are only 0.35-0.40% from real price so they pass the 3% threshold — need tighter local check
+    const SPIKE_WINDOW_SIZE = 10;
+    let _priceWindow = [];
+    let _consecutiveSpikes = 0;
+    const MAX_CONSECUTIVE_SPIKES = 5;
+
+    const _getChartSpikeThresholdPct = (sym) => {
+      const u = String(sym).toUpperCase();
+      if (u.includes('BTC') || u.includes('ETH') || u.includes('BNB') || u.includes('SOL') || u.includes('XRP') || u.includes('DOGE')) return 5;
+      if (u.includes('XAU') || u.includes('XAG')) return 1.5;
+      if (u.includes('OIL') || u.includes('NGAS') || u.includes('US30') || u.includes('US100') || u.includes('US500') || u.includes('UK100') || u.includes('ES35')) return 1;
+      return 0.35; // FX pairs: 0.35% catches AllTick stale quote spikes (~0.36%) while allowing real moves
+    };
+
+    const _isChartSpike = (price, sym) => {
+      if (_priceWindow.length < 5) return false; // not enough data yet
+      const sorted = [..._priceWindow].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const devPct = Math.abs((price - median) / median) * 100;
+      return devPct > _getChartSpikeThresholdPct(sym);
+    };
+
     const seededBar = Datafeed._lastHistoryBars?.[historyKey];
     if (seededBar && Number.isFinite(seededBar.time)) {
       currentBar = { ...seededBar };
       lastBarTime = seededBar.time;
       lastUpdateTime = Date.now();
+      //Sanket v2.0 - Pre-seed rolling window from historical bar close so spike guard is active from first tick
+      if (Number.isFinite(seededBar.close) && seededBar.close > 0 && (Date.now() - seededBar.time) < 120000) {
+        _priceWindow = Array(5).fill(seededBar.close);
+      }
     }
 
     let lastPushedBarTime = seededBar ? seededBar.time : -Infinity;
@@ -497,6 +525,20 @@ const Datafeed = {
         return;
       }
 
+      //Sanket v2.0 - Rolling median spike guard: reject single stale/outlier AllTick quotes that create spike wicks
+      //Sanket v2.0 - Safety: after MAX_CONSECUTIVE_SPIKES rejections in a row, force-accept (handles real rapid moves)
+      if (_isChartSpike(price, symbolInfo.name)) {
+        if (_consecutiveSpikes < MAX_CONSECUTIVE_SPIKES) {
+          _consecutiveSpikes++;
+          console.warn(`[CHART-SPIKE-GUARD] ${symbol} price=${price} rejected (consecutive=${_consecutiveSpikes}) vs window median`);
+          return;
+        }
+        // Too many consecutive rejections → real market move, accept and reset
+        console.warn(`[CHART-SPIKE-GUARD] ${symbol} price=${price} force-accepted after ${_consecutiveSpikes} consecutive rejections`);
+        _priceWindow = []; // reset window to new price level
+      }
+      _consecutiveSpikes = 0;
+
       //Sanket v2.0 - buildCandleFromTick handles same-bucket updates, new-minute bar creation, and gap interpolation
       //Sanket v2.0 - replaces validateRealtimeUpdate which could not create new bars nor interpolate gaps
       const result = buildCandleFromTick({
@@ -512,6 +554,10 @@ const Datafeed = {
         console.warn(`[CHART-SKIP] ${symbol} reason=${result.reason} price=${price} currentBar.close=${currentBar?.close}`);
         return;
       }
+
+      //Sanket v2.0 - Update rolling window with accepted price so median stays current
+      _priceWindow.push(price);
+      if (_priceWindow.length > SPIKE_WINDOW_SIZE) _priceWindow.shift();
 
       for (const bar of result.bars) {
         console.log(`[CHART-PUSH] ${symbol} close=${bar.close} high=${bar.high} low=${bar.low} barTime=${bar.time}`);
