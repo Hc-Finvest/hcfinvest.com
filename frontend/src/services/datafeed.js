@@ -455,7 +455,8 @@ const Datafeed = {
         previousBar: currentBar
       });
       if (!validatedBar.accepted) return;
-      if (currentBar !== null && validatedBar.bar.time < lastBarTime) return;
+      //Sanket v2.0 - Skip same-minute and stale backend candle updates; handlePriceUpdate owns live bar state
+      if (validatedBar.bar.time <= lastBarTime) return;
 
       const authoritativeBar = applyChartPriceModeToBar(validatedBar.bar, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
 
@@ -496,24 +497,27 @@ const Datafeed = {
         return;
       }
 
-      // 🏆 PRODUCTION SANITIZATION: Validate live update
-      if (currentBar) {
-        const result = validateRealtimeUpdate({
-          currentBar, 
-          nextPrice: price, 
-          symbol: symbolInfo.name
-        });
-        
-        if (!result.accepted) {
-          console.warn(`[CHART-SPIKE-DROPPED] ${symbol} price=${price} rejected vs currentBar.close=${currentBar.close}`);
-          return;
-        }
-        
-        // 🔍 DEBUG-CHART-PUSH: Log what actually gets pushed to TradingView
-        console.log(`[CHART-PUSH] ${symbol} close=${result.bar.close} high=${result.bar.high} low=${result.bar.low} barTime=${result.bar.time}`);
-        currentBar = result.bar;
-        pushBar(currentBar);
+      //Sanket v2.0 - buildCandleFromTick handles same-bucket updates, new-minute bar creation, and gap interpolation
+      //Sanket v2.0 - replaces validateRealtimeUpdate which could not create new bars nor interpolate gaps
+      const result = buildCandleFromTick({
+        currentBar,
+        tickPrice: price,
+        tickTime: time,
+        resolutionMs,
+        symbol: symbolInfo.name
+      });
+
+      if (!result.accepted) {
+        console.warn(`[CHART-SPIKE-DROPPED] ${symbol} price=${price} rejected vs currentBar?.close=${currentBar?.close}`);
+        return;
       }
+
+      for (const bar of result.bars) {
+        console.log(`[CHART-PUSH] ${symbol} close=${bar.close} high=${bar.high} low=${bar.low} barTime=${bar.time}`);
+        pushBar(bar);
+      }
+      currentBar = result.bars[result.bars.length - 1];
+      lastBarTime = currentBar.time;
     };
 
     Datafeed._subscribers = Datafeed._subscribers || {};
