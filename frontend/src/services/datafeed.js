@@ -162,6 +162,8 @@ const Datafeed = {
   interval: null,
   _adminSpreads: {},
   _chartPriceSide: 'MID',
+  //Sanket v2.0 - Offset in ms between server clock and local Date.now(); set by getServerTime on each call
+  _serverTimeOffsetMs: 0,
 
   setAdminSpreads: (spreads) => {
     Datafeed._adminSpreads = spreads || {};
@@ -176,16 +178,29 @@ const Datafeed = {
     setTimeout(() => callback(configurationData));
   },
 
-  // 🛡️ v7.52 Sync with server time to ensure candle countdown is accurate
+  //Sanket v2.0 - Fixed: always call callback so TradingView countdown never hangs on network failure
+  //Sanket v2.0 - Added half-RTT latency compensation so bar-close countdown matches real server time
+  //Sanket v2.0 - Stores _serverTimeOffsetMs so bootstrapLiveBar uses server-aligned bucket boundaries
   getServerTime: (callback) => {
+    const _fetchStart = Date.now();
     fetch(`${API_URL}/prices/time`)
       .then(res => res.json())
       .then(json => {
-        if (json.success && json.time) {
-          callback(json.time);
+        if (json.success && Number.isFinite(json.time)) {
+          //Sanket v2.0 - Compensate for ~half of round-trip network latency
+          const _latencyMs = (Date.now() - _fetchStart) / 2;
+          const _adjustedSec = json.time + Math.round(_latencyMs / 1000);
+          //Sanket v2.0 - Store server-client offset so all bucket calculations are server-time-aligned
+          Datafeed._serverTimeOffsetMs = (json.time * 1000 + _latencyMs) - Date.now();
+          callback(_adjustedSec);
+        } else {
+          callback(Math.floor(Date.now() / 1000));
         }
       })
-      .catch(() => { /* Fallback to local time if API fails */ });
+      .catch(() => {
+        //Sanket v2.0 - Always call back: TradingView bar-close countdown is broken if this never fires
+        callback(Math.floor(Date.now() / 1000));
+      });
   },
 
   // Required by TradingView — powers the built-in symbol search dialog
@@ -379,7 +394,9 @@ const Datafeed = {
       lastBarTime = seededBar.time;
       lastUpdateTime = Date.now();
       //Sanket v2.0 - Pre-seed rolling window from historical bar close so spike guard is active from first tick
-      if (Number.isFinite(seededBar.close) && seededBar.close > 0 && (Date.now() - seededBar.time) < 120000) {
+      //Sanket v2.0 - Use server-aligned time so a stale seeded bar is not mistakenly treated as fresh
+      const _seedNowMs = Date.now() + (Datafeed._serverTimeOffsetMs || 0);
+      if (Number.isFinite(seededBar.close) && seededBar.close > 0 && (_seedNowMs - seededBar.time) < 120000) {
         _priceWindow = Array(5).fill(seededBar.close);
       }
     }
@@ -420,7 +437,11 @@ const Datafeed = {
         if (bars.length === 0) return;
 
         const latest = bars[bars.length - 1];
-        const currentBucket = Math.floor(Date.now() / resolutionMs) * resolutionMs;
+        //Sanket v2.0 - Use server-aligned time: prevents bucket mismatch when client clock drifts from server
+        //Sanket v2.0 - Without this fix, bootstrapLiveBar would fail to recognise the running candle
+        //Sanket v2.0 - and the chart would appear stuck until the NEXT candle boundary was crossed
+        const _nowAlignedMs = Date.now() + (Datafeed._serverTimeOffsetMs || 0);
+        const currentBucket = Math.floor(_nowAlignedMs / resolutionMs) * resolutionMs;
 
         if (latest.time === currentBucket) {
           currentBar = applyChartPriceModeToBar(latest, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
