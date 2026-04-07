@@ -6,6 +6,7 @@ import { opsRateLimit, getOpsRateLimitStats } from '../middleware/opsRateLimit.j
 import OpsActionLog from '../models/OpsActionLog.js'
 import redisClient from '../services/redisClient.js'
 import { aggregateToTimeframe, fillGaps, validateContinuity } from '../utils/candleAggregator.js'
+import { normalizeSymbol as canonicalizeSymbol } from '../config/symbols.js'
 
 const router = express.Router()
 
@@ -55,6 +56,52 @@ router.get('/status', async (req, res) => {
 // GET /api/prices/time - Get authoritative server time for candle countdown
 router.get('/time', (req, res) => {
   res.json({ success: true, time: Math.floor(Date.now() / 1000) });
+})
+
+//Sanket v2.0 - Returns the currently running (in-progress) candle from backend live state
+//Sanket v2.0 - Frontend bootstrapLiveBar calls this to get exact OHLC of the active candle
+//Sanket v2.0 - Without this, chart creates a brand-new empty candle on load instead of continuing the real one
+// GET /api/prices/current-candle?symbol=XAUUSD&resolution=1m
+router.get('/current-candle', (req, res) => {
+  try {
+    const { symbol, resolution } = req.query;
+    if (!symbol || !resolution) {
+      return res.status(400).json({ success: false, message: 'symbol and resolution required' });
+    }
+
+    const cleanSymbol = canonicalizeSymbol(symbol);
+    const barKey = `${cleanSymbol}|${resolution}`;
+    const liveBar = storageService.liveBars.get(barKey);
+
+    if (!liveBar || !liveBar.timeMs) {
+      return res.json({ success: true, candle: null });
+    }
+
+    //Sanket v2.0 - Reject stale live bars (older than 2x the timeframe interval = clearly a past candle)
+    const timeframeMs = storageService.timeframeToSeconds(resolution) * 1000;
+    const serverNow = Date.now();
+    const bucketStart = Math.floor(serverNow / timeframeMs) * timeframeMs;
+    if (liveBar.timeMs < bucketStart) {
+      // Bar is from previoius bucket — don't return it as "current"
+      return res.json({ success: true, candle: null });
+    }
+
+    return res.json({
+      success: true,
+      candle: {
+        time: liveBar.timeMs,    // milliseconds (TradingView format)
+        open: liveBar.open,
+        high: liveBar.high,
+        low: liveBar.low,
+        close: liveBar.close,
+        volume: liveBar.volume || 0,
+        isClosed: false
+      }
+    });
+  } catch (error) {
+    console.error('[current-candle] error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
 })
 
 // GET /api/prices/live-persistence - Get real-time candle persistence health

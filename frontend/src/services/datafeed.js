@@ -419,8 +419,49 @@ const Datafeed = {
       } catch {}
     };
 
+    //Sanket v2.0 - Rewritten: Phase 1 fetches CURRENT RUNNING bar directly from backend live state
+    //Sanket v2.0 - This is the REAL FIX: on mid-candle joins the chart now continues the active candle
+    //Sanket v2.0 - instead of creating a new empty one. Phase 2 falls back to preferLive history.
+    //Sanket v2.0 - Only create a new candle when the first tick arrives for a genuinely new bucket.
     const bootstrapLiveBar = async () => {
       try {
+        // ── Phase 1: Fetch exactly the current in-progress bar from backend live state ──
+        const currentCandleRes = await fetch(
+          `${API_URL}/prices/current-candle?symbol=${encodeURIComponent(symbolInfo.name)}&resolution=${encodeURIComponent(timeframe)}`
+        );
+        if (!isActive) return;
+
+        if (currentCandleRes.ok) {
+          const json = await currentCandleRes.json();
+          if (!isActive) return;
+
+          if (json?.success && json.candle && Number.isFinite(json.candle.time) && json.candle.time > 0) {
+            //Sanket v2.0 - Server returned the currently running candle — use it directly
+            //Sanket v2.0 - This bar already has correct open/high/low/close from all ticks so far this minute
+            const liveCandle = {
+              time: json.candle.time,
+              open: Number(json.candle.open),
+              high: Number(json.candle.high),
+              low: Number(json.candle.low),
+              close: Number(json.candle.close),
+              volume: Number(json.candle.volume) || 0
+            };
+            currentBar = applyChartPriceModeToBar(liveCandle, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
+            lastBarTime = liveCandle.time;
+            lastUpdateTime = Date.now();
+            Datafeed._lastHistoryBars = Datafeed._lastHistoryBars || {};
+            Datafeed._lastHistoryBars[historyKey] = { ...currentBar };
+            // Seed spike guard window with the real close
+            if (liveCandle.close > 0 && _priceWindow.length < 5) {
+              _priceWindow = Array(5).fill(liveCandle.close);
+            }
+            pushBar(currentBar);
+            return; // Done — live bar fully seeded
+          }
+        }
+
+        // ── Phase 2: Fallback — preferLive history fetch ──
+        //Sanket v2.0 - Used when backend live bar is not yet available (e.g. no ticks this minute yet)
         const params = new URLSearchParams();
         params.set('symbol', symbolInfo.name);
         params.set('resolution', timeframe);
@@ -437,9 +478,7 @@ const Datafeed = {
         if (bars.length === 0) return;
 
         const latest = bars[bars.length - 1];
-        //Sanket v2.0 - Use server-aligned time: prevents bucket mismatch when client clock drifts from server
-        //Sanket v2.0 - Without this fix, bootstrapLiveBar would fail to recognise the running candle
-        //Sanket v2.0 - and the chart would appear stuck until the NEXT candle boundary was crossed
+        //Sanket v2.0 - Use server-aligned time for bucket boundary check
         const _nowAlignedMs = Date.now() + (Datafeed._serverTimeOffsetMs || 0);
         const currentBucket = Math.floor(_nowAlignedMs / resolutionMs) * resolutionMs;
 
@@ -453,6 +492,8 @@ const Datafeed = {
           return;
         }
 
+        // Most-recent historical bar is NOT the current bucket — use it to anchor currentBar
+        // The first incoming tick will trigger buildCandleFromTick to open the correct new bucket
         if (lastBarTime === null) {
           currentBar = applyChartPriceModeToBar(latest, symbolInfo.name, Datafeed._adminSpreads, Datafeed._chartPriceSide);
           lastBarTime = latest.time;
